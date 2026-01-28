@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cotação MM3A3277010 - Imperial Seguros</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+        
+        body {
+            font-family: 'Calibri', 'Arial', sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .page {
+            page-break-after: always;
+            position: relative;
+            min-height: 277mm;
+            box-sizing: border-box;
+        }
+        
+        /* Cabeçalho com papel timbrado */
+        .header-timbrado {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #166534;
+            padding-bottom: 15px;
+        }
+        
+        .logo-container {
+            margin-bottom: 10px;
+        }
+        
+        .logo-text {
+            font-size: 28px;
+            font-weight: bold;
+            color: #166534;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        
+        .logo-subtitle {
+            font-size: 14px;
+            color: #666;
+            font-style: italic;
+            margin-bottom: 10px;
+        }
+        
+        .titulo-principal {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        
+        .titulo-cotacao {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #166534;
+        }
+        
+        .validade {
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #d00;
+            background-color: #fff3cd;
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            border: 1px solid #ffc107;
+        }
+        
+        /* Tabelas estilizadas */
+        .tabela-segurado {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 10pt;
+            border: 1px solid #ddd;
+        }
+        
+        .tabela-segurado th {
+            background-color: #166534;
+            color: white;
+            padding: 8px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #166534;
+        }
+        
+        .tabela-segurado td {
+            padding: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .tabela-segurado tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .tabela-premios {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 10pt;
+            border: 1px solid #000;
+        }
+        
+        .tabela-premios th,
+        .tabela-premios td {
+            border: 1px solid #000;
+            padding: 6px;
+            vertical-align: middle;
+        }
+        
+        .tabela-premios th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .tabela-bancos {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 8pt;
+            border: 1px solid #ddd;
+        }
+        
+        .tabela-bancos th,
+        .tabela-bancos td {
+            border: 1px solid #ddd;
+            padding: 4px;
+            text-align: left;
+        }
+        
+        .tabela-bancos th {
+            background-color: #e9ecef;
+            font-weight: bold;
+        }
+        
+        /* Classes utilitárias */
+        .bold {
+            font-weight: bold !important;
+        }
+        
+        .text-center {
+            text-align: center !important;
+        }
+        
+        .text-right {
+            text-align: right !important;
+        }
+        
+        .text-left {
+            text-align: left !important;
+        }
+        
+        .mt-10 {
+            margin-top: 10px !important;
+        }
+        
+        .mt-15 {
+            margin-top: 15px !important;
+        }
+        
+        .mt-20 {
+            margin-top: 20px !important;
+        }
+        
+        .mt-30 {
+            margin-top: 30px !important;
+        }
+        
+        .mb-10 {
+            margin-bottom: 10px !important;
+        }
+        
+        .mb-15 {
+            margin-bottom: 15px !important;
+        }
+        
+        .mb-20 {
+            margin-bottom: 20px !important;
+        }
+        
+        .mb-30 {
+            margin-bottom: 30px !important;
+        }
+        
+        .ml-10 {
+            margin-left: 10px !important;
+        }
+        
+        .linha-divisoria {
+            border-top: 1px solid #000;
+            margin: 15px 0;
+        }
+        
+        .assinatura {
+            margin-top: 50px;
+            border-top: 1px solid #000;
+            padding-top: 10px;
+            width: 250px;
+            text-align: center;
+        }
+        
+        .pagina-numero {
+            position: absolute;
+            bottom: 15px;
+            right: 20px;
+            font-size: 10pt;
+            color: #666;
+        }
+        
+        .condicoes {
+            font-size: 10pt;
+            line-height: 1.3;
+        }
+        
+        .condicoes ul {
+            padding-left: 20px;
+            margin: 8px 0;
+        }
+        
+        .condicoes li {
+            margin-bottom: 5px;
+        }
+        
+        .exclusoes {
+            column-count: 2;
+            column-gap: 25px;
+            font-size: 9pt;
+            margin: 15px 0;
+        }
+        
+        .exclusoes div {
+            margin-bottom: 5px;
+            padding-left: 10px;
+        }
+        
+        .box-info {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .box-alerta {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 12px;
+            margin: 15px 0;
+            font-size: 10pt;
+        }
+        
+        .highlight {
+            background-color: #e7f4ff;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        
+        .section-title {
+            background-color: #166534;
+            color: white;
+            padding: 8px 12px;
+            font-weight: bold;
+            margin: 20px 0 10px 0;
+            border-radius: 4px;
+        }
+        
+        .sub-section {
+            padding-left: 15px;
+            border-left: 3px solid #166534;
+            margin: 15px 0;
+        }
+        
+        /* Formatação específica para impressão */
+        @media print {
+            body {
+                font-size: 10pt;
+            }
+            
+            .page {
+                min-height: auto;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            .tabela-bancos {
+                font-size: 7pt;
+            }
+            
+            .exclusoes {
+                font-size: 8pt;
+            }
+        }
+        
+        /* Formulário de vistoria */
+        .form-vistoria {
+            margin: 20px 0;
+        }
+        
+        .form-vistoria table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .form-vistoria td {
+            padding: 6px;
+            border-bottom: 1px solid #ddd;
+            vertical-align: top;
+        }
+        
+        .form-vistoria .label {
+            font-weight: bold;
+            width: 150px;
+        }
+        
+        .linha-pontilhada {
+            border-bottom: 1px dashed #999;
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- PÁGINA 1 -->
+    <div class="page">
+        <!-- Cabeçalho com papel timbrado -->
+        <div class="header-timbrado">
+            <div class="logo-container">
+                <div class="logo-text">IMPERIAL SEGUROS</div>
+                <div class="logo-subtitle">Moçambique, S.A.</div>
+                <div style="font-size: 12px; color: #444; margin-top: 5px;">
+                    Seguros Gerais • Automóvel • Residencial • Empresarial
+                </div>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <div class="titulo-principal">COTACÃO DE SEGURO</div>
+                <div class="titulo-cotacao">Documento Oficial Nº MM3A3277010</div>
+                <div class="validade">Válida por 30 dias a partir de 30/10/2025</div>
+            </div>
+        </div>
+        
+        <!-- Informações do Segurado -->
+        <div class="section-title">INFORMAÇÕES DO SEGURADO</div>
+        
+        <table class="tabela-segurado">
+            <tbody>
+                <tr>
+                    <td width="50%"><strong>Segurado:</strong><br>Chuabo, Costa Gonçalves José, Sr.</td>
+                    <td width="50%"><strong>Número da Cotação:</strong><br>MM3A3277010</td>
+                </tr>
+                <tr>
+                    <td><strong>NUIT:</strong><br>128704132</td>
+                    <td><strong>Número da Apólice Anterior:</strong><br>Novo Negócio</td>
+                </tr>
+                <tr>
+                    <td><strong>Morada Postal:</strong><br>Q.01 Vila de Sede, Marracuene</td>
+                    <td><strong>Versão da Apólice:</strong><br>1</td>
+                </tr>
+                <tr>
+                    <td><strong>Data Efectiva:</strong><br>30/10/2025</td>
+                    <td><strong>Data de Vencimento:</strong><br>29/10/2026 (data inclusas)</td>
+                </tr>
+                <tr>
+                    <td colspan="2"><strong>Província:</strong><br>Maputo, Moçambique</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <!-- Período do Seguro -->
+        <div class="box-info">
+            <div class="bold">PERÍODO DE SEGURO:</div>
+            <div>(a) Desde 30/10/2025 até 29/10/2026 (ambas as datas inclusas)</div>
+            <div>(b) Qualquer período posterior para o qual o segurador aceite ou concorde aceitar pagamento para renovação da apólice.</div>
+        </div>
+        
+        <!-- Outras Informações -->
+        <div class="mb-20">
+            <div><strong>Âmbito Territorial:</strong> Moçambique</div>
+            <div><strong>Actividade Empresarial:</strong> Subscritor</div>
+            <div><strong>Agência:</strong> MAPUTO</div>
+            <div><strong>Agente:</strong> DIRECT - MAPUTO</div>
+        </div>
+        
+        <!-- Nota sobre renovação -->
+        <div class="box-alerta">
+            <div class="bold">IMPORTANTE:</div>
+            <div>Esta cotação é renovada Anualmente. O prémio é pago numa base Anual.</div>
+        </div>
+        
+        <!-- Assinatura e data -->
+        <div class="mt-30">
+            <div style="float: right; text-align: center;">
+                <div><strong>Data:</strong> 30/10/2025</div>
+                <div class="assinatura">
+                    Assinado: ......................................................................<br>
+                    <em>em nome da Companhia Imperial Seguros Moçambique, S.A.</em>
+                </div>
+            </div>
+            <div style="clear: both;"></div>
+        </div>
+        
+        <div class="pagina-numero">Página 1 de 6</div>
+    </div>
+    
+    <!-- PÁGINA 2 -->
+    <div class="page">
+        <div class="header-timbrado">
+            <div class="logo-text">IMPERIAL SEGUROS</div>
+            <div class="titulo-cotacao">TABELA DE PRÉMIOS</div>
+        </div>
+        
+        <div class="section-title">DADOS DA COTAÇÃO</div>
+        
+        <table width="100%" style="font-size: 10pt; margin-bottom: 20px;">
+            <tr>
+                <td width="50%"><strong>Número da cotação:</strong> MM3A3277010</td>
+                <td width="50%" class="text-right"><strong>Secção:</strong> Tabela de Prémios</td>
+            </tr>
+            <tr>
+                <td><strong>Número da Versão:</strong> 1</td>
+                <td class="text-right"><strong>Data de Impressão:</strong> 30/10/2025</td>
+            </tr>
+            <tr>
+                <td><strong>Válida a Partir de:</strong> 30/10/2025</td>
+                <td class="text-right"><strong>Válida Até:</strong> 29/10/2026 (data inclusas)</td>
+            </tr>
+        </table>
+        
+        <!-- Tabela de Prémios -->
+        <table class="tabela-premios">
+            <thead>
+                <tr>
+                    <th width="40%">Secções da Apólice</th>
+                    <th width="20%">Subscritas</th>
+                    <th width="20%">Prémio Anual</th>
+                    <th width="20%">Prémio Adicional / de Reembolso</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Automóvel</td>
+                    <td class="text-center">Sim</td>
+                    <td class="text-right">MT 4,200.80</td>
+                    <td class="text-right">MT 0.00</td>
+                </tr>
+                <tr>
+                    <td colspan="2" class="bold">Total</td>
+                    <td class="text-right bold">MT 4,200.80</td>
+                    <td class="text-right bold">MT 0.00</td>
+                </tr>
+                <tr>
+                    <td>Custos Administrativos</td>
+                    <td></td>
+                    <td class="text-right">MT 630.12</td>
+                    <td class="text-right">MT 0.00</td>
+                </tr>
+                <tr>
+                    <td>Sobre Taxa</td>
+                    <td></td>
+                    <td class="text-right">MT 72.46</td>
+                    <td class="text-right">MT 0.00</td>
+                </tr>
+                <tr>
+                    <td>Imposto de Selo</td>
+                    <td></td>
+                    <td class="text-right">MT 96.62</td>
+                    <td class="text-right">MT 0.00</td>
+                </tr>
+                <tr style="background-color: #e8f5e9;">
+                    <td colspan="2" class="bold">PRÉMIO TOTAL</td>
+                    <td class="text-right bold" colspan="2">MT 5,000.00</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <!-- Pagamento do Prémio -->
+        <div class="section-title mt-30">PAGAMENTO DO PRÉMIO</div>
+        
+        <div class="box-alerta">
+            <div class="bold">EFICÁCIA DO CONTRATO E CONSEQUÊNCIA DA FALTA DO PAGAMENTO DO PRÉMIO</div>
+            <div class="mt-10">
+                1. A cobertura efectiva dos riscos apenas se verifica a partir do momento em que é feito o pagamento do prémio do seguro ou fracção;
+            </div>
+            <div class="mt-10">
+                2. A falta de pagamento do prémio da anuidade subsequente ou da primeira fracção deste, impede a renovação do contrato e o não pagamento de qualquer fracção do prémio do decurso de uma anuidade determina a resolução automática e imediata do contrato, na data em que o pagamento dessa fracção é devido.
+            </div>
+        </div>
+        
+        <!-- Dados Bancários -->
+        <div class="section-title">DADOS BANCÁRIOS</div>
+        <div class="bold mb-10">Imperial Insurance Moçambique, S.A.</div>
+        
+        <table class="tabela-bancos">
+            <thead>
+                <tr>
+                    <th>Nome Banco</th>
+                    <th>Número de Conta MZN</th>
+                    <th>NIB MZN</th>
+                    <th>Número de Conta USD</th>
+                    <th>NIB USD</th>
+                    <th>Número de Conta ZAR</th>
+                    <th>NIB ZAR</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>ACCESS BANK</td>
+                    <td>3805960110</td>
+                    <td>0066000603805<br>96011071</td>
+                    <td>3805960211</td>
+                    <td>0013000603805<br>96021136</td>
+                    <td>3805960313</td>
+                    <td>0013000603805<br>96031321</td>
+                </tr>
+                <tr>
+                    <td>BCI</td>
+                    <td>1430858651000 1</td>
+                    <td>0008000043085<br>86510195</td>
+                    <td>1430858651000 2</td>
+                    <td>0008000043085<br>86510292</td>
+                    <td>1430858651000 3</td>
+                    <td>0008000043085<br>86510389</td>
+                </tr>
+                <tr>
+                    <td>Ecobank</td>
+                    <td>5575000017081</td>
+                    <td>0023001557500<br>01708191</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>MILLENNIUM BIM</td>
+                    <td>330446409</td>
+                    <td>0001000000330<br>44640957</td>
+                    <td>330503930</td>
+                    <td>0001000000330<br>50393057</td>
+                    <td>330449610</td>
+                    <td>0001000000330<br>44961057</td>
+                </tr>
+                <tr>
+                    <td>MOZABANCO</td>
+                    <td>820478810001</td>
+                    <td>0034000008204<br>78810165</td>
+                    <td>820478815001</td>
+                    <td>0034000008204<br>78815112</td>
+                    <td>820478815209</td>
+                    <td>0034000008204<br>78815209</td>
+                </tr>
+                <tr>
+                    <td>MPESA</td>
+                    <td>905000</td>
+                    <td>905000</td>
+                    <td>905000</td>
+                    <td>905000</td>
+                    <td>905000</td>
+                    <td>905000</td>
+                </tr>
+                <tr>
+                    <td>STANDARD BANK</td>
+                    <td>1256457681001</td>
+                    <td>0003012506457<br>68100167</td>
+                    <td>1256457681017</td>
+                    <td>0003012506457<br>68101719</td>
+                    <td>1256457681028</td>
+                    <td>0003012506457<br>68102883</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="pagina-numero">Página 2 de 6</div>
+    </div>
+    
+    <!-- PÁGINA 3 -->
+    <div class="page">
+        <div class="header-timbrado">
+            <div class="logo-text">IMPERIAL SEGUROS</div>
+            <div class="titulo-cotacao">SEÇÃO DE AUTOMÓVEIS - APENAS CONTRA TERCEIROS</div>
+        </div>
+        
+        <div class="section-title">DADOS DA APÓLICE</div>
+        
+        <table width="100%" style="font-size: 10pt; margin-bottom: 20px;">
+            <tr>
+                <td width="50%"><strong>Número da Apólice:</strong> MM3A3277010</td>
+                <td width="50%" class="text-right"><strong>Secção:</strong> 989860</td>
+            </tr>
+            <tr>
+                <td><strong>Número da Versão:</strong> 1</td>
+                <td class="text-right"><strong>Data de Impressão:</strong> 30/10/2025</td>
+            </tr>
+            <tr>
+                <td><strong>Válida a Partir de:</strong> 30/10/2025</td>
+                <td class="text-right"><strong>Válida Até:</strong> 29/10/2026 (data inclusas)</td>
+            </tr>
+        </table>
+        
+        <!-- Descrição do Veículo -->
+        <div class="box-info">
+            <div class="bold">DESCRIÇÃO DO VEÍCULO</div>
+            <div>Matrícula: AFU;1234</div>
+        </div>
+        
+        <!-- Instalações -->
+        <div class="mb-20">
+            <div class="bold">INSTALAÇÕES:</div>
+            <div>MATOLA</div>
+            <div>MAPUTO</div>
+            <div>Moçambique</div>
+        </div>
+        
+        <!-- Características do Veículo -->
+        <div class="section-title">CARACTERÍSTICAS DO VEÍCULO</div>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <tr>
+                <td style="padding: 6px; border-bottom: 1px solid #ddd;"><strong>Ano:</strong> 2000</td>
+                <td style="padding: 6px; border-bottom: 1px solid #ddd;"><strong>N°. do Chassi:</strong> 12345678</td>
+            </tr>
+            <tr>
+                <td style="padding: 6px; border-bottom: 1px solid #ddd;"><strong>N°. do Motor:</strong> 98765</td>
+                <td style="padding: 6px; border-bottom: 1px solid #ddd;"><strong>Marca:</strong> TOYOTA</td>
+            </tr>
+            <tr>
+                <td style="padding: 6px; border-bottom: 1px solid #ddd;"><strong>Modelo:</strong> ALLION</td>
+                <td style="padding: 6px; border-bottom: 1px solid #ddd;"><strong>Matrícula:</strong> AFU;1234</td>
+            </tr>
+            <tr>
+                <td style="padding: 6px;" colspan="2"><strong>Classe do Veículo:</strong> Private motor</td>
+            </tr>
+        </table>
+        
+        <!-- Coberturas -->
+        <div class="section-title">ELEMENTOS DA COBERTURA</div>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd; width: 70%;"><strong>Responsabilidade Civil a Terceiros</strong></td>
+                <td style="padding: 8px; border: 1px solid #ddd; width: 30%; text-align: right;"><strong>MT 4,000,000.00</strong></td>
+            </tr>
+        </table>
+        
+        <!-- Extensões -->
+        <div class="section-title">EXTENSÕES DA COBERTURA</div>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd; width: 70%;"><strong>Responsabilidade Contra Passageiros</strong></td>
+                <td style="padding: 8px; border: 1px solid #ddd; width: 30%; text-align: right;"><strong>MT 125,000.00</strong></td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">Morte ou invalidez Permanente:</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">MZN 100,000.00 / USD 1,600.00 / ZAR 2,000.00</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">Despesas Médicas:</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">MZN 20,000.00 / USD 320.00 / ZAR 4,000.00</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">Despesas de Funeral:</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">MZN 5,000.00 / USD 80.00 / ZAR 1,000.00</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">Limite de Ocupantes:</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: right;"><strong>05 passageiros</strong></td>
+            </tr>
+        </table>
+        
+        <!-- Franquias -->
+        <div class="mb-20">
+            <div class="bold">FRANQUIAS:</div>
+            <div>Não aplicável</div>
+        </div>
+        
+        <!-- Nota do rodapé -->
+        <div class="text-center mt-30" style="font-size: 9pt; color: #666; font-style: italic;">
+            www.imperialseguros.co.mz | contacto@imperialseguros.co.mz | +258 84 123 4567
+        </div>
+        
+        <div class="pagina-numero">Página 3 de 6</div>
+    </div>
+    
+    <!-- PÁGINA 4 -->
+    <div class="page">
+        <div class="header-timbrado">
+            <div class="logo-text">IMPERIAL SEGUROS</div>
+            <div class="titulo-cotacao">CONDIÇÕES E GARANTIAS</div>
+        </div>
+        
+        <div class="section-title">CONDIÇÕES ESPECIAIS / GARANTIAS / EXTENSÕES / EXCLUSÕES / TERMOS E CONDIÇÕES</div>
+        
+        <!-- Condicionantes Obrigatórias -->
+        <div class="sub-section">
+            <div class="bold" style="color: #166534; font-size: 12pt;">CONDICIONANTES OBRIGATÓRIAS DA COBERTURA AUTOMÓVEL</div>
+            <div class="condicoes">
+                <p>Os veículos abrangidos pela presente apólice deverão cumprir integralmente os requisitos legais de circulação e segurança em vigor.</p>
+                <p>O condutor do veículo, no momento do sinistro, deve:</p>
+                <ul>
+                    <li>Ser titular de carta de condução válida;</li>
+                </ul>
+                <p>O veículo deve apresentar:</p>
+                <ul>
+                    <li>Inspeção legal periódica válida;</li>
+                    <li>Inspeção técnica interna prévia à emissão da apólice, com verificação do estado geral (pneus, motor, travões, entre outros);</li>
+                    <li>O veículo deverá ser mantido em boas condições de funcionamento e conservação;</li>
+                    <li>O veículo não poderá ser utilizado para finalidades diversas daquelas declaradas na proposta de Seguro;</li>
+                    <li>O tomador do seguro deverá comunicar à seguradora, de forma imediata e por escrito, qualquer alteração relevante que possa impactar o risco segurado;</li>
+                    <li>O veículo não poderá ser utilizado para finalidades de competições ou atividades de risco elevado: Corridas, competições ou provas desportivas, testes de velocidade, treinamentos, exibições públicas ou eventos similares, salvo mediante contratação de cobertura específica.</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Condicionantes Facultativas -->
+        <div class="sub-section mt-20">
+            <div class="bold" style="color: #166534; font-size: 12pt;">CONDICIONANTES FACULTATIVAS – APLICÁVEIS À COBERTURA DE DANOS PRÓPRIOS</div>
+            <div class="condicoes">
+                <p>Para efeitos de reforço da proteção contra riscos de furto, roubo ou desaparecimento, especialmente no âmbito da cobertura de danos próprios, recomenda-se que o tomador do seguro adopte os seguintes dispositivos adicionais:</p>
+                <ul>
+                    <li>Instalação de dispositivo de rastreamento e contratação de serviço de localização e recuperação do veículo em caso de roubo e/ou furto;</li>
+                    <li>Instalação de imobilizadores eletrônicos, travas antifurto ou outros mecanismos que dificultem o acesso, movimentação ou remoção não autorizada do veículo;</li>
+                    <li>O veículo deverá estar equipado com sistema de alarme antifurto funcional, instalado e activo durante todo o período de vigência da apólice;</li>
+                    <li>Durante o período nocturno, o veículo deverá ser estacionado em local seguro e adequado, de forma a minimizar riscos de furto, roubo ou danos;</li>
+                    <li>Salvo autorização expressa em cláusula adicional, o veículo não poderá ser utilizado para o transporte de materiais perigosos ou inflamáveis.</li>
+                </ul>
+                <div class="box-alerta mt-10">
+                    <strong>Atenção:</strong> A inobservância das obrigações acima referidas poderá acarretar a perda do direito à indenização, total ou parcial, consoante a gravidade da infração e sua relação com o sinistro.
+                </div>
+            </div>
+        </div>
+        
+        <!-- Vistoria Obrigatória -->
+        <div class="sub-section mt-20">
+            <div class="bold" style="color: #166534; font-size: 12pt;">VISTÓRIA OBRIGATÓRIA DA VIATURA</div>
+            <div class="condicoes">
+                <p>A viatura segurada deverá ser submetida a inspeção obrigatória no prazo de até 5 (Cinco) dias úteis, contados a partir da data de emissão da apólice (30/10/2025). Nos casos em que a viatura se encontre fora de Maputo, é da inteira responsabilidade do segurado apresentar o veículo à instalação da seguradora mais próxima antes do início da cobertura ou, no máximo, dentro do prazo de 5 (Cinco) dias úteis a contar da data de início da apólice.</p>
+                <div class="box-alerta">
+                    <strong>Consequência:</strong> O não cumprimento desta obrigação resultará na perda do direito à indenização.
+                </div>
+            </div>
+        </div>
+        
+        <!-- Detalhes da Vistoria -->
+        <div class="section-title mt-30">DETALHES DA VISTÓRIA</div>
+        
+        <div class="form-vistoria">
+            <table>
+                <tr>
+                    <td class="label">Viatura Inspecionada Por:</td>
+                    <td class="linha-pontilhada">_____________________________________</td>
+                </tr>
+                <tr>
+                    <td class="label">Datados a:</td>
+                    <td class="linha-pontilhada">___/___/_____</td>
+                </tr>
+                <tr>
+                    <td class="label">Cor:</td>
+                    <td class="linha-pontilhada">_____________________________________</td>
+                </tr>
+                <tr>
+                    <td class="label">Transmissão:</td>
+                    <td class="linha-pontilhada">_____________________________________</td>
+                </tr>
+                <tr>
+                    <td class="label">Danos no Veículo:</td>
+                    <td class="linha-pontilhada">_____________________________________</td>
+                </tr>
+                <tr>
+                    <td class="label">Para-brisas:</td>
+                    <td class="linha-pontilhada">_____________________________________</td>
+                </tr>
+                <tr>
+                    <td class="label">Pneus:</td>
+                    <td class="linha-pontilhada">_____________________________________</td>
+                </tr>
+                <tr>
+                    <td class="label">Aparelho sonoro:</td>
+                    <td class="linha-pontilhada">_____________________________________</td>
+                </tr>
+                <tr>
+                    <td class="label">Nº Chassis:</td>
+                    <td class="linha-pontilhada">_____________________________________</td>
+                </tr>
+                <tr>
+                    <td class="label">Quilometragem:</td>
+                    <td class="linha-pontilhada">_____________________________________</td>
+                </tr>
+                <tr>
+                    <td class="label">Outros danos:</td>
+                    <td class="linha-pontilhada">_____________________________________</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="pagina-numero">Página 4 de 6</div>
+    </div>
+    
+    <!-- PÁGINA 5 -->
+    <div class="page">
+        <div class="header-timbrado">
+            <div class="logo-text">IMPERIAL SEGUROS</div>
+            <div class="titulo-cotacao">CONDIÇÕES E GARANTIAS (CONT.)</div>
+        </div>
+        
+        <!-- Garantia de Inspeção -->
+        <div class="sub-section">
+            <div class="bold" style="color: #166534; font-size: 12pt;">GARANTIA DE INSPEÇÃO DA VIATURA</div>
+            <div class="condicoes">
+                <p>É responsabilidade do segurado levar o veículo às instalações da seguradora ou a uma garagem ou centro de inspeção aprovado para uma inspeção antes do início da cobertura da apólice, ou pelo menos dentro de 5 dias a partir da data de início da apólice.</p>
+                <div class="box-alerta">
+                    <strong>Consequência:</strong> Se este requisito não for atendido, a apólice será reduzida apenas para uma cobertura total de terceiros.
+                </div>
+            </div>
+        </div>
+        
+        <!-- Garantia do Dispositivo de Localização -->
+        <div class="sub-section mt-20">
+            <div class="bold" style="color: #166534; font-size: 12pt;">GARANTIA DO DISPOSITIVO DE LOCALIZAÇÃO DO VEÍCULO</div>
+            <div class="condicoes">
+                <p>O veículo deve estar equipado com um dispositivo de localização GPS que tenha sido instalado pelos nossos técnicos ou profissionais aprovados.</p>
+                <div class="box-alerta">
+                    <strong>Importante:</strong> Se o dispositivo de rastreo não estiver instalado conforme especificado, a apólice não cobrirá em caso de roubo do veículo.
+                </div>
+            </div>
+        </div>
+        
+        <!-- Medidas no Acidente -->
+        <div class="sub-section mt-20">
+            <div class="bold" style="color: #166534; font-size: 12pt;">MEDIDAS A TOMAR NO MOMENTO DO ACIDENTE</div>
+            <div class="condicoes">
+                <p>Medidas a serem tomadas no momento do acidente: em caso de acidente, o segurado deve imediatamente:</p>
+                <ul>
+                    <li>Tirar fotografias e gravações de vídeo no local;</li>
+                    <li>Captar claramente a data e a hora;</li>
+                    <li>A evidência deve incluir o número de registro do veículo, detalhes internos, todos os lados externos e o ponto de impacto.</li>
+                </ul>
+                <div class="box-alerta">
+                    <strong>Atenção:</strong> A não apresentação dessas evidências pode resultar na perda do direito à indenização, total ou parcial, consoante a gravidade.
+                </div>
+            </div>
+        </div>
+        
+        <!-- Garantia de Sistemas de Monitorização -->
+        <div class="sub-section mt-20">
+            <div class="bold" style="color: #166534; font-size: 12pt;">GARANTIA DE SISTEMAS DE MONITORIZAÇÃO E CONTROLO</div>
+            <div class="condicoes">
+                <p>O segurado obriga-se a assegurar que todos os veículos comerciais segurados estejam equipados com sistemas eficazes de monitorização da velocidade e do comportamento dos condutores, que deverão cumprir rigorosamente as políticas internas da empresa e a legislação aplicável.</p>
+                <div class="box-alerta">
+                    <strong>Consequência:</strong> O incumprimento desta obrigação resulta na exclusão da cobertura para quaisquer perdas, danos ou responsabilidades decorrentes, incluindo excesso de velocidade, condução negligente, uso não autorizado ou falta de diligência na monitorização e aplicação das medidas corretivas.
+                </div>
+            </div>
+        </div>
+        
+        <!-- Cláusula do Valor Médio -->
+        <div class="sub-section mt-20">
+            <div class="bold" style="color: #166534; font-size: 12pt;">CLÁUSULA DO VALOR MÉDIO</div>
+            <div class="condicoes">
+                <p>Se, no momento do sinistro, o valor seguro dos bens declarado nas Condições Particulares for inferior ao valor de mercado dos mesmos, o Segurado será considerado responsável pela diferença, assumindo o papel de auto-segurador nesse montante.</p>
+                <p>Consequentemente, o Segurado deverá suportar, proporcionalmente, uma parte da perda, de acordo com a relação entre o valor seguro e o valor real do bem no momento do sinistro.</p>
+                <p><strong>Nota:</strong> Esta regra será aplicada separadamente a cada item segurado, quando houver mais de um.</p>
+            </div>
+        </div>
+        
+        <!-- Exclusões Gerais -->
+        <div class="section-title mt-30">EXCLUSÕES GERAIS</div>
+        
+        <div class="exclusoes">
+            <div>Bens sob os cuidados, custódia e controle do segurado</div>
+            <div>Abuso e molestamento</div>
+            <div>Amianto</div>
+            <div>Actos de Terrorismo</div>
+            <div>Violência Política e Terrorismo e riscos associados</div>
+            <div>Riscos nucleares</div>
+            <div>Guerra e guerra civil ou motim, greve e riscos semelhantes</div>
+            <div>Danos em obras, propriedade em construção</div>
+            <div>Perda Financeira Pura</div>
+            <div>Explosão, Combustão Espontânea</div>
+            <div>Danos Maliciosos</div>
+            <div>Comoção Civil</div>
+            <div>Sabotagem</div>
+            <div>Vandalização</div>
+            <div>Insurreição</div>
+            <div>Saques</div>
+            <div>Poluição Ambiental</div>
+            <div>Avarias mecânicas</div>
+            <div>Negligência do condutor</div>
+            <div>Condução sem habilitação legal válida</div>
+            <div>Condução sob efeito de álcool, drogas ou substâncias entorpecentes</div>
+            <div>Exclui-se o uso do veículo em corridas, testes, exibições ou eventos similares, salvo se contratada cobertura adicional específica e expressamente prevista na apólice</div>
+            <div>Perda ou dano resultante do abandono, entrega voluntária ou da falta de diligência razoável na proteção do veículo segurado</div>
+        </div>
+        
+        <div class="pagina-numero">Página 5 de 6</div>
+    </div>
+    
+    <!-- PÁGINA 6 -->
+    <div class="page">
+        <div class="header-timbrado">
+            <div class="logo-text">IMPERIAL SEGUROS</div>
+            <div class="titulo-cotacao">CLÁUSULAS FINAIS</div>
+        </div>
+        
+        <!-- Cláusula de Exclusão para Matrícula Estrangeira -->
+        <div class="sub-section">
+            <div class="bold" style="color: #166534; font-size: 12pt;">CLÁUSULA ADICIONAL DE EXCLUSÃO – VIATURAS COM MATRÍCULA ESTRANGEIRA</div>
+            <div class="condicoes">
+                <p>Para além das exclusões gerais previstas na apólice, ficam expressamente excluídas da cobertura as seguintes situações, quando se trate de viaturas com matrícula estrangeira:</p>
+                <ul>
+                    <li>Roubo ou furto total da viatura ocorrido fora do território da República de Moçambique;</li>
+                    <li>Roubo ou furto de acessórios da viatura ocorrido fora do território da República de Moçambique.</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Eficácia do Contrato -->
+        <div class="sub-section mt-20">
+            <div class="bold" style="color: #166534; font-size: 12pt;">EFICÁCIA DO CONTRATO E CONSEQUÊNCIA NA FALTA DO PAGAMENTO DO PRÉMIO</div>
+            <div class="condicoes">
+                <p>O prémio total para o período de cobertura é devido e pagável antes ou na data do seu início ou data de renovação, conforme o caso, e continua a ser da exclusiva responsabilidade do segurado garantir que o prémio seja atempadamente pago.</p>
+                <p><strong>Nota:</strong> A Seguradora não é obrigada a aceitar o prémio que lhe foi endereçado após a data de emissão ou data de renovação.</p>
+                <p>Esta apólice é um contrato anual para o qual a Seguradora pode aceitar o pagamento de prémio em prestações, mediante acordo prévio. A Seguradora se reserva o direito de deduzir o prémio total anual relativamente ao objecto sobre o qual um sinistro foi ou está a ser pago.</p>
+            </div>
+        </div>
+        
+        <!-- Divulgação de Factos Relevantes -->
+        <div class="sub-section mt-20">
+            <div class="bold" style="color: #166534; font-size: 12pt;">DIVULGAÇÃO DE FACTOS RELEVANTES</div>
+            <div class="condicoes">
+                <p>É dever do cliente divulgar todos os factores materiais antes do início da apólice ou renovação e durante o curso da apólice. Isso envolve o seguinte:</p>
+                <ol>
+                    <li>Divulgando todo o histórico de perdas pagas ou não pagas, seguradas ou não;</li>
+                    <li>Factores ou ameaças que podem causar perda ou dar lugar ao sinistro do bem segurado. Isso pode representar ameaças passadas;</li>
+                    <li>Quaisquer mudanças nos factores durante o curso da apólice.</li>
+                </ol>
+                <div class="box-alerta">
+                    <strong>Consequência Grave:</strong> A não divulgação dos fatores materiais ou a má interpretação dos fatores materiais tornará a apólice automaticamente nula, ou seja, a apólice não será válida desde o início. A seguradora reembolsará todos os prémios e se isso for descoberto no momento do sinistro, o sinistro não será pago e o prémio será devolvido ao cliente.
+                </div>
+            </div>
+        </div>
+        
+        <!-- Espaço para Observações -->
+        <div class="section-title mt-30">OBSERVAÇÕES ADICIONAIS</div>
+        
+        <div style="min-height: 150px; border: 1px dashed #999; padding: 15px; margin: 15px 0;">
+            <p style="color: #666; font-style: italic;">Espaço reservado para observações adicionais da seguradora ou do segurado:</p>
+            <br><br><br><br>
+        </div>
+        
+        <!-- Assinaturas Finais -->
+        <div style="margin-top: 40px;">
+            <table width="100%">
+                <tr>
+                    <td width="50%" style="text-align: center;">
+                        <div class="assinatura">
+                            <strong>PARA O SEGURADO</strong><br><br>
+                            Nome: _____________________________________<br><br>
+                            Assinatura: _________________________________<br><br>
+                            Data: ___/___/_____
+                        </div>
+                    </td>
+                    <td width="50%" style="text-align: center;">
+                        <div class="assinatura">
+                            <strong>PARA A SEGURADORA</strong><br><br>
+                            Nome: _____________________________________<br><br>
+                            Assinatura: _________________________________<br><br>
+                            Data: ___/___/_____
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- Informações de Contacto -->
+        <div class="text-center mt-30" style="font-size: 9pt; color: #666; border-top: 1px solid #eee; padding-top: 15px;">
+            <div><strong>IMPERIAL SEGUROS MOÇAMBIQUE, S.A.</strong></div>
+            <div>Av. 25 de Setembro, nº 1234 • Maputo • Moçambique</div>
+            <div>Telefone: +258 84 123 4567 • Email: contacto@imperialseguros.co.mz</div>
+            <div>Website: www.imperialseguros.co.mz • NUIT: 500000000</div>
+        </div>
+        
+        <div class="pagina-numero">Página 6 de 6</div>
+    </div>
+    
+    <!-- Instruções para uso -->
+    <div class="no-print" style="background-color: #f8f9fa; padding: 20px; border: 1px solid #dee2e6; margin: 20px; border-radius: 5px;">
+        <h3 style="color: #166534; margin-bottom: 15px;">Instruções de Uso:</h3>
+        <ul style="color: #666;">
+            <li>Este documento está formatado para impressão em formato A4</li>
+            <li>Para salvar como PDF: Use a opção "Imprimir" do navegador e selecione "Salvar como PDF"</li>
+            <li>Para salvar como Word: Copie todo o conteúdo e cole em um documento Word</li>
+            <li>As tabelas estão otimizadas para impressão</li>
+            <li>Os números de página aparecerão automaticamente ao imprimir</li>
+        </ul>
+        <button onclick="window.print()" style="background-color: #166534; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px;">
+            🖨️ Imprimir Documento
+        </button>
+    </div>
+    
+    <script>
+        // Adiciona a data atual automaticamente
+        document.addEventListener('DOMContentLoaded', function() {
+            const hoje = new Date();
+            const dia = hoje.getDate().toString().padStart(2, '0');
+            const mes = (hoje.getMonth() + 1).toString().padStart(2, '0');
+            const ano = hoje.getFullYear();
+            const dataFormatada = `${dia}/${mes}/${ano}`;
+            
+            // Atualiza todas as datas em branco
+            const elementosData = document.querySelectorAll('.linha-pontilhada');
+            elementosData.forEach(el => {
+                if (el.textContent.includes('___/___/_____')) {
+                    el.textContent = dataFormatada;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

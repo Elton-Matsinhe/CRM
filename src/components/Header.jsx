@@ -21,9 +21,13 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
+import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const Header = ({ sidebarOpen, setSidebarOpen }) => {
-  const { theme, setTheme, language, setLanguage, themeConfig } = useTheme();
+  const { theme, setTheme, language, setLanguage } = useTheme();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
@@ -142,23 +146,23 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
   // Função para obter ícone baseado no tipo
   const getNotificationIcon = (type) => {
     switch (type) {
-      case 'approval': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'approval': return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'expiry': return <Clock className="h-4 w-4 text-amber-500" />;
       case 'achievement': return <TrendingUp className="h-4 w-4 text-blue-500" />;
-      case 'policy': return <FileText className="h-4 w-4 text-emerald-500" />;
-      case 'admin': return <Shield className="h-4 w-4 text-purple-500" />;
-      case 'system': return <Activity className="h-4 w-4 text-cyan-500" />;
-      default: return <Bell className="h-4 w-4 text-slate-500" />;
+      case 'policy': return <FileText className="h-4 w-4 text-emerald-600" />;
+      case 'admin': return <Shield className="h-4 w-4 text-purple-600" />;
+      case 'system': return <Activity className="h-4 w-4 text-cyan-600" />;
+      default: return <Bell className="h-4 w-4 text-gray-500" />;
     }
   };
 
   // Função para obter cor de prioridade
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'high': return 'rgba(239, 68, 68, 0.1)';
+      case 'high': return 'rgba(22, 163, 74, 0.1)'; // Verde claro
       case 'medium': return 'rgba(245, 158, 11, 0.1)';
-      case 'low': return 'rgba(74, 222, 128, 0.05)';
-      default: return 'rgba(74, 222, 128, 0.05)';
+      case 'low': return 'rgba(22, 163, 74, 0.05)'; // Verde muito claro
+      default: return 'rgba(22, 163, 74, 0.05)';
     }
   };
 
@@ -189,6 +193,16 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
     setTheme(themeName);
   };
 
+  // Função para fazer logout
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
+  };
+
   // Função para obter texto baseado no idioma
   const getText = (pt, en, fr) => {
     switch (language) {
@@ -199,12 +213,24 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
     }
   };
 
+  // Obter cores do tema atual - FUNDO BRANCO PARA TODOS
+  const getHeaderStyle = () => {
+    return {
+      background: '#ffffff',
+      color: '#000000', // Texto preto
+      borderColor: '#e5e7eb' // Border cinza claro
+    };
+  };
+
+  const headerStyle = getHeaderStyle();
+
   return (
     <header 
-      className="sticky top-0 z-40 backdrop-blur-2xl border-b shadow-sm transition-all duration-500"
+      className="sticky top-0 z-40 border-b shadow-sm transition-all duration-500"
       style={{
-        background: themeConfig.background,
-        borderColor: themeConfig.border
+        background: headerStyle.background,
+        color: headerStyle.color,
+        borderColor: headerStyle.borderColor
       }}
     >
       <div className="px-6 py-4">
@@ -215,35 +241,33 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
             {/* Botão Menu */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-xl transition-all duration-300 hover:scale-105 backdrop-blur-sm group"
-              style={{
-                background: 'rgba(74, 222, 128, 0.1)',
-                border: '1px solid rgba(74, 222, 128, 0.2)'
-              }}
+              className="p-2 rounded-xl transition-all duration-300 hover:scale-105 group hover:bg-green-50 border border-gray-200"
             >
-              <Menu className="h-5 w-5 transition-colors duration-300 group-hover:text-emerald-300" style={{ color: '#a7f3d0' }} />
+              <Menu className="h-5 w-5 text-green-600 transition-colors duration-300 group-hover:text-green-700" />
             </button>
 
             {/* Navegação */}
             <div className="hidden md:flex items-center space-x-3">
-              <span className="text-sm font-medium px-3 py-1 rounded-full backdrop-blur-sm" 
-                style={{ 
-                  background: 'rgba(74, 222, 128, 0.1)',
-                  color: '#86efac',
-                  border: '1px solid rgba(74, 222, 128, 0.2)'
-                }}>
+              <span 
+                className="text-sm font-medium px-3 py-1 rounded-full border"
+                style={{
+                  background: '#16a34a', // Verde
+                  color: '#ffffff',
+                  borderColor: '#16a34a'
+                }}
+              >
                 CRM Imperial
               </span>
-              <span style={{ color: 'rgba(74, 222, 128, 0.3)' }}>•</span>
-              <span className="text-sm font-semibold text-white">
+              <span style={{ color: '#000000' }}>•</span>
+              <span className="text-sm font-semibold" style={{ color: '#000000' }}>
                 {getText("Painel Administrativo", "Admin Dashboard", "Tableau de Bord Admin")}
               </span>
             </div>
 
-            {/* Barra de Pesquisa Dinâmica - SEM LINHA VERDE */}
+            {/* Barra de Pesquisa Dinâmica */}
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4" style={{ color: 'rgba(134, 239, 172, 0.6)' }} />
+                <Search className="h-4 w-4 text-gray-400" />
               </div>
               <input
                 ref={searchInputRef}
@@ -256,13 +280,11 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                   "Search quotes, policies, agents...",
                   "Rechercher devis, polices, agents..."
                 )}
-                className="pl-10 pr-12 py-2.5 w-80 rounded-xl focus:ring-2 transition-all duration-300 placeholder-opacity-60 backdrop-blur-sm text-sm"
+                className="pl-10 pr-12 py-2.5 w-80 rounded-xl focus:ring-2 transition-all duration-300 placeholder-gray-400 border text-sm"
                 style={{
-                  background: 'rgba(74, 222, 128, 0.05)',
-                  border: '1px solid rgba(74, 222, 128, 0.2)',
-                  color: '#ffffff',
-                  focusRing: 'rgba(74, 222, 128, 0.5)',
-                  placeholderColor: 'rgba(134, 239, 172, 0.6)'
+                  background: '#ffffff',
+                  borderColor: '#d1d5db',
+                  color: '#000000'
                 }}
               />
               {/* Botão de Pesquisa Dinâmico */}
@@ -271,70 +293,50 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                 disabled={!searchQuery.trim()}
                 className={`absolute inset-y-0 right-0 pr-3 flex items-center transition-all duration-300 ${
                   searchQuery.trim() 
-                    ? 'text-emerald-400 hover:text-emerald-300 cursor-pointer' 
-                    : 'text-gray-500 cursor-not-allowed'
+                    ? 'text-green-600 hover:text-green-700 cursor-pointer' 
+                    : 'text-gray-400 cursor-not-allowed'
                 }`}
               >
                 <Search className="h-4 w-4" />
               </button>
-              
-              {/* REMOVIDA: Linha verde que aparecia durante a pesquisa */}
             </div>
           </div>
 
           {/* Lado Direito: Ações Rápidas */}
           <div className="flex items-center space-x-3">
-            {/* Seleção de Tema - Verde, Cinza, Branco */}
+            {/* Seleção de Tema - Branco, Verde, Preto */}
             <div className="flex items-center space-x-2">
+              {/* Branco (Primeira opção) */}
+              <button
+                onClick={() => handleThemeChange('branco')}
+                className={`p-2 rounded-xl transition-all duration-300 hover:scale-110 border-2 ${
+                  theme === 'branco' ? 'ring-2 ring-offset-2 ring-gray-300' : ''
+                } bg-white hover:bg-gray-50 border-gray-300`}
+                title={getText("Tema Branco", "White Theme", "Thème Blanc")}
+              >
+                <div className="w-4 h-4 rounded-full bg-gradient-to-br from-white to-gray-100 border border-gray-300"></div>
+              </button>
+              
               {/* Verde */}
               <button
                 onClick={() => handleThemeChange('verde')}
-                className={`p-2 rounded-xl transition-all duration-300 hover:scale-110 backdrop-blur-sm border-2 ${
-                  theme === 'verde' ? 'ring-2 ring-offset-2' : ''
-                }`}
-                style={{
-                  background: theme === 'verde' ? 'rgba(74, 222, 128, 0.2)' : 'rgba(74, 222, 128, 0.1)',
-                  borderColor: theme === 'verde' ? '#4ade80' : 'rgba(74, 222, 128, 0.2)',
-                  ringColor: '#4ade80',
-                  ringOffsetColor: themeConfig.background
-                }}
+                className={`p-2 rounded-xl transition-all duration-300 hover:scale-110 border-2 ${
+                  theme === 'verde' ? 'ring-2 ring-offset-2 ring-green-500' : ''
+                } bg-white hover:bg-green-50 border-green-300`}
                 title={getText("Tema Verde", "Green Theme", "Thème Vert")}
               >
-                <div className="w-4 h-4 rounded-full bg-gradient-to-br from-emerald-400 to-green-600"></div>
+                <div className="w-4 h-4 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
               </button>
               
-              {/* Cinza */}
+              {/* Preto */}
               <button
-                onClick={() => handleThemeChange('cinza')}
-                className={`p-2 rounded-xl transition-all duration-300 hover:scale-110 backdrop-blur-sm border-2 ${
-                  theme === 'cinza' ? 'ring-2 ring-offset-2' : ''
-                }`}
-                style={{
-                  background: theme === 'cinza' ? 'rgba(107, 114, 128, 0.2)' : 'rgba(107, 114, 128, 0.1)',
-                  borderColor: theme === 'cinza' ? '#6b7280' : 'rgba(107, 114, 128, 0.2)',
-                  ringColor: '#6b7280',
-                  ringOffsetColor: themeConfig.background
-                }}
-                title={getText("Tema Cinza", "Gray Theme", "Thème Gris")}
+                onClick={() => handleThemeChange('preto')}
+                className={`p-2 rounded-xl transition-all duration-300 hover:scale-110 border-2 ${
+                  theme === 'preto' ? 'ring-2 ring-offset-2 ring-black' : ''
+                } bg-white hover:bg-gray-100 border-gray-700`}
+                title={getText("Tema Preto", "Black Theme", "Thème Noir")}
               >
-                <div className="w-4 h-4 rounded-full bg-gradient-to-br from-gray-400 to-gray-600"></div>
-              </button>
-              
-              {/* Branco */}
-              <button
-                onClick={() => handleThemeChange('branco')}
-                className={`p-2 rounded-xl transition-all duration-300 hover:scale-110 backdrop-blur-sm border-2 ${
-                  theme === 'branco' ? 'ring-2 ring-offset-2' : ''
-                }`}
-                style={{
-                  background: theme === 'branco' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)',
-                  borderColor: theme === 'branco' ? '#ffffff' : 'rgba(255, 255, 255, 0.2)',
-                  ringColor: '#ffffff',
-                  ringOffsetColor: themeConfig.background
-                }}
-                title={getText("Tema Branco", "White Theme", "Thème Blanc")}
-              >
-                <div className="w-4 h-4 rounded-full bg-gradient-to-br from-white to-gray-200"></div>
+                <div className="w-4 h-4 rounded-full bg-gradient-to-br from-gray-700 to-black"></div>
               </button>
             </div>
 
@@ -346,20 +348,12 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                   setIsNotificationsOpen(false);
                   setIsSettingsOpen(false);
                 }}
-                className="relative p-2 rounded-xl transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
-                style={{
-                  background: 'rgba(74, 222, 128, 0.1)',
-                  border: '1px solid rgba(74, 222, 128, 0.2)'
-                }}
+                className="relative p-2 rounded-xl transition-all duration-300 hover:scale-110 group hover:bg-green-50 border border-gray-200"
               >
-                <MessageSquare className="h-5 w-5 transition-colors duration-300 group-hover:text-cyan-300" style={{ color: '#86efac' }} />
+                <MessageSquare className="h-5 w-5 text-green-600 transition-colors duration-300 group-hover:text-green-700" />
                 {unreadMessages > 0 && (
                   <span 
-                    className="absolute -top-1 -right-1 w-5 h-5 text-xs rounded-full flex items-center justify-center animate-pulse font-medium"
-                    style={{
-                      background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                      color: 'white'
-                    }}
+                    className="absolute -top-1 -right-1 w-5 h-5 text-xs rounded-full flex items-center justify-center animate-pulse font-medium bg-green-600 text-white"
                   >
                     {unreadMessages}
                   </span>
@@ -369,18 +363,14 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
               {/* Dropdown Mensagens */}
               {isMessagesOpen && (
                 <div 
-                  className="absolute right-0 mt-2 w-96 rounded-xl shadow-2xl backdrop-blur-xl z-50 animate-slideDown"
-                  style={{
-                    background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)',
-                    border: '1px solid rgba(74, 222, 128, 0.2)'
-                  }}
+                  className="absolute right-0 mt-2 w-96 rounded-xl shadow-2xl bg-white border border-gray-200 z-50 animate-slideDown"
                 >
-                  <div className="p-4 border-b" style={{ borderColor: 'rgba(74, 222, 128, 0.1)' }}>
+                  <div className="p-4 border-b border-gray-100">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-white text-base">
+                      <h3 className="font-semibold text-gray-900 text-base">
                         {getText("Mensagens do Sistema", "System Messages", "Messages du Système")}
                       </h3>
-                      <span className="text-sm px-2 py-1 rounded-full" style={{ background: 'rgba(74, 222, 128, 0.1)', color: '#86efac' }}>
+                      <span className="text-sm px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
                         {unreadMessages} {getText("não lidas", "unread", "non lues")}
                       </span>
                     </div>
@@ -389,12 +379,10 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                     {messages.map((message) => (
                       <div
                         key={message.id}
-                        className={`p-3 border-b transition-all duration-200 hover:bg-opacity-20 ${
-                          message.unread ? "border-l-4" : ""
+                        className={`p-3 border-b border-gray-100 transition-all duration-200 hover:bg-green-50 ${
+                          message.unread ? "border-l-4 border-green-500" : ""
                         }`}
                         style={{ 
-                          borderColor: 'rgba(74, 222, 128, 0.1)',
-                          borderLeftColor: message.unread ? '#4ade80' : 'transparent',
                           background: message.unread ? getPriorityColor(message.priority) : 'transparent'
                         }}
                       >
@@ -403,27 +391,23 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                             {getNotificationIcon(message.type)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white leading-tight">
+                            <p className="text-sm font-medium text-gray-900 leading-tight">
                               {message.text}
                             </p>
-                            <p className="text-xs mt-1" style={{ color: '#86efac' }}>
+                            <p className="text-xs mt-1 text-green-600">
                               {message.time}
                             </p>
                           </div>
                           {message.unread && (
-                            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#4ade80' }}></div>
+                            <div className="w-2 h-2 rounded-full animate-pulse bg-green-500"></div>
                           )}
                         </div>
                       </div>
                     ))}
                   </div>
-                  <div className="p-3 border-t" style={{ borderColor: 'rgba(74, 222, 128, 0.1)' }}>
+                  <div className="p-3 border-t border-gray-100">
                     <button 
-                      className="w-full text-center text-sm font-medium py-2 rounded-lg transition-all duration-200 hover:bg-opacity-20"
-                      style={{
-                        color: '#4ade80',
-                        background: 'rgba(74, 222, 128, 0.1)'
-                      }}
+                      className="w-full text-center text-sm font-medium py-2 rounded-lg transition-all duration-200 hover:bg-green-50 text-green-700 border border-green-200"
                     >
                       {getText("Ver Todas as Mensagens", "View All Messages", "Voir Tous les Messages")}
                     </button>
@@ -440,20 +424,12 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                   setIsMessagesOpen(false);
                   setIsSettingsOpen(false);
                 }}
-                className="relative p-2 rounded-xl transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
-                style={{
-                  background: 'rgba(74, 222, 128, 0.1)',
-                  border: '1px solid rgba(74, 222, 128, 0.2)'
-                }}
+                className="relative p-2 rounded-xl transition-all duration-300 hover:scale-110 group hover:bg-green-50 border border-gray-200"
               >
-                <Bell className="h-5 w-5 transition-colors duration-300 group-hover:text-cyan-300" style={{ color: '#86efac' }} />
+                <Bell className="h-5 w-5 text-green-600 transition-colors duration-300 group-hover:text-green-700" />
                 {unreadNotifications > 0 && (
                   <span 
-                    className="absolute -top-1 -right-1 w-5 h-5 text-xs rounded-full flex items-center justify-center animate-pulse font-medium"
-                    style={{
-                      background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                      color: 'white'
-                    }}
+                    className="absolute -top-1 -right-1 w-5 h-5 text-xs rounded-full flex items-center justify-center animate-pulse font-medium bg-green-600 text-white"
                   >
                     {unreadNotifications}
                   </span>
@@ -463,18 +439,14 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
               {/* Dropdown Notificações */}
               {isNotificationsOpen && (
                 <div 
-                  className="absolute right-0 mt-2 w-96 rounded-xl shadow-2xl backdrop-blur-xl z-50 animate-slideDown"
-                  style={{
-                    background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)',
-                    border: '1px solid rgba(74, 222, 128, 0.2)'
-                  }}
+                  className="absolute right-0 mt-2 w-96 rounded-xl shadow-2xl bg-white border border-gray-200 z-50 animate-slideDown"
                 >
-                  <div className="p-4 border-b" style={{ borderColor: 'rgba(74, 222, 128, 0.1)' }}>
+                  <div className="p-4 border-b border-gray-100">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-white text-base">
+                      <h3 className="font-semibold text-gray-900 text-base">
                         {getText("Notificações CRM", "CRM Notifications", "Notifications CRM")}
                       </h3>
-                      <span className="text-sm px-2 py-1 rounded-full" style={{ background: 'rgba(74, 222, 128, 0.1)', color: '#86efac' }}>
+                      <span className="text-sm px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
                         {unreadNotifications} {getText("não lidas", "unread", "non lues")}
                       </span>
                     </div>
@@ -483,12 +455,10 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                     {notifications.map((notification) => (
                       <div
                         key={notification.id}
-                        className={`p-3 border-b transition-all duration-200 hover:bg-opacity-20 ${
-                          notification.unread ? "border-l-4" : ""
+                        className={`p-3 border-b border-gray-100 transition-all duration-200 hover:bg-green-50 ${
+                          notification.unread ? "border-l-4 border-green-500" : ""
                         }`}
                         style={{ 
-                          borderColor: 'rgba(74, 222, 128, 0.1)',
-                          borderLeftColor: notification.unread ? '#4ade80' : 'transparent',
                           background: notification.unread ? getPriorityColor(notification.priority) : 'transparent'
                         }}
                       >
@@ -497,27 +467,23 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                             {getNotificationIcon(notification.type)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white leading-tight">
+                            <p className="text-sm font-medium text-gray-900 leading-tight">
                               {notification.text}
                             </p>
-                            <p className="text-xs mt-1" style={{ color: '#86efac' }}>
+                            <p className="text-xs mt-1 text-green-600">
                               {notification.time}
                             </p>
                           </div>
                           {notification.unread && (
-                            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#4ade80' }}></div>
+                            <div className="w-2 h-2 rounded-full animate-pulse bg-green-500"></div>
                           )}
                         </div>
                       </div>
                     ))}
                   </div>
-                  <div className="p-3 border-t" style={{ borderColor: 'rgba(74, 222, 128, 0.1)' }}>
+                  <div className="p-3 border-t border-gray-100">
                     <button 
-                      className="w-full text-center text-sm font-medium py-2 rounded-lg transition-all duration-200 hover:bg-opacity-20"
-                      style={{
-                        color: '#4ade80',
-                        background: 'rgba(74, 222, 128, 0.1)'
-                      }}
+                      className="w-full text-center text-sm font-medium py-2 rounded-lg transition-all duration-200 hover:bg-green-50 text-green-700 border border-green-200"
                     >
                       {getText("Ver Todas as Notificações", "View All Notifications", "Voir Toutes les Notifications")}
                     </button>
@@ -534,26 +500,18 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                   setIsMessagesOpen(false);
                   setIsNotificationsOpen(false);
                 }}
-                className="p-2 rounded-xl transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
-                style={{
-                  background: 'rgba(74, 222, 128, 0.1)',
-                  border: '1px solid rgba(74, 222, 128, 0.2)'
-                }}
+                className="p-2 rounded-xl transition-all duration-300 hover:scale-110 group hover:bg-green-50 border border-gray-200"
               >
-                <Settings className="h-5 w-5 transition-colors duration-300 group-hover:text-cyan-300" style={{ color: '#86efac' }} />
+                <Settings className="h-5 w-5 text-green-600 transition-colors duration-300 group-hover:text-green-700" />
               </button>
 
               {/* Dropdown Configurações */}
               {isSettingsOpen && (
                 <div 
-                  className="absolute right-0 mt-2 w-64 rounded-xl shadow-2xl backdrop-blur-xl z-50 animate-slideDown"
-                  style={{
-                    background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)',
-                    border: '1px solid rgba(74, 222, 128, 0.2)'
-                  }}
+                  className="absolute right-0 mt-2 w-64 rounded-xl shadow-2xl bg-white border border-gray-200 z-50 animate-slideDown"
                 >
-                  <div className="p-4 border-b" style={{ borderColor: 'rgba(74, 222, 128, 0.1)' }}>
-                    <h3 className="font-semibold text-white text-base">
+                  <div className="p-4 border-b border-gray-100">
+                    <h3 className="font-semibold text-gray-900 text-base">
                       {getText("Configurações", "Settings", "Paramètres")}
                     </h3>
                   </div>
@@ -561,7 +519,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                   <div className="p-2">
                     {/* Idioma */}
                     <div className="mb-2">
-                      <p className="text-xs font-medium px-3 mb-2" style={{ color: '#86efac' }}>
+                      <p className="text-xs font-medium px-3 mb-2 text-green-700">
                         {getText("Idioma", "Language", "Langue")}
                       </p>
                       {languages.map((lang) => (
@@ -570,47 +528,42 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                           onClick={() => handleLanguageChange(lang.code)}
                           className={`w-full flex items-center space-x-3 px-3 py-2 text-left rounded-lg transition-all duration-200 mb-1 ${
                             language === lang.code 
-                              ? 'bg-emerald-500/20 border border-emerald-500/30' 
-                              : 'hover:bg-white/5'
+                              ? 'bg-green-50 border border-green-200' 
+                              : 'hover:bg-green-50'
                           }`}
                         >
-                          <span className="text-base" style={{ filter: 'brightness(1.2)' }}>{lang.flag}</span>
-                          <span className="text-sm text-white flex-1">{lang.name}</span>
-                          <span className="text-xs px-2 py-1 rounded font-medium" 
-                            style={{ 
-                              background: 'rgba(74, 222, 128, 0.2)', 
-                              color: '#86efac',
-                              border: '1px solid rgba(74, 222, 128, 0.3)'
-                            }}>
+                          <span className="text-base">{lang.flag}</span>
+                          <span className="text-sm text-gray-900 flex-1">{lang.name}</span>
+                          <span className="text-xs px-2 py-1 rounded font-medium bg-green-50 text-green-700 border border-green-200">
                             {lang.shortName}
                           </span>
                           {language === lang.code && (
-                            <CheckCircle className="h-4 w-4 text-emerald-400" />
+                            <CheckCircle className="h-4 w-4 text-green-600" />
                           )}
                         </button>
                       ))}
                     </div>
 
-                    <div className="border-t my-2" style={{ borderColor: 'rgba(74, 222, 128, 0.1)' }}></div>
+                    <div className="border-t my-2 border-gray-100"></div>
 
                     {/* Outras Configurações */}
-                    <button className="w-full flex items-center space-x-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 hover:bg-white/5 group">
-                      <UserCog className="h-4 w-4" style={{ color: '#86efac' }} />
-                      <span className="text-sm text-white group-hover:text-emerald-300">
+                    <button className="w-full flex items-center space-x-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 hover:bg-green-50 group">
+                      <UserCog className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-gray-900 group-hover:text-green-700">
                         {getText("Preferências", "Preferences", "Préférences")}
                       </span>
                     </button>
 
-                    <button className="w-full flex items-center space-x-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 hover:bg-white/5 group">
-                      <Database className="h-4 w-4" style={{ color: '#86efac' }} />
-                      <span className="text-sm text-white group-hover:text-emerald-300">
+                    <button className="w-full flex items-center space-x-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 hover:bg-green-50 group">
+                      <Database className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-gray-900 group-hover:text-green-700">
                         {getText("Backup & Restauro", "Backup & Restore", "Sauvegarde & Restauration")}
                       </span>
                     </button>
 
-                    <button className="w-full flex items-center space-x-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 hover:bg-white/5 group">
-                      <ShieldCheck className="h-4 w-4" style={{ color: '#86efac' }} />
-                      <span className="text-sm text-white group-hover:text-emerald-300">
+                    <button className="w-full flex items-center space-x-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 hover:bg-green-50 group">
+                      <ShieldCheck className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-gray-900 group-hover:text-green-700">
                         {getText("Segurança", "Security", "Sécurité")}
                       </span>
                     </button>
@@ -626,25 +579,21 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                   setIsProfileOpen(!isProfileOpen);
                   setIsSettingsOpen(false);
                 }}
-                className="flex items-center space-x-3 p-2 rounded-xl transition-all duration-300 group backdrop-blur-sm"
-                style={{
-                  background: 'rgba(74, 222, 128, 0.1)',
-                  border: '1px solid rgba(74, 222, 128, 0.2)'
-                }}
+                className="flex items-center space-x-3 p-2 rounded-xl transition-all duration-300 group hover:bg-green-50 border border-gray-200"
               >
                 <div 
-                  className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg transition-all duration-300 group-hover:shadow-emerald-500/25"
+                  className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg transition-all duration-300 group-hover:shadow-green-200"
                   style={{
-                    background: 'linear-gradient(135deg, #4ade80, #22c55e)'
+                    background: 'linear-gradient(135deg, #16a34a, #15803d)' // Gradiente verde
                   }}
                 >
                   <Shield className="h-4 w-4 text-white" />
                 </div>
                 <div className="hidden lg:block text-left">
-                  <p className="text-sm font-semibold text-white leading-tight">
+                  <p className="text-sm font-semibold text-gray-900 leading-tight">
                     Elton Matsinhe
                   </p>
-                  <p className="text-xs" style={{ color: '#86efac' }}>
+                  <p className="text-xs text-green-700">
                     {getText("Administrador", "Administrator", "Administrateur")}
                   </p>
                 </div>
@@ -653,27 +602,23 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
               {/* Dropdown Perfil */}
               {isProfileOpen && (
                 <div 
-                  className="absolute right-0 mt-2 w-64 rounded-xl shadow-2xl backdrop-blur-xl z-50 animate-slideDown"
-                  style={{
-                    background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)',
-                    border: '1px solid rgba(74, 222, 128, 0.2)'
-                  }}
+                  className="absolute right-0 mt-2 w-64 rounded-xl shadow-2xl bg-white border border-gray-200 z-50 animate-slideDown"
                 >
-                  <div className="p-4 border-b" style={{ borderColor: 'rgba(74, 222, 128, 0.1)' }}>
+                  <div className="p-4 border-b border-gray-100">
                     <div className="flex items-center space-x-3">
                       <div 
                         className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
                         style={{
-                          background: 'linear-gradient(135deg, #4ade80, #22c55e)'
+                          background: 'linear-gradient(135deg, #16a34a, #15803d)'
                         }}
                       >
                         <Shield className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <p className="font-semibold text-white text-sm">
+                        <p className="font-semibold text-gray-900 text-sm">
                           Elton Matsinhe
                         </p>
-                        <p className="text-xs" style={{ color: '#86efac' }}>
+                        <p className="text-xs text-green-700">
                           {getText("Administrador do Sistema", "System Administrator", "Administrateur Système")}
                         </p>
                       </div>
@@ -681,32 +626,35 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                   </div>
 
                   <div className="p-2">
-                    <button className="w-full flex items-center space-x-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 hover:bg-white/5 group">
-                      <User className="h-4 w-4" style={{ color: '#86efac' }} />
-                      <span className="text-sm text-white group-hover:text-emerald-300">
+                    <button className="w-full flex items-center space-x-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 hover:bg-green-50 group">
+                      <User className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-gray-900 group-hover:text-green-700">
                         {getText("Meu Perfil", "My Profile", "Mon Profil")}
                       </span>
                     </button>
 
-                    <button className="w-full flex items-center space-x-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 hover:bg-white/5 group">
-                      <Settings className="h-4 w-4" style={{ color: '#86efac' }} />
-                      <span className="text-sm text-white group-hover:text-emerald-300">
+                    <button className="w-full flex items-center space-x-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 hover:bg-green-50 group">
+                      <Settings className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-gray-900 group-hover:text-green-700">
                         {getText("Configurações", "Settings", "Paramètres")}
                       </span>
                     </button>
 
-                    <button className="w-full flex items-center space-x-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 hover:bg-white/5 group">
-                      <BarChart3 className="h-4 w-4" style={{ color: '#86efac' }} />
-                      <span className="text-sm text-white group-hover:text-emerald-300">
+                    <button className="w-full flex items-center space-x-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 hover:bg-green-50 group">
+                      <BarChart3 className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-gray-900 group-hover:text-green-700">
                         {getText("Relatórios", "Reports", "Rapports")}
                       </span>
                     </button>
 
-                    <div className="border-t my-2" style={{ borderColor: 'rgba(74, 222, 128, 0.1)' }}></div>
+                    <div className="border-t my-2 border-gray-100"></div>
 
-                    <button className="w-full flex items-center space-x-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 hover:bg-red-500/10 group">
-                      <LogOut className="h-4 w-4 text-red-400" />
-                      <span className="text-sm text-white group-hover:text-red-400">
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full flex items-center space-x-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 hover:bg-red-50 group"
+                    >
+                      <LogOut className="h-4 w-4 text-red-600" />
+                      <span className="text-sm text-gray-900 group-hover:text-red-700">
                         {getText("Terminar Sessão", "Logout", "Déconnexion")}
                       </span>
                     </button>
@@ -721,10 +669,10 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
         <div className="flex items-center justify-between">
           {/* Saudação */}
           <div>
-            <h1 className="text-2xl font-bold text-white">
+            <h1 className="text-2xl font-bold" style={{ color: '#000000' }}>
               {getText("Olá, Administrador! 👋", "Hello, Administrator! 👋", "Bonjour, Administrateur! 👋")}
             </h1>
-            <p className="mt-1 text-sm" style={{ color: '#86efac' }}>
+            <p className="mt-1 text-sm" style={{ color: '#374151' }}>
               {getText(
                 "Aqui está o resumo do desempenho do sistema hoje",
                 "Here's today's system performance summary", 
@@ -736,51 +684,51 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
           {/* Métricas Rápidas */}
           <div className="flex items-center space-x-6">
             <div className="text-center">
-              <div className="flex items-center space-x-2">
-                <FileText className="h-4 w-4" style={{ color: '#4ade80' }} />
-                <span className="text-sm font-semibold text-white">{crmMetrics.totalQuotes}</span>
+              <div className="flex items-center space-x-2 justify-center">
+                <FileText className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-semibold text-black">{crmMetrics.totalQuotes}</span>
               </div>
-              <p className="text-xs mt-1" style={{ color: '#86efac' }}>
+              <p className="text-xs mt-1 text-gray-700">
                 {getText("Cotações", "Quotes", "Devis")}
               </p>
             </div>
 
             <div className="text-center">
-              <div className="flex items-center space-x-2">
-                <Clock className="h-4 w-4 text-amber-400" />
-                <span className="text-sm font-semibold text-white">{crmMetrics.pendingApproval}</span>
+              <div className="flex items-center space-x-2 justify-center">
+                <Clock className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-semibold text-black">{crmMetrics.pendingApproval}</span>
               </div>
-              <p className="text-xs mt-1" style={{ color: '#86efac' }}>
+              <p className="text-xs mt-1 text-gray-700">
                 {getText("Pendentes", "Pending", "En Attente")}
               </p>
             </div>
 
             <div className="text-center">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4 text-green-400" />
-                <span className="text-sm font-semibold text-white">{crmMetrics.policiesIssued}</span>
+              <div className="flex items-center space-x-2 justify-center">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-semibold text-black">{crmMetrics.policiesIssued}</span>
               </div>
-              <p className="text-xs mt-1" style={{ color: '#86efac' }}>
+              <p className="text-xs mt-1 text-gray-700">
                 {getText("Apólices", "Policies", "Polices")}
               </p>
             </div>
 
             <div className="text-center">
-              <div className="flex items-center space-x-2">
-                <Users className="h-4 w-4 text-blue-400" />
-                <span className="text-sm font-semibold text-white">{crmMetrics.activeAgents}</span>
+              <div className="flex items-center space-x-2 justify-center">
+                <Users className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-semibold text-black">{crmMetrics.activeAgents}</span>
               </div>
-              <p className="text-xs mt-1" style={{ color: '#86efac' }}>
+              <p className="text-xs mt-1 text-gray-700">
                 {getText("Agentes", "Agents", "Agents")}
               </p>
             </div>
 
             <div className="text-center">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4 text-purple-400" />
-                <span className="text-sm font-semibold text-white">{crmMetrics.conversionRate}</span>
+              <div className="flex items-center space-x-2 justify-center">
+                <TrendingUp className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-semibold text-black">{crmMetrics.conversionRate}</span>
               </div>
-              <p className="text-xs mt-1" style={{ color: '#86efac' }}>
+              <p className="text-xs mt-1 text-gray-700">
                 {getText("Conversão", "Conversion", "Conversion")}
               </p>
             </div>
