@@ -1,770 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, Filter, Eye, Phone, MapPin, Clock, CheckCircle,
   Calendar, User, MessageSquare, FileText, TrendingUp,
   XCircle, AlertCircle, ChevronRight, Printer, Send, Mail,
   Upload, X, Check, ChevronLeft, Download, FileCheck, SendHorizontal,
-  FileUp, CheckSquare, ChevronsLeft, ChevronsRight, Ban
+  FileUp, CheckSquare, ChevronsLeft, ChevronsRight, Ban, Loader2
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { cotacaoService, followUpService, usuarioService } from '../services/api';
 
-const initialCotacoes = [
-  {
-    id: 'CT-2024-001',
-    cliente: 'João Santos',
-    tipo: 'Automóvel',
-    valor: 85000,
-    dataCriacao: '2024-01-15',
-    status: 'ativa',
-    finalizada: false,
-    agente: 'Maria Silva',
-    agenteInicial: 'Maria Silva',
-    subscritorFinalizou: '',
-    encerradoPor: '',
-    telefone: '+258 84 123 4567',
-    email: 'joao.santos@email.com',
-    estagio: 'Negociação',
-    progresso: [
-      { etapa: 'Criação', data: '2024-01-15', status: 'concluida', tipo: 'sistema' },
-      { etapa: 'Envio ao Cliente', data: '2024-01-16', status: 'concluida', tipo: 'email' },
-      { etapa: 'Contato Telefônico', data: '2024-01-17', status: 'concluida', tipo: 'telefone' },
-      { etapa: 'Visita ao Cliente', data: '2024-01-18', status: 'concluida', tipo: 'visita' },
-      { etapa: 'Negociação', data: '2024-01-20', status: 'em_andamento', tipo: 'telefone' },
-      { etapa: 'Aprovação', data: null, status: 'pendente', tipo: null }
-    ],
-    ultimaAtualizacao: '2024-01-20',
-    motivoNaoFinalizada: 'Aguardando resposta do cliente sobre condições',
-    motivoRecusa: '',
-    proximaAcao: 'Ligar novamente em 2 dias',
-    acompanhamentoSemanas: [
-      {
-        semana: 1,
-        data: '2024-01-22',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 2,
-        data: '2024-01-29',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 3,
-        data: '2024-02-05',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 4,
-        data: '2024-02-12',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      }
-    ],
-    encerrado: false,
-    recusado: false,
-    dataEncerramento: null,
-    dataRecusa: null,
-    comprovativoEncerramento: null,
-    reencaminhadoSubscricao: false,
-    dadosSubscricao: null
-  },
-  {
-    id: 'CT-2024-002',
-    cliente: 'Maria Costa',
-    tipo: 'Saúde',
-    valor: 50000,
-    dataCriacao: '2024-01-10',
-    status: 'pendente',
-    finalizada: false,
-    agente: 'Pedro Lima',
-    agenteInicial: 'Pedro Lima',
-    subscritorFinalizou: '',
-    encerradoPor: '',
-    telefone: '+258 84 234 5678',
-    email: 'maria.costa@email.com',
-    estagio: 'Aguardando Documentos',
-    progresso: [
-      { etapa: 'Criação', data: '2024-01-10', status: 'concluida', tipo: 'sistema' },
-      { etapa: 'Envio ao Cliente', data: '2024-01-11', status: 'concluida', tipo: 'email' },
-      { etapa: 'Contato Telefônico', data: '2024-01-12', status: 'concluida', tipo: 'telefone' },
-      { etapa: 'Aguardando Documentos', data: '2024-01-13', status: 'em_andamento', tipo: 'telefone' },
-      { etapa: 'Análise', data: null, status: 'pendente', tipo: null },
-      { etapa: 'Aprovação', data: null, status: 'pendente', tipo: null }
-    ],
-    ultimaAtualizacao: '2024-01-18',
-    motivoNaoFinalizada: 'Cliente precisa enviar documentos médicos',
-    motivoRecusa: '',
-    proximaAcao: 'Enviar lembrete por email',
-    acompanhamentoSemanas: [
-      {
-        semana: 1,
-        data: '2024-01-17',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 2,
-        data: '2024-01-24',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 3,
-        data: '2024-01-31',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 4,
-        data: '2024-02-07',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      }
-    ],
-    encerrado: false,
-    recusado: false,
-    dataEncerramento: null,
-    dataRecusa: null,
-    comprovativoEncerramento: null,
-    reencaminhadoSubscricao: false,
-    dadosSubscricao: null
-  },
-  {
-    id: 'CT-2024-003',
-    cliente: 'Carlos Oliveira',
-    tipo: 'Residência',
-    valor: 250000,
-    dataCriacao: '2024-01-05',
-    status: 'finalizada',
-    finalizada: true,
-    agente: 'Ana Costa',
-    agenteInicial: 'Ana Costa',
-    subscritorFinalizou: 'João Ferraz',
-    encerradoPor: '',
-    telefone: '+258 84 345 6789',
-    email: 'carlos.oliveira@email.com',
-    estagio: 'Finalizada',
-    progresso: [
-      { etapa: 'Criação', data: '2024-01-05', status: 'concluida', tipo: 'sistema' },
-      { etapa: 'Envio ao Cliente', data: '2024-01-06', status: 'concluida', tipo: 'email' },
-      { etapa: 'Contato Telefônico', data: '2024-01-07', status: 'concluida', tipo: 'telefone' },
-      { etapa: 'Visita ao Cliente', data: '2024-01-08', status: 'concluida', tipo: 'visita' },
-      { etapa: 'Análise', data: '2024-01-10', status: 'concluida', tipo: 'sistema' },
-      { etapa: 'Aprovação', data: '2024-01-15', status: 'concluida', tipo: 'sistema' },
-      { etapa: 'Cotação Aceita pelo Cliente', data: '2024-01-15', status: 'concluida', tipo: 'sistema' }
-    ],
-    ultimaAtualizacao: '2024-01-19',
-    motivoNaoFinalizada: null,
-    motivoRecusa: '',
-    proximaAcao: 'Apólice emitida - seguimento pós-venda',
-    acompanhamentoSemanas: [],
-    encerrado: true,
-    recusado: false,
-    dataEncerramento: '2024-01-15',
-    dataRecusa: null,
-    comprovativoEncerramento: { nome: 'contrato_assinado.pdf' },
-    reencaminhadoSubscricao: true,
-    dadosSubscricao: {
-      cliente: 'Carlos Oliveira',
-      codigoCotacao: 'CT-2024-003',
-      tipoSeguro: 'Residência',
-      valor: 250000,
-      email: 'carlos.oliveira@email.com',
-      telefone: '+258 84 345 6789',
-      agenteResponsavel: 'Ana Costa',
-      dataEncerramento: '2024-01-15'
-    }
-  },
-  {
-    id: 'CT-2024-004',
-    cliente: 'Ana Silva',
-    tipo: 'Viagem',
-    valor: 15000,
-    dataCriacao: '2024-01-12',
-    status: 'expirada',
-    finalizada: false,
-    agente: 'João Santos',
-    agenteInicial: 'João Santos',
-    subscritorFinalizou: '',
-    encerradoPor: 'Equipe Comercial',
-    telefone: '+258 84 456 7890',
-    email: 'ana.silva@email.com',
-    estagio: 'Expirada',
-    progresso: [
-      { etapa: 'Criação', data: '2024-01-12', status: 'concluida', tipo: 'sistema' },
-      { etapa: 'Envio ao Cliente', data: '2024-01-12', status: 'concluida', tipo: 'email' },
-      { etapa: 'Contato Telefônico', data: '2024-01-14', status: 'concluida', tipo: 'telefone' },
-      { etapa: 'Aguardando Resposta', data: '2024-01-15', status: 'em_andamento', tipo: 'telefone' }
-    ],
-    ultimaAtualizacao: '2024-01-17',
-    motivoNaoFinalizada: 'Cotação expirada - cliente não respondeu',
-    motivoRecusa: '',
-    proximaAcao: 'Follow-up para renovação',
-    acompanhamentoSemanas: [],
-    encerrado: false,
-    recusado: false,
-    dataEncerramento: null,
-    dataRecusa: null,
-    comprovativoEncerramento: null,
-    reencaminhadoSubscricao: false,
-    dadosSubscricao: null
-  },
-  {
-    id: 'CT-2024-005',
-    cliente: 'Empresa ABC Ltda',
-    tipo: 'Empresarial',
-    valor: 500000,
-    dataCriacao: '2024-01-08',
-    status: 'ativa',
-    finalizada: false,
-    agente: 'Carla Mondlane',
-    agenteInicial: 'Carla Mondlane',
-    subscritorFinalizou: '',
-    encerradoPor: '',
-    telefone: '+258 84 567 8901',
-    email: 'empresa@email.com',
-    estagio: 'Negociação',
-    progresso: [
-      { etapa: 'Criação', data: '2024-01-08', status: 'concluida', tipo: 'sistema' },
-      { etapa: 'Envio ao Cliente', data: '2024-01-09', status: 'concluida', tipo: 'email' },
-      { etapa: 'Contato Telefônico', data: '2024-01-10', status: 'concluida', tipo: 'telefone' },
-      { etapa: 'Reunião Presencial', data: '2024-01-12', status: 'concluida', tipo: 'visita' },
-      { etapa: 'Análise', data: '2024-01-15', status: 'em_andamento', tipo: 'sistema' },
-      { etapa: 'Proposta Final', data: null, status: 'pendente', tipo: null }
-    ],
-    ultimaAtualizacao: '2024-01-21',
-    motivoNaoFinalizada: 'Aguardando análise jurídica da proposta',
-    motivoRecusa: '',
-    proximaAcao: 'Enviar proposta final após revisão jurídica',
-    acompanhamentoSemanas: [
-      {
-        semana: 1,
-        data: '2024-01-15',
-        status: 'concluida',
-        feedback: 'Cliente demonstrou interesse, pediu ajustes',
-        impasses: {
-          opcao1: true,
-          opcao2: false,
-          opcao3: true,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: { nome: 'minuta_contrato.pdf' }
-      },
-      {
-        semana: 2,
-        data: '2024-01-22',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 3,
-        data: '2024-01-29',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 4,
-        data: '2024-02-05',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      }
-    ],
-    encerrado: false,
-    recusado: false,
-    dataEncerramento: null,
-    dataRecusa: null,
-    comprovativoEncerramento: null,
-    reencaminhadoSubscricao: false,
-    dadosSubscricao: null
-  },
-  {
-    id: 'CT-2024-006',
-    cliente: 'Fernando Soares',
-    tipo: 'Vida',
-    valor: 120000,
-    dataCriacao: '2024-01-18',
-    status: 'ativa',
-    finalizada: false,
-    agente: 'Marta Pereira',
-    agenteInicial: 'Marta Pereira',
-    subscritorFinalizou: '',
-    encerradoPor: '',
-    telefone: '+258 84 678 9012',
-    email: 'fernando.soares@email.com',
-    estagio: 'Análise Médica',
-    progresso: [
-      { etapa: 'Criação', data: '2024-01-18', status: 'concluida', tipo: 'sistema' },
-      { etapa: 'Envio ao Cliente', data: '2024-01-19', status: 'concluida', tipo: 'email' },
-      { etapa: 'Contato Telefônico', data: '2024-01-20', status: 'concluida', tipo: 'telefone' },
-      { etapa: 'Exames Médicos', data: '2024-01-22', status: 'em_andamento', tipo: 'visita' },
-      { etapa: 'Análise de Risco', data: null, status: 'pendente', tipo: null }
-    ],
-    ultimaAtualizacao: '2024-01-22',
-    motivoNaoFinalizada: 'Aguardando resultados dos exames médicos',
-    motivoRecusa: '',
-    proximaAcao: 'Solicitar exames complementares',
-    acompanhamentoSemanas: [
-      {
-        semana: 1,
-        data: '2024-01-25',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 2,
-        data: '2024-02-01',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 3,
-        data: '2024-02-08',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 4,
-        data: '2024-02-15',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      }
-    ],
-    encerrado: false,
-    recusado: false,
-    dataEncerramento: null,
-    dataRecusa: null,
-    comprovativoEncerramento: null,
-    reencaminhadoSubscricao: false,
-    dadosSubscricao: null
-  },
-  {
-    id: 'CT-2024-007',
-    cliente: 'Transportes Moçambique Lda',
-    tipo: 'Transporte',
-    valor: 750000,
-    dataCriacao: '2024-01-14',
-    status: 'pendente',
-    finalizada: false,
-    agente: 'Ricardo Fernandes',
-    agenteInicial: 'Ricardo Fernandes',
-    subscritorFinalizou: '',
-    encerradoPor: '',
-    telefone: '+258 84 789 0123',
-    email: 'transporte@email.com',
-    estagio: 'Avaliação de Frota',
-    progresso: [
-      { etapa: 'Criação', data: '2024-01-14', status: 'concluida', tipo: 'sistema' },
-      { etapa: 'Envio ao Cliente', data: '2024-01-15', status: 'concluida', tipo: 'email' },
-      { etapa: 'Contato Telefônico', data: '2024-01-16', status: 'concluida', tipo: 'telefone' },
-      { etapa: 'Vistoria dos Veículos', data: '2024-01-18', status: 'em_andamento', tipo: 'visita' },
-      { etapa: 'Análise de Documentação', data: null, status: 'pendente', tipo: null }
-    ],
-    ultimaAtualizacao: '2024-01-19',
-    motivoNaoFinalizada: 'Necessário vistoriar mais 3 veículos da frota',
-    motivoRecusa: '',
-    proximaAcao: 'Agendar nova vistoria',
-    acompanhamentoSemanas: [
-      {
-        semana: 1,
-        data: '2024-01-21',
-        status: 'concluida',
-        feedback: 'Vistoria parcial realizada, aguardando liberação de outros veículos',
-        impasses: {
-          opcao1: false,
-          opcao2: true,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: { nome: 'vistoria_parcial.pdf' }
-      },
-      {
-        semana: 2,
-        data: '2024-01-28',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 3,
-        data: '2024-02-04',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 4,
-        data: '2024-02-11',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      }
-    ],
-    encerrado: false,
-    recusado: false,
-    dataEncerramento: null,
-    dataRecusa: null,
-    comprovativoEncerramento: null,
-    reencaminhadoSubscricao: false,
-    dadosSubscricao: null
-  },
-  {
-    id: 'CT-2024-008',
-    cliente: 'Sara Mendes',
-    tipo: 'Responsabilidade Civil',
-    valor: 45000,
-    dataCriacao: '2024-01-20',
-    status: 'ativa',
-    finalizada: false,
-    agente: 'António Castro',
-    agenteInicial: 'António Castro',
-    subscritorFinalizou: '',
-    encerradoPor: '',
-    telefone: '+258 84 890 1234',
-    email: 'sara.mendes@email.com',
-    estagio: 'Negociação de Termos',
-    progresso: [
-      { etapa: 'Criação', data: '2024-01-20', status: 'concluida', tipo: 'sistema' },
-      { etapa: 'Envio ao Cliente', data: '2024-01-21', status: 'concluida', tipo: 'email' },
-      { etapa: 'Contato Telefônico', data: '2024-01-22', status: 'concluida', tipo: 'telefone' },
-      { etapa: 'Reunião de Negociação', data: '2024-01-23', status: 'concluida', tipo: 'visita' },
-      { etapa: 'Ajuste de Cláusulas', data: '2024-01-24', status: 'em_andamento', tipo: 'email' }
-    ],
-    ultimaAtualizacao: '2024-01-24',
-    motivoNaoFinalizada: 'Cliente solicitou ajustes nas cláusulas de responsabilidade',
-    motivoRecusa: '',
-    proximaAcao: 'Enviar versão revisada do contrato',
-    acompanhamentoSemanas: [
-      {
-        semana: 1,
-        data: '2024-01-27',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: true,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 2,
-        data: '2024-02-03',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 3,
-        data: '2024-02-10',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 4,
-        data: '2024-02-17',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      }
-    ],
-    encerrado: false,
-    recusado: false,
-    dataEncerramento: null,
-    dataRecusa: null,
-    comprovativoEncerramento: null,
-    reencaminhadoSubscricao: false,
-    dadosSubscricao: null
-  },
-  {
-    id: 'CT-2024-009',
-    cliente: 'Hotel Praia Dourada',
-    tipo: 'Hotelaria',
-    valor: 1200000,
-    dataCriacao: '2024-01-16',
-    status: 'pendente',
-    finalizada: false,
-    agente: 'Luísa Santos',
-    agenteInicial: 'Luísa Santos',
-    subscritorFinalizou: '',
-    encerradoPor: '',
-    telefone: '+258 84 901 2345',
-    email: 'hotel@email.com',
-    estagio: 'Avaliação de Riscos',
-    progresso: [
-      { etapa: 'Criação', data: '2024-01-16', status: 'concluida', tipo: 'sistema' },
-      { etapa: 'Envio ao Cliente', data: '2024-01-17', status: 'concluida', tipo: 'email' },
-      { etapa: 'Contato Telefônico', data: '2024-01-18', status: 'concluida', tipo: 'telefone' },
-      { etapa: 'Vistoria do Hotel', data: '2024-01-20', status: 'concluida', tipo: 'visita' },
-      { etapa: 'Análise de Segurança', data: '2024-01-22', status: 'em_andamento', tipo: 'sistema' }
-    ],
-    ultimaAtualizacao: '2024-01-23',
-    motivoNaoFinalizada: 'Aguardando relatório do departamento de engenharia',
-    motivoRecusa: '',
-    proximaAcao: 'Solicitar parecer técnico sobre sistema de incêndio',
-    acompanhamentoSemanas: [
-      {
-        semana: 1,
-        data: '2024-01-23',
-        status: 'concluida',
-        feedback: 'Vistoria realizada, aguardando parecer técnico',
-        impasses: {
-          opcao1: false,
-          opcao2: true,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: { nome: 'relatorio_vistoria.pdf' }
-      },
-      {
-        semana: 2,
-        data: '2024-01-30',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 3,
-        data: '2024-02-06',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      },
-      {
-        semana: 4,
-        data: '2024-02-13',
-        status: 'pendente',
-        feedback: '',
-        impasses: {
-          opcao1: false,
-          opcao2: false,
-          opcao3: false,
-          opcao4: false,
-          outros: false,
-          outrosTexto: ''
-        },
-        comprovativo: null
-      }
-    ],
-    encerrado: false,
-    recusado: false,
-    dataEncerramento: null,
-    dataRecusa: null,
-    comprovativoEncerramento: null,
-    reencaminhadoSubscricao: false,
-    dadosSubscricao: null
-  }
-];
+// Dados fictícios removidos - agora vem do backend
 
 // Questões diferentes para cada semana
 const questoesPorSemana = [
@@ -901,24 +146,284 @@ const titulosPorSemana = [
 
 function Acompanhamento() {
   const { themeConfig, language } = useTheme();
+  const [cotacoes, setCotacoes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedCotacao, setSelectedCotacao] = useState(null);
+  const [followUps, setFollowUps] = useState([]);
+  const [loadingFollowUps, setLoadingFollowUps] = useState(false);
   const [showAcompanhamentoModal, setShowAcompanhamentoModal] = useState(false);
   const [cotacaoSelecionada, setCotacaoSelecionada] = useState(null);
   const [semanaAtual, setSemanaAtual] = useState(0);
   const [formState, setFormState] = useState({});
-  const [cotacoes, setCotacoes] = useState(() => initialCotacoes);
   const [showEncerramento, setShowEncerramento] = useState(false);
   const [showRecusa, setShowRecusa] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadedComprovativo, setUploadedComprovativo] = useState(null);
   const [motivoRecusaSelecionado, setMotivoRecusaSelecionado] = useState('');
   const [outrosMotivosRecusa, setOutrosMotivosRecusa] = useState('');
+  const [subscritores, setSubscritores] = useState([]);
+  const [subscritoresSelecionados, setSubscritoresSelecionados] = useState([]);
+  const [enviarTodosSubscritores, setEnviarTodosSubscritores] = useState(false);
+  const [loadingFinalizar, setLoadingFinalizar] = useState(false);
   
   // Paginação - 3 cotações por página
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(3);
+
+  // Carregar cotações do backend
+  useEffect(() => {
+    carregarCotacoes();
+  }, [filterStatus, searchTerm]);
+
+  // Escutar evento de cotação criada para atualizar lista
+  useEffect(() => {
+    const handleCotacaoCriada = () => {
+      carregarCotacoes();
+    };
+
+    window.addEventListener('cotacaoCriada', handleCotacaoCriada);
+    return () => window.removeEventListener('cotacaoCriada', handleCotacaoCriada);
+  }, []);
+
+  // Carregar follow-ups quando uma cotação for selecionada
+  useEffect(() => {
+    if (selectedCotacao) {
+      carregarFollowUps(selectedCotacao);
+    }
+  }, [selectedCotacao]);
+
+  // Carregar subscritores quando mostrar encerramento
+  useEffect(() => {
+    if (showEncerramento) {
+      carregarSubscritores();
+    }
+  }, [showEncerramento]);
+
+  const carregarCotacoes = async () => {
+    try {
+      setLoading(true);
+      const filters = {
+        page: 1,
+        limit: 1000, // Limite alto para buscar todas as cotações
+        status: filterStatus !== 'all' ? filterStatus : undefined,
+        search: searchTerm || undefined
+      };
+
+      console.log('🔍 Buscando cotações com filtros:', filters);
+      const result = await cotacaoService.listar(filters);
+      console.log('📊 Resultado da busca:', {
+        success: result.success,
+        total: result.data?.length || 0,
+        pagination: result.pagination
+      });
+      
+      if (result.success && result.data) {
+        console.log('✅ [Acompanhamento] Dados recebidos:', result.data.length, 'cotações');
+        console.log('📋 [Acompanhamento] Primeira cotação (exemplo):', result.data[0]);
+        
+        const cotacoesFormatadas = result.data.map((cotacao, index) => {
+          const cotacaoFormatada = {
+            id: cotacao.numero_cotacao || cotacao.id, // Para exibição
+            idNumerico: cotacao.id, // ID numérico do backend (importante para operações)
+            cliente: `${cotacao.primeiro_nome || ''} ${cotacao.sobrenome || ''}`.trim() || cotacao.cliente?.nome_empresa || 'N/A',
+            tipo: 'Automóvel',
+            valor: parseFloat(cotacao.total_premio) || 0,
+            dataCriacao: cotacao.data_criacao || cotacao.created_at,
+            status: cotacao.status || 'pendente',
+            finalizada: cotacao.status === 'aprovada' || cotacao.status === 'cancelada',
+            agente: cotacao.agente_nome || 'N/A',
+            agenteInicial: cotacao.agente_nome || 'N/A',
+            telefone: cotacao.cliente_telefone || 'N/A',
+            email: cotacao.cliente_email || 'N/A',
+            estagio: getEstagio(cotacao.status || 'pendente'),
+            progresso: gerarProgresso(cotacao),
+            ultimaAtualizacao: cotacao.data_atualizacao || cotacao.updated_at || cotacao.data_criacao || cotacao.created_at,
+            motivoNaoFinalizada: '',
+            motivoRecusa: '',
+            proximaAcao: 'Aguardando follow-up',
+            acompanhamentoSemanas: gerarAcompanhamentoSemanas(),
+            encerrado: false,
+            recusado: false,
+            dataEncerramento: null,
+            dataRecusa: null,
+            comprovativoEncerramento: null,
+            reencaminhadoSubscricao: false,
+            dadosSubscricao: null
+          };
+          
+          if (index === 0) {
+            console.log('📝 [Acompanhamento] Cotação formatada (exemplo):', cotacaoFormatada);
+          }
+          
+          return cotacaoFormatada;
+        });
+        
+        console.log('✅ [Acompanhamento] Total de cotações formatadas:', cotacoesFormatadas.length);
+        setCotacoes(cotacoesFormatadas);
+      } else {
+        console.error('❌ [Acompanhamento] Erro ao carregar cotações:', result.message || 'Erro desconhecido');
+        setCotacoes([]);
+      }
+    } catch (error) {
+      console.error("❌ [Acompanhamento] Erro ao carregar cotações:", error);
+      console.error("❌ [Acompanhamento] Detalhes do erro:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      setCotacoes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const carregarFollowUps = async (cotacaoId) => {
+    try {
+      setLoadingFollowUps(true);
+      // Usar ID numérico se disponível
+      const idParaBuscar = typeof cotacaoId === 'object' ? (cotacaoId.idNumerico || cotacaoId.id) : cotacaoId;
+      const result = await followUpService.listar({ cotacao_id: idParaBuscar });
+      
+      if (result.success) {
+        setFollowUps(result.data || []);
+        
+        // Atualizar acompanhamentoSemanas com dados do backend
+        if (cotacaoSelecionada && result.data && result.data.length > 0) {
+          const updatedSemanas = cotacaoSelecionada.acompanhamentoSemanas.map((semana, idx) => {
+            const followUpSemana = result.data.find(f => f.semana === idx + 1);
+            if (followUpSemana) {
+              return {
+                ...semana,
+                status: followUpSemana.status || 'concluida',
+                data: followUpSemana.data || semana.data,
+                feedback: followUpSemana.feedback || semana.feedback,
+                impasses: {
+                  opcao1: followUpSemana.impasse_opcao1 || false,
+                  opcao2: followUpSemana.impasse_opcao2 || false,
+                  opcao3: followUpSemana.impasse_opcao3 || false,
+                  opcao4: followUpSemana.impasse_opcao4 || false,
+                  outros: followUpSemana.impasse_outros || false,
+                  outrosTexto: followUpSemana.impasse_outros_texto || ''
+                },
+                comprovativo: followUpSemana.comprovativo_path || null
+              };
+            }
+            return semana;
+          });
+          
+          setCotacaoSelecionada(prev => ({
+            ...prev,
+            acompanhamentoSemanas: updatedSemanas
+          }));
+        }
+      } else {
+        setFollowUps([]);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar follow-ups:", error);
+      setFollowUps([]);
+    } finally {
+      setLoadingFollowUps(false);
+    }
+  };
+
+  const getEstagio = (status) => {
+    switch (status) {
+      case 'ativa': return 'Negociação';
+      case 'aprovada': return 'Aprovada';
+      case 'expirada': return 'Expirada';
+      case 'cancelada': return 'Cancelada';
+      default: return 'Pendente';
+    }
+  };
+
+  const gerarProgresso = (cotacao) => {
+    const etapas = [
+      { etapa: 'Criação', data: cotacao.data_criacao, status: 'concluida', tipo: 'sistema' }
+    ];
+
+    if (cotacao.status === 'aprovada') {
+      etapas.push(
+        { etapa: 'Envio ao Cliente', data: cotacao.data_criacao, status: 'concluida', tipo: 'email' },
+        { etapa: 'Aprovação', data: cotacao.data_atualizacao || cotacao.data_criacao, status: 'concluida', tipo: 'sistema' }
+      );
+    } else if (cotacao.status === 'ativa') {
+      etapas.push(
+        { etapa: 'Envio ao Cliente', data: cotacao.data_criacao, status: 'concluida', tipo: 'email' },
+        { etapa: 'Negociação', data: cotacao.data_atualizacao || cotacao.data_criacao, status: 'em_andamento', tipo: 'telefone' },
+        { etapa: 'Aprovação', data: null, status: 'pendente', tipo: null }
+      );
+    }
+
+    return etapas;
+  };
+
+  const gerarAcompanhamentoSemanas = () => {
+    return [
+      {
+        semana: 1,
+        data: null,
+        status: 'pendente',
+        feedback: '',
+        impasses: {
+          opcao1: false,
+          opcao2: false,
+          opcao3: false,
+          opcao4: false,
+          outros: false,
+          outrosTexto: ''
+        },
+        comprovativo: null
+      },
+      {
+        semana: 2,
+        data: null,
+        status: 'pendente',
+        feedback: '',
+        impasses: {
+          opcao1: false,
+          opcao2: false,
+          opcao3: false,
+          opcao4: false,
+          outros: false,
+          outrosTexto: ''
+        },
+        comprovativo: null
+      },
+      {
+        semana: 3,
+        data: null,
+        status: 'pendente',
+        feedback: '',
+        impasses: {
+          opcao1: false,
+          opcao2: false,
+          opcao3: false,
+          opcao4: false,
+          outros: false,
+          outrosTexto: ''
+        },
+        comprovativo: null
+      },
+      {
+        semana: 4,
+        data: null,
+        status: 'pendente',
+        feedback: '',
+        impasses: {
+          opcao1: false,
+          opcao2: false,
+          opcao3: false,
+          opcao4: false,
+          outros: false,
+          outrosTexto: ''
+        },
+        comprovativo: null
+      }
+    ];
+  };
 
   const getText = (pt, en, fr) => {
     switch (language) {
@@ -988,7 +493,7 @@ function Acompanhamento() {
     }));
   };
 
-  const handleAcompanhamentoClick = (cotacao) => {
+  const handleAcompanhamentoClick = async (cotacao) => {
     setCotacaoSelecionada(cotacao);
     setSemanaAtual(0);
     setShowAcompanhamentoModal(true);
@@ -998,6 +503,12 @@ function Acompanhamento() {
     setShowRecusa(false);
     setMotivoRecusaSelecionado('');
     setOutrosMotivosRecusa('');
+    
+    // Carregar follow-ups existentes do backend
+    const cotacaoId = cotacao.idNumerico || cotacao.id;
+    if (cotacaoId) {
+      await carregarFollowUps(cotacaoId);
+    }
   };
 
   const handleImpassesChange = (semanaIndex, impasse, value) => {
@@ -1041,51 +552,96 @@ function Acompanhamento() {
     setCotacaoSelecionada(updatedCotacao);
   };
 
-  const handleUpdateAcompanhamento = () => {
+  const handleUpdateAcompanhamento = async () => {
     if (!cotacaoSelecionada) return;
 
-    const semanasAtual = cotacaoSelecionada.acompanhamentoSemanas[semanaAtual];
-    const temImpassesMarcados = Object.entries(semanasAtual.impasses)
-      .some(([key, value]) => key !== 'outrosTexto' && value === true);
+    try {
+      // Obter o ID numérico da cotação (pode ser id ou idNumerico)
+      const cotacaoId = cotacaoSelecionada.idNumerico || cotacaoSelecionada.id;
+      
+      if (!cotacaoId) {
+        alert('❌ Erro: ID da cotação não encontrado.');
+        return;
+      }
 
-    const updatedCotacao = {
-      ...cotacaoSelecionada,
-      acompanhamentoSemanas: cotacaoSelecionada.acompanhamentoSemanas.map((semana, idx) => {
-        if (idx === semanaAtual) {
+      const semanasAtual = cotacaoSelecionada.acompanhamentoSemanas[semanaAtual];
+      const temImpassesMarcados = Object.entries(semanasAtual.impasses)
+        .some(([key, value]) => key !== 'outrosTexto' && value === true);
+
+      // Preparar dados do follow-up para salvar no backend
+      const followUpData = {
+        cotacao_id: cotacaoId,
+        semana: semanaAtual + 1, // Semana 1, 2, 3 ou 4
+        data: new Date().toISOString().slice(0, 10),
+        feedback: semanasAtual.feedback || '',
+        tipo_contato: 'telefone', // Pode ser expandido para permitir seleção
+        impasses: {
+          opcao1: semanasAtual.impasses?.opcao1 || false,
+          opcao2: semanasAtual.impasses?.opcao2 || false,
+          opcao3: semanasAtual.impasses?.opcao3 || false,
+          opcao4: semanasAtual.impasses?.opcao4 || false,
+          outros: semanasAtual.impasses?.outros || false,
+          outrosTexto: semanasAtual.impasses?.outrosTexto || null
+        },
+        comprovativo_path: uploadedComprovativo || null
+      };
+
+      // Salvar no backend
+      const result = await followUpService.criar(followUpData);
+
+      if (!result.success) {
+        alert(`❌ Erro ao salvar acompanhamento: ${result.message || 'Erro desconhecido'}`);
+        return;
+      }
+
+      // Atualizar estado local após sucesso
+      const updatedCotacao = {
+        ...cotacaoSelecionada,
+        acompanhamentoSemanas: cotacaoSelecionada.acompanhamentoSemanas.map((semana, idx) => {
+          if (idx === semanaAtual) {
+            return {
+              ...semana,
+              status: 'concluida',
+              data: new Date().toISOString().slice(0, 10),
+              comprovativo: uploadedComprovativo
+            };
+          }
+          return semana;
+        }),
+        ultimaAtualizacao: new Date().toISOString().slice(0, 10)
+      };
+
+      setCotacoes(prev => prev.map(c => {
+        if (c.id === cotacaoSelecionada.id || c.idNumerico === cotacaoId) {
           return {
-            ...semana,
-            status: 'concluida',
-            data: new Date().toISOString().slice(0, 10),
-            comprovativo: uploadedFile
+            ...c,
+            acompanhamentoSemanas: updatedCotacao.acompanhamentoSemanas,
+            ultimaAtualizacao: updatedCotacao.ultimaAtualizacao,
+            status: temImpassesMarcados ? 'pendente' : c.status,
+            motivoNaoFinalizada: temImpassesMarcados ? 
+              'Identificado impasse durante acompanhamento' : 
+              c.motivoNaoFinalizada
           };
         }
-        return semana;
-      }),
-      ultimaAtualizacao: new Date().toISOString().slice(0, 10)
-    };
+        return c;
+      }));
 
-    setCotacoes(prev => prev.map(c => {
-      if (c.id === cotacaoSelecionada.id) {
-        return {
-          ...c,
-          acompanhamentoSemanas: updatedCotacao.acompanhamentoSemanas,
-          ultimaAtualizacao: updatedCotacao.ultimaAtualizacao,
-          status: temImpassesMarcados ? 'pendente' : c.status,
-          motivoNaoFinalizada: temImpassesMarcados ? 
-            'Identificado impasse durante acompanhamento' : 
-            c.motivoNaoFinalizada
-        };
+      setCotacaoSelecionada(updatedCotacao);
+      setUploadedComprovativo(null);
+      setUploadedFile(null);
+
+      // Recarregar follow-ups para mostrar os salvos
+      await carregarFollowUps(cotacaoId);
+
+      if (semanaAtual < 3) {
+        setSemanaAtual(prev => prev + 1);
+      } else {
+        alert('✅ Acompanhamento concluído e salvo com sucesso!');
+        setShowAcompanhamentoModal(false);
       }
-      return c;
-    }));
-
-    setCotacaoSelecionada(updatedCotacao);
-    setUploadedFile(null);
-
-    if (semanaAtual < 3) {
-      setSemanaAtual(prev => prev + 1);
-    } else {
-      setShowAcompanhamentoModal(false);
+    } catch (error) {
+      console.error('Erro ao salvar acompanhamento:', error);
+      alert(`❌ Erro ao salvar acompanhamento: ${error.message || 'Erro desconhecido'}`);
     }
   };
 
@@ -1216,7 +772,20 @@ Sistema de Gestão de Cotações
     alert(`📧 NOTIFICAÇÃO DE RECUSA ENVIADA\n\nEmail enviado para a administração com os seguintes dados:\n\n${emailBody}`);
   };
 
-  const handleEncerrarCotacao = () => {
+  const carregarSubscritores = async () => {
+    try {
+      const result = await usuarioService.findAll();
+      if (result.success && result.data) {
+        const subscritoresAtivos = result.data.filter(u => u.role === 'subscritor' && u.ativo);
+        setSubscritores(subscritoresAtivos);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar subscritores:", error);
+      setSubscritores([]);
+    }
+  };
+
+  const handleEncerrarCotacao = async () => {
     if (!cotacaoSelecionada) return;
 
     if (!uploadedComprovativo) {
@@ -1224,42 +793,65 @@ Sistema de Gestão de Cotações
       return;
     }
 
-    const dataAtual = new Date().toISOString().slice(0, 10);
+    // Verificar se há subscritores selecionados ou se deve enviar para todos
+    if (!enviarTodosSubscritores && (!subscritoresSelecionados || subscritoresSelecionados.length === 0)) {
+      alert('Por favor, selecione pelo menos um subscritor ou marque "Enviar para todos os subscritores".');
+      return;
+    }
 
-    const newProgress = {
-      etapa: 'Cotação Aceita pelo Cliente',
-      data: dataAtual,
-      status: 'concluida',
-      tipo: 'sistema'
-    };
+    try {
+      setLoadingFinalizar(true);
+      const cotacaoId = cotacaoSelecionada.idNumerico || cotacaoSelecionada.id;
 
-    const updatedCotacao = {
-      ...cotacaoSelecionada,
-      encerrado: true,
-      finalizada: true,
-      status: 'finalizada',
-      dataEncerramento: dataAtual,
-      estagio: 'Encerrado - Aceite do Cliente',
-      progresso: [...cotacaoSelecionada.progresso, newProgress],
-      acompanhamentoSemanas: cotacaoSelecionada.acompanhamentoSemanas.map(semana => ({
-        ...semana,
-        status: 'concluida'
-      })),
-      ultimaAtualizacao: dataAtual,
-      motivoNaoFinalizada: null,
-      comprovativoEncerramento: uploadedComprovativo
-    };
+      const dadosFinalizacao = {
+        enviar_todos: enviarTodosSubscritores,
+        subscritor_ids: enviarTodosSubscritores ? [] : subscritoresSelecionados
+      };
 
-    setCotacoes(prev => prev.map(c => 
-      c.id === cotacaoSelecionada.id ? updatedCotacao : c
-    ));
+      const result = await cotacaoService.finalizar(cotacaoId, dadosFinalizacao);
 
-    // Enviar email para administração
-    enviarEmailEncerramento(updatedCotacao);
+      if (result.success) {
+        const dataAtual = new Date().toISOString().slice(0, 10);
 
-    setShowEncerramento(false);
-    setShowAcompanhamentoModal(false);
-    setSelectedCotacao(null);
+        const updatedCotacao = {
+          ...cotacaoSelecionada,
+          encerrado: true,
+          finalizada: true,
+          status: 'finalizada',
+          dataEncerramento: dataAtual,
+          estagio: 'Encerrado - Aceite do Cliente',
+          ultimaAtualizacao: dataAtual,
+          comprovativoEncerramento: uploadedComprovativo
+        };
+
+        setCotacoes(prev => prev.map(c => 
+          (c.id === cotacaoSelecionada.id || c.idNumerico === cotacaoId) ? updatedCotacao : c
+        ));
+
+        // Mostrar resultado dos envios
+        if (result.envios && result.envios.length > 0) {
+          const sucessos = result.envios.filter(e => e.sucesso).length;
+          const falhas = result.envios.filter(e => !e.sucesso).length;
+          alert(`✅ Cotação finalizada com sucesso!\n\n📧 Emails enviados:\n- Sucessos: ${sucessos}\n- Falhas: ${falhas}`);
+        } else {
+          alert('✅ Cotação finalizada com sucesso!');
+        }
+
+        setShowEncerramento(false);
+        setShowAcompanhamentoModal(false);
+        setSelectedCotacao(null);
+        setSubscritoresSelecionados([]);
+        setEnviarTodosSubscritores(false);
+        carregarCotacoes(); // Recarregar lista
+      } else {
+        alert(`❌ Erro ao finalizar cotação: ${result.message || 'Erro desconhecido'}`);
+      }
+    } catch (error) {
+      console.error("Erro ao finalizar cotação:", error);
+      alert(`❌ Erro ao finalizar cotação: ${error.message || 'Erro desconhecido'}`);
+    } finally {
+      setLoadingFinalizar(false);
+    }
   };
 
   const enviarEmailEncerramento = (cotacao) => {
@@ -2050,28 +1642,68 @@ Sistema de Gestão de Cotações
                             </p>
                           </div>
                           
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Data de Aceitação
+                          {/* Seleção de Subscritores */}
+                          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                              📧 Enviar Cotação para Subscritores
+                            </h3>
+                            
+                            <div className="mb-4">
+                              <label className="flex items-center space-x-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={enviarTodosSubscritores}
+                                  onChange={(e) => {
+                                    setEnviarTodosSubscritores(e.target.checked);
+                                    if (e.target.checked) {
+                                      setSubscritoresSelecionados([]);
+                                    }
+                                  }}
+                                  className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                />
+                                <span className="text-sm font-medium text-gray-700">
+                                  Enviar para todos os subscritores
+                                </span>
                               </label>
-                              <input
-                                type="date"
-                                defaultValue={new Date().toISOString().slice(0, 10)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                              />
                             </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Método de Aceitação
-                              </label>
-                              <select className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                                <option value="email">Email</option>
-                                <option value="telefone">Telefone</option>
-                                <option value="pessoal">Pessoalmente</option>
-                                <option value="assinatura">Assinatura Digital</option>
-                              </select>
-                            </div>
+
+                            {!enviarTodosSubscritores && (
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Selecionar Subscritores Específicos:
+                                </label>
+                                <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-white">
+                                  {subscritores.length > 0 ? (
+                                    subscritores.map((subscritor) => (
+                                      <label
+                                        key={subscritor.id}
+                                        className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={subscritoresSelecionados.includes(subscritor.id)}
+                                          onChange={(e) => {
+                                            if (e.target.checked) {
+                                              setSubscritoresSelecionados([...subscritoresSelecionados, subscritor.id]);
+                                            } else {
+                                              setSubscritoresSelecionados(
+                                                subscritoresSelecionados.filter(id => id !== subscritor.id)
+                                              );
+                                            }
+                                          }}
+                                          className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                        />
+                                        <span className="text-sm text-gray-700">
+                                          {subscritor.nome} {subscritor.email ? `(${subscritor.email})` : ''}
+                                        </span>
+                                      </label>
+                                    ))
+                                  ) : (
+                                    <p className="text-sm text-gray-500">Nenhum subscritor disponível</p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -2079,27 +1711,32 @@ Sistema de Gestão de Cotações
                       <div className="flex space-x-4">
                         <button
                           onClick={handleEncerrarCotacao}
-                          disabled={!uploadedComprovativo}
+                          disabled={!uploadedComprovativo || loadingFinalizar || (!enviarTodosSubscritores && subscritoresSelecionados.length === 0)}
                           className={`flex-1 py-4 text-white rounded-xl transition-colors duration-300 shadow-lg font-bold text-lg flex items-center justify-center space-x-2 ${
-                            uploadedComprovativo
+                            uploadedComprovativo && !loadingFinalizar && (enviarTodosSubscritores || subscritoresSelecionados.length > 0)
                               ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700'
                               : 'bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed'
                           }`}
                         >
-                          <Check className="h-6 w-6" />
-                          <span>Confirmar Encerramento</span>
+                          {loadingFinalizar ? (
+                            <>
+                              <Loader2 className="h-6 w-6 animate-spin" />
+                              <span>Finalizando...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Check className="h-6 w-6" />
+                              <span>Finalizar e Enviar para Subscritores</span>
+                            </>
+                          )}
                         </button>
                         
                         <button
-                          onClick={handleReencaminharSubscricao}
-                          className="flex-1 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-colors duration-300 shadow-lg font-bold text-lg flex items-center justify-center space-x-2"
-                        >
-                          <SendHorizontal className="h-6 w-6" />
-                          <span>Enviar para Subscrição</span>
-                        </button>
-                        
-                        <button
-                          onClick={() => setShowEncerramento(false)}
+                          onClick={() => {
+                            setShowEncerramento(false);
+                            setSubscritoresSelecionados([]);
+                            setEnviarTodosSubscritores(false);
+                          }}
                           className="px-6 py-4 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
                         >
                           Cancelar
@@ -2169,8 +1806,19 @@ Sistema de Gestão de Cotações
         </div>
 
         {/* Lista de Cotações */}
-        <div className="space-y-4">
-          {currentItems.map((cotacao) => {
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mr-3" />
+            <span className="text-gray-600">Carregando cotações...</span>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {currentItems.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-600">Nenhuma cotação encontrada.</p>
+              </div>
+            ) : (
+              currentItems.map((cotacao) => {
             const progressoCompleto = cotacao.progresso.filter(p => p.status === 'concluida').length;
             const totalEtapas = cotacao.progresso.length;
             const progressoPercent = Math.round((progressoCompleto / totalEtapas) * 100);
@@ -2462,8 +2110,10 @@ Sistema de Gestão de Cotações
                 )}
               </div>
             );
-          })}
-        </div>
+          })
+            )}
+          </div>
+        )}
 
         {/* Paginação Profissional */}
         {filteredCotacoes.length > itemsPerPage && (

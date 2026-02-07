@@ -10,6 +10,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { menuItems } from "../data/data";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
+import { estatisticasService, cotacaoService } from "../services/api";
 
 // Importando o logo diretamente
 import logo from "../assets/logo.png";
@@ -20,6 +21,7 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
   const [openSubmenus, setOpenSubmenus] = useState({});
   const [hoveredItem, setHoveredItem] = useState(null);
   const [submenuScrollable, setSubmenuScrollable] = useState({});
+  const [menuItemsComBadges, setMenuItemsComBadges] = useState(menuItems);
   const submenuRefs = useRef({});
   const navigate = useNavigate();
 
@@ -46,6 +48,59 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
 
   const isSubmenuOpen = (menuId) => {
     return openSubmenus[menuId] || false;
+  };
+
+  // Carregar badges dinâmicos
+  useEffect(() => {
+    carregarBadgesDinamicos();
+    
+    // Atualizar a cada 30 segundos
+    const interval = setInterval(() => {
+      carregarBadgesDinamicos();
+    }, 30000);
+
+    // Escutar evento de cotação criada para atualizar badges
+    const handleCotacaoCriada = () => {
+      carregarBadgesDinamicos();
+    };
+
+    window.addEventListener('cotacaoCriada', handleCotacaoCriada);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('cotacaoCriada', handleCotacaoCriada);
+    };
+  }, []);
+
+  // Carregar badges dinamicamente
+  const carregarBadgesDinamicos = async () => {
+    try {
+      // Buscar todas as cotações para calcular badges
+      const result = await cotacaoService.listar({ limit: 10000 });
+      
+      if (result.success && result.data) {
+        const cotacoes = result.data;
+        
+        // Calcular badges
+        const totalCotacoes = cotacoes.length;
+        const cotacoesAtivas = cotacoes.filter(c => c.status === 'ativa' || c.status === 'pendente').length;
+        
+        // Atualizar menu items com badges dinâmicos
+        const menuAtualizado = menuItems.map(item => {
+          if (item.id === 3) { // Gestão de Cotações
+            return { ...item, badge: totalCotacoes.toString() };
+          }
+          if (item.id === 5) { // Acompanhamento
+            return { ...item, badge: cotacoesAtivas.toString() };
+          }
+          return item;
+        });
+        
+        setMenuItemsComBadges(menuAtualizado);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar badges:", error);
+    }
   };
 
   // Verificar se o submenu precisa de scroll
@@ -248,7 +303,7 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
 
       {/* Navegação com Scroll - Design Limpo */}
       <nav className={`flex-1 overflow-y-auto mt-2 ${isCollapsed ? 'px-2' : 'px-3'} space-y-1 custom-scrollbar relative z-10 py-4`}>
-        {menuItems.map((item, index) => {
+        {menuItemsComBadges.map((item, index) => {
           const isActive = activeTab === item.path;
           const hasSubmenu = item.type === "submenu";
           const isOpen = isSubmenuOpen(item.id);

@@ -27,18 +27,31 @@ export const AuthProvider = ({ children }) => {
         if (token && usuarioSalvo) {
           try {
             const result = await usuarioService.validateToken(token);
-            if (result.valid) {
-              setUsuario(JSON.parse(usuarioSalvo));
+            if (result.valid && result.user) {
+              setUsuario(result.user);
             } else {
-              // Limpar dados inválidos
-              localStorage.removeItem("authToken");
-              localStorage.removeItem("token");
-              localStorage.removeItem("user");
-              localStorage.removeItem("usuario");
-              setUsuario(null);
+              // Tentar buscar informações do usuário
+              const userInfo = await usuarioService.getUserInfo();
+              if (userInfo) {
+                setUsuario(userInfo);
+                localStorage.setItem("user", JSON.stringify(userInfo));
+                localStorage.setItem("usuario", JSON.stringify(userInfo));
+              } else {
+                // Limpar dados inválidos
+                localStorage.removeItem("authToken");
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                localStorage.removeItem("usuario");
+                setUsuario(null);
+              }
             }
           } catch (tokenError) {
             console.error("Erro ao validar token:", tokenError);
+            // Limpar dados inválidos
+            localStorage.removeItem("authToken");
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("usuario");
             setUsuario(null);
           }
         } else {
@@ -83,7 +96,7 @@ export const AuthProvider = ({ children }) => {
         };
       }
     } catch (error) {
-      const errorMsg = error.message || "Erro de conexão com o servidor";
+      const errorMsg = error.response?.data?.message || error.message || "Erro de conexão com o servidor";
       setError(errorMsg);
       return { success: false, error: errorMsg };
     }

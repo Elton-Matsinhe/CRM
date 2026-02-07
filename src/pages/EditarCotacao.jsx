@@ -17,6 +17,7 @@ import {
 import CotacoesLayout from "../components/CotacoesLayout";
 import { jsPDF } from "jspdf";
 import logo from "../assets/logo.png";
+import { cotacaoService } from "../services/api";
 
 const loadLogo = (src) =>
   new Promise((resolve, reject) => {
@@ -94,48 +95,98 @@ function EditarCotacao() {
     },
   };
 
-  // Carregar cotações do localStorage
-  const carregarCotacoes = () => {
-    const cotacoesSalvas = localStorage.getItem("cotacoes");
-    return cotacoesSalvas ? JSON.parse(cotacoesSalvas) : [];
-  };
-
-  const buscarCotacao = () => {
-    if (!cotacaoId) return;
+  // Buscar cotação do backend por ID ou número de cotação
+  const buscarCotacao = async () => {
+    if (!cotacaoId) {
+      alert("Por favor, digite o ID ou número da cotação.");
+      return;
+    }
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      const cotacoes = carregarCotacoes();
-      const cotacao = cotacoes.find((c) => c.id === cotacaoId);
+    try {
+      // Tentar buscar por ID numérico primeiro
+      let cotacaoIdNumero = parseInt(cotacaoId);
+      let result;
 
-      if (cotacao) {
+      if (!isNaN(cotacaoIdNumero)) {
+        // Se for um número, buscar por ID
+        result = await cotacaoService.buscarPorId(cotacaoIdNumero);
+      } else {
+        // Se não for número, buscar por número de cotação
+        // Primeiro listar todas e filtrar
+        const listResult = await cotacaoService.listar({ limit: 1000, search: cotacaoId });
+        if (listResult.success && listResult.data.length > 0) {
+          const cotacaoEncontrada = listResult.data.find(
+            c => c.numero_cotacao === cotacaoId || c.numero_cotacao?.toUpperCase() === cotacaoId.toUpperCase()
+          );
+          if (cotacaoEncontrada) {
+            result = await cotacaoService.buscarPorId(cotacaoEncontrada.id);
+          } else {
+            result = { success: false, message: "Cotação não encontrada" };
+          }
+        } else {
+          result = { success: false, message: "Cotação não encontrada" };
+        }
+      }
+
+      if (result.success && result.data) {
+        const cotacao = result.data;
+        
+        // Mapear dados do backend para o formato esperado pelo formulário
         setFormData({
-          ...cotacao,
-          // Garantir que todos os campos dos veículos existam
-          veiculos: cotacao.veiculos.map((veiculo) => ({
+          id: cotacao.id,
+          numero_cotacao: cotacao.numero_cotacao,
+          cliente: {
+            tipo: cotacao.cliente?.tipo || 'Particular',
+            primeiroNome: cotacao.primeiro_nome || cotacao.cliente?.primeiro_nome || '',
+            sobrenome: cotacao.sobrenome || cotacao.cliente?.sobrenome || '',
+            email: cotacao.cliente_email || cotacao.cliente?.email || '',
+            telefone: cotacao.cliente_telefone || cotacao.cliente?.telefone || '',
+            numeroDocumento: cotacao.cliente?.numero_documento || '',
+            dataNascimento: cotacao.cliente?.data_nascimento || '',
+            nomeEmpresa: cotacao.cliente?.nome_empresa || '',
+            numeroReferenciaFiscal: cotacao.cliente?.numero_referencia_fiscal || '',
+            nacionalidade: cotacao.cliente?.nacionalidade || 'MZ',
+            tituloContato: cotacao.cliente?.titulo_contato || ''
+          },
+          veiculos: (cotacao.veiculos || []).map((veiculo) => ({
             id: veiculo.id || Date.now() + Math.random(),
-            marcaModelo: veiculo.marcaModelo || "",
-            matricula: veiculo.matricula || "",
-            ano: veiculo.ano || "",
-            motor: veiculo.motor || "",
-            chassis: veiculo.chassis || "",
-            lotacao: veiculo.lotacao || "",
-            tipoViatura: veiculo.tipoViatura || "Ligeiro",
-            capitalSeguro: veiculo.capitalSeguro || "",
-            taxa: veiculo.taxa || "",
-            premioAnnual: veiculo.premioAnnual || "",
-            tipoCobertura: veiculo.tipoCobertura || "DP_NORMAL",
-            // Outros campos que podem estar faltando
+            marca: veiculo.marca || '',
+            modelo: veiculo.modelo || '',
+            marcaModelo: `${veiculo.marca || ''} ${veiculo.modelo || ''}`.trim(),
+            matricula: veiculo.matricula || '',
+            matriculaCompleta: veiculo.matricula_completa || veiculo.matricula || '',
+            ano: veiculo.ano || '',
+            motor: veiculo.numero_motor || '',
+            chassis: veiculo.numero_chassi || '',
+            lotacao: veiculo.lotacao || '',
+            tipoViatura: veiculo.tipo_viatura || "Ligeiro",
+            capitalSeguro: veiculo.capital_seguro || '',
+            taxa: veiculo.taxa || '',
+            premioAnnual: veiculo.premio_anual || '',
+            premioSemestral: veiculo.premio_semestral || '',
+            premioTrimestral: veiculo.premio_trimestral || '',
+            premioMensal: veiculo.premio_mensal || '',
+            tipoCobertura: veiculo.tipo_cobertura || "DP_NORMAL",
             ...veiculo,
           })),
+          totalPremio: parseFloat(cotacao.total_premio) || 0,
+          status: cotacao.status || 'pendente',
+          dataCriacao: cotacao.data_criacao || cotacao.created_at,
+          dataValidade: cotacao.data_validade
         });
       } else {
-        alert("Cotação não encontrada!");
+        alert(`❌ ${result.message || "Cotação não encontrada!"}`);
         setFormData(null);
       }
+    } catch (error) {
+      console.error("Erro ao buscar cotação:", error);
+      alert(`❌ Erro ao buscar cotação: ${error.response?.data?.message || error.message || 'Erro desconhecido'}`);
+      setFormData(null);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   // Função para calcular prémio
@@ -521,44 +572,33 @@ function EditarCotacao() {
   const enviarEmail = async () => {
     if (!formData) return;
 
+    if (!formData.cliente?.email) {
+      alert("❌ O cliente não tem email cadastrado.");
+      return;
+    }
+
+    const confirmarEnvio = window.confirm(
+      `Deseja enviar a cotação ${formData.numero_cotacao || formData.id} por email para ${formData.cliente.email}?`
+    );
+    
+    if (!confirmarEnvio) {
+      return;
+    }
+
     try {
       setProcessandoEmail(true);
 
-      // Simulação de envio de email
-      const dadosEmail = {
-        Nome_Usuario: `${formData.cliente.primeiroNome} ${formData.cliente.sobrenome}`,
-        Nome_Documento: `Cotação Atualizada ${formData.id}`,
-        Nome_Categoria: "Seguro Auto",
-        Nome_Departamento: "Comercial",
-        Estado: formData.status,
-        Data_Pedido: new Date().toLocaleDateString("pt-MZ"),
-      };
-
-      const mensagem = `Cotação atualizada através do sistema de Gestão de Seguros:\n\n
-Usuário: ${dadosEmail.Nome_Usuario}\n
-Documento: ${dadosEmail.Nome_Documento}\n
-Categoria: ${dadosEmail.Nome_Categoria}\n
-Departamento: ${dadosEmail.Nome_Departamento}\n\n
-Estado: ${dadosEmail.Estado}\n
-Data de Atualização: ${dadosEmail.Data_Pedido}\n
-Valor Total Atualizado: MT ${parseFloat(formData.totalPremio).toLocaleString(
-        "pt-MZ",
-        { minimumFractionDigits: 2 }
-      )}\n
-Número de Veículos: ${formData.veiculos.length}\n\n
-Acesse o sistema para mais detalhes. http://192.168.110.71/IMPERIAL-INSURANCE/PortalOnline/login/`;
-
-      console.log("Enviando email para administradores...");
-      console.log("Mensagem:", mensagem);
-
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
-      alert(
-        `Cotação atualizada ${formData.id} enviada por email para administradores!`
-      );
-      setMostrarOpcoesPartilha(false);
+      const result = await cotacaoService.enviarEmail(formData.id);
+      
+      if (result.success) {
+        alert(`✅ Email enviado com sucesso para ${formData.cliente.email}!`);
+        setMostrarOpcoesPartilha(false);
+      } else {
+        alert(`❌ Erro ao enviar email: ${result.message || 'Erro desconhecido'}`);
+      }
     } catch (error) {
-      alert("Erro ao enviar email. Tente novamente.");
+      console.error("Erro ao enviar email:", error);
+      alert(`❌ Erro ao enviar email: ${error.response?.data?.message || error.message || 'Erro desconhecido'}`);
     } finally {
       setProcessandoEmail(false);
     }

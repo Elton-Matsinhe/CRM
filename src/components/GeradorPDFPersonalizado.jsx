@@ -15,15 +15,51 @@ const imageToBase64 = (imagePath) => {
  * Este componente gera HTML que pode ser convertido para PDF usando a função de impressão do navegador
  */
 export const gerarHTMLCotacaoPersonalizado = (cotacao) => {
-  const dataInicio = new Date(cotacao.dataCriacao);
+  // Validar cotação
+  if (!cotacao) {
+    throw new Error('Cotação não fornecida');
+  }
+
+  // Validar cliente
+  if (!cotacao.cliente) {
+    cotacao.cliente = {
+      primeiroNome: '',
+      sobrenome: '',
+      email: '',
+      telefone: '',
+      tipo: 'Particular',
+      numeroDocumento: '',
+      morada: ''
+    };
+  }
+
+  // Validar e processar data de criação
+  let dataInicio;
+  try {
+    dataInicio = cotacao.dataCriacao ? new Date(cotacao.dataCriacao) : new Date();
+    if (isNaN(dataInicio.getTime())) {
+      dataInicio = new Date();
+    }
+  } catch (e) {
+    dataInicio = new Date();
+  }
+  
   const dataFim = new Date(dataInicio);
   dataFim.setFullYear(dataFim.getFullYear() + 1);
   
-  const veiculo = cotacao.veiculos[0] || {};
-  const premioBase = cotacao.totalPremio * 0.84;
-  const custosAdmin = cotacao.totalPremio * 0.12;
-  const sobreTaxa = cotacao.totalPremio * 0.02;
-  const impostoSelo = cotacao.totalPremio * 0.02;
+  // Validar veículos
+  const veiculos = Array.isArray(cotacao.veiculos) ? cotacao.veiculos : [];
+  const veiculo = veiculos[0] || {};
+  
+  // Validar valores numéricos
+  const totalPremio = parseFloat(cotacao.totalPremio) || 0;
+  const premioBase = totalPremio * 0.84;
+  const custosAdmin = totalPremio * 0.12;
+  const sobreTaxa = totalPremio * 0.02;
+  const impostoSelo = totalPremio * 0.02;
+
+  // Validar ID da cotação
+  const cotacaoId = cotacao.numero_cotacao || cotacao.id || 'N/A';
 
   // Caminho da imagem do papel timbrado (será carregado pelo navegador)
   // Em produção, você pode usar uma URL absoluta ou base64
@@ -98,7 +134,7 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cotacao ${cotacao.id} - Imperial Seguros</title>
+    <title>Cotacao ${cotacaoId} - Imperial Seguros</title>
     <style>
         @page {
             size: A4;
@@ -371,12 +407,12 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao) => {
                 </thead>
                 <tbody>
                     <tr>
-                        <td width="50%"><strong>Segurado:</strong> ${cotacao.cliente.primeiroNome} ${cotacao.cliente.sobrenome}</td>
-                        <td width="50%"><strong>Número da cotação:</strong> ${cotacao.id}</td>
+                        <td width="50%"><strong>Segurado:</strong> ${cotacao.cliente.primeiroNome || ''} ${cotacao.cliente.sobrenome || ''}</td>
+                        <td width="50%"><strong>Número da cotação:</strong> ${cotacaoId}</td>
                     </tr>
                     <tr>
                         <td><strong>NUIT:</strong> ${cotacao.cliente.numeroDocumento || '128704132'}</td>
-                        <td><strong>Número da Apólice:</strong> ${cotacao.id.substring(0, 6)}</td>
+                        <td><strong>Número da Apólice:</strong> ${String(cotacaoId).substring(0, 6)}</td>
                     </tr>
                     <tr>
                         <td><strong>Morada Postal:</strong> ${cotacao.cliente.morada || 'Q.01 Vila de Sede, Marracuene'}</td>
@@ -427,7 +463,7 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao) => {
             <div class="mb-20">
                 <table width="100%" style="font-size: 10px; background: rgba(255,255,255,0.95);">
                     <tr>
-                        <td><strong>Número da cotação:</strong> ${cotacao.id}</td>
+                        <td><strong>Número da cotação:</strong> ${cotacaoId}</td>
                         <td class="text-right"><strong>Secção:</strong> Tabela de Prémios</td>
                     </tr>
                     <tr>
@@ -482,7 +518,7 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao) => {
                     </tr>
                     <tr class="bold">
                         <td colspan="2">Prémio Total</td>
-                        <td class="text-right">MT ${cotacao.totalPremio.toFixed(2)}</td>
+                        <td class="text-right">MT ${totalPremio.toFixed(2)}</td>
                         <td class="text-right">MT 0.00</td>
                     </tr>
                 </tbody>
@@ -545,8 +581,8 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao) => {
             <div class="mb-20">
                 <table width="100%" style="font-size: 10px; background: rgba(255,255,255,0.95);">
                     <tr>
-                        <td><strong>Número da Apólice:</strong> ${cotacao.id.substring(0, 6)}</td>
-                        <td class="text-right"><strong>Secção:</strong> ${cotacao.id.substring(0, 6)}</td>
+                        <td><strong>Número da Apólice:</strong> ${String(cotacaoId).substring(0, 6)}</td>
+                        <td class="text-right"><strong>Secção:</strong> ${String(cotacaoId).substring(0, 6)}</td>
                     </tr>
                     <tr>
                         <td><strong>Número da Versão:</strong> 1</td>
@@ -576,10 +612,10 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao) => {
                 <div><strong>Ano:</strong> ${veiculo.ano || "2000"}</div>
                 <div><strong>N°. do Chassi:</strong> ${veiculo.numeroChassi || "12345678"}</div>
                 <div><strong>N°. do Motor:</strong> ${veiculo.numeroMotor || "98765"}</div>
-                <div><strong>Marca:</strong> ${veiculo.marcaModelo?.split(' ')[0] || "TOYOTA"}</div>
-                <div><strong>Modelo:</strong> ${veiculo.marcaModelo?.split(' ').slice(1).join(' ') || "ALLION"}</div>
-                <div><strong>Matrícula:</strong> ${veiculo.matricula || "AFU;1234"}</div>
-                <div><strong>Classe do Veículo:</strong> ${veiculo.tipoViatura === 'Particular' ? 'Private motor' : veiculo.tipoViatura}</div>
+                <div><strong>Marca:</strong> ${(veiculo.marca || veiculo.marca_modelo || veiculo.marcaModelo || "TOYOTA").split(' ')[0]}</div>
+                <div><strong>Modelo:</strong> ${(veiculo.modelo || (veiculo.marca_modelo || veiculo.marcaModelo || "ALLION").split(' ').slice(1).join(' ')) || "ALLION"}</div>
+                <div><strong>Matrícula:</strong> ${veiculo.matricula || veiculo.matricula_completa || "Por atribuir"}</div>
+                <div><strong>Classe do Veículo:</strong> ${veiculo.tipo_cobertura || veiculo.tipoViatura || 'Particular'}</div>
             </div>
             
             <div class="mb-20" style="background: rgba(255,255,255,0.95); padding: 10px;">
@@ -752,17 +788,37 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao) => {
  */
 export const gerarPDFPersonalizado = (cotacao, acao = 'download') => {
   try {
+    // Validar cotação
+    if (!cotacao) {
+      console.error('Cotação não fornecida');
+      alert('❌ Erro: Cotação não encontrada.');
+      return false;
+    }
+
+    // Validar dados mínimos necessários
+    if (!cotacao.cliente || (!cotacao.cliente.primeiroNome && !cotacao.cliente.sobrenome)) {
+      console.error('Dados do cliente incompletos:', cotacao);
+      alert('❌ Erro: Dados do cliente incompletos.');
+      return false;
+    }
+
     const htmlContent = gerarHTMLCotacaoPersonalizado(cotacao);
     
+    if (!htmlContent || htmlContent.trim().length === 0) {
+      console.error('HTML vazio gerado');
+      alert('❌ Erro ao gerar conteúdo do documento.');
+      return false;
+    }
+    
     // Criar blob do HTML
-    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     
     if (acao === 'download') {
       // Criar link para download
       const a = document.createElement('a');
       a.href = url;
-      a.download = `cotacao-${cotacao.id}.html`;
+      a.download = `cotacao-${cotacao.numero_cotacao || cotacao.id || 'cotacao'}.html`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -781,11 +837,19 @@ export const gerarPDFPersonalizado = (cotacao, acao = 'download') => {
       
     } else if (acao === 'visualizar') {
       // Abrir em nova aba
-      window.open(url, '_blank');
+      const win = window.open(url, '_blank');
+      if (!win) {
+        alert('❌ Por favor, permita pop-ups para visualizar o documento.');
+        return false;
+      }
       
     } else if (acao === 'imprimir') {
       // Abrir e imprimir
       const win = window.open(url, '_blank');
+      if (!win) {
+        alert('❌ Por favor, permita pop-ups para imprimir o documento.');
+        return false;
+      }
       if (win) {
         win.onload = () => {
           setTimeout(() => {
@@ -796,12 +860,19 @@ export const gerarPDFPersonalizado = (cotacao, acao = 'download') => {
     }
     
     // Liberar memória após algum tempo
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    setTimeout(() => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        console.warn('Erro ao revogar URL:', e);
+      }
+    }, 10000);
     
     return true;
   } catch (error) {
     console.error('Erro ao gerar documento:', error);
-    alert('Erro ao gerar documento. Por favor, tente novamente.');
+    console.error('Cotação recebida:', cotacao);
+    alert(`❌ Erro ao gerar documento: ${error.message || 'Erro desconhecido'}. Por favor, tente novamente.`);
     return false;
   }
 };

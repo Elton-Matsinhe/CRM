@@ -19,6 +19,7 @@ import {
   MoreVertical,
   MapPin,
   Building,
+  Loader2,
 } from "lucide-react";
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import CriarCotacao from "./pages/CriarCotacao";
@@ -26,9 +27,11 @@ import EditarCotacao from "./pages/EditarCotacao";
 import ListarCotacoes from "./pages/ListarCotacoes";
 import GestaoCotacoes from "./pages/GestaoCotacoes";
 import Acompanhamento from "./pages/Acompanhamento";
+import Relatorios from "./pages/Relatorios";
 import DepartamentoPlaceholder from "./pages/DepartamentoPlaceholder";
 import Login from "./pages/Login";
 import { useTheme } from "./contexts/ThemeContext";
+import { cotacaoService } from "./services/api";
 
 // Componente para rotas protegidas - versão simplificada
 const ProtectedRoute = ({ children }) => {
@@ -81,6 +84,24 @@ function App() {
   const [sidebar, setSidebarOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [performanceView, setPerformanceView] = useState("individual");
+  const [crmData, setCrmData] = useState({
+    totalQuotes: 0,
+    pendingApproval: 0,
+    policiesIssued: 0,
+    expiredQuotes: 0,
+    activeAgents: 0,
+    conversionRate: "0%",
+    monthlyRevenue: "0",
+    monthlyGrowth: 0,
+    performance: {
+      individual: [],
+      equipe: [],
+      provincia: []
+    },
+    recentQuotes: [],
+    policyTypes: []
+  });
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -102,8 +123,74 @@ function App() {
     return () => clearInterval(timer);
   }, []);
 
-  // Dados fictícios do CRM Imperial Seguros
-  const crmData = {
+  // Carregar dados do dashboard do backend
+  useEffect(() => {
+    if (location.pathname === '/' || location.pathname === '/dashboard') {
+      carregarDadosDashboard();
+    }
+  }, [location.pathname]);
+
+  const carregarDadosDashboard = async () => {
+    try {
+      setLoadingDashboard(true);
+      const result = await cotacaoService.listar({ limit: 1000 });
+      
+      if (result.success && result.data) {
+        const cotacoes = result.data;
+        const totalQuotes = cotacoes.length;
+        const pendingApproval = cotacoes.filter(c => c.status === 'pendente' || c.status === 'ativa').length;
+        const policiesIssued = cotacoes.filter(c => c.status === 'aprovada').length;
+        const expiredQuotes = cotacoes.filter(c => c.status === 'expirada').length;
+        
+        // Calcular taxa de conversão
+        const conversionRate = totalQuotes > 0 
+          ? ((policiesIssued / totalQuotes) * 100).toFixed(0) + '%'
+          : '0%';
+
+        // Cotações recentes (últimas 5)
+        const recentQuotes = cotacoes
+          .sort((a, b) => new Date(b.data_criacao) - new Date(a.data_criacao))
+          .slice(0, 5)
+          .map(cotacao => ({
+            id: cotacao.numero_cotacao,
+            client: `${cotacao.primeiro_nome || ''} ${cotacao.sobrenome || ''}`.trim() || 'N/A',
+            value: `MT ${parseFloat(cotacao.total_premio || 0).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}`,
+            status: cotacao.status === 'aprovada' ? 'approved' : cotacao.status === 'expirada' ? 'expired' : 'pending',
+            date: new Date(cotacao.data_criacao).toLocaleDateString('pt-MZ')
+          }));
+
+        // Tipos de seguro (todos são automóvel por enquanto)
+        const policyTypes = [
+          { type: "Automóvel", count: totalQuotes, color: "#4ade80" }
+        ];
+
+        setCrmData({
+          totalQuotes,
+          pendingApproval,
+          policiesIssued,
+          expiredQuotes,
+          activeAgents: 0, // Será implementado quando tivermos endpoint de agentes
+          conversionRate,
+          monthlyRevenue: "0",
+          monthlyGrowth: 0,
+          performance: {
+            individual: [],
+            equipe: [],
+            provincia: []
+          },
+          recentQuotes,
+          policyTypes
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao carregar dados do dashboard:", error);
+    } finally {
+      setLoadingDashboard(false);
+    }
+  };
+
+  // Dados padrão (fallback)
+  const crmDataDefault = {
     totalQuotes: 156,
     pendingApproval: 23,
     policiesIssued: 89,
@@ -195,14 +282,26 @@ function App() {
   ];
 
   // Dashboard como componente interno
-  const DashboardPage = () => (
-    <div className="max-w-7xl mx-auto">
-      <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Dashboard Geral</h1>
-        <p className="text-emerald-600 text-sm max-w-2xl mx-auto">
-          Visão completa do desempenho do sistema CRM do Imperial Insurance Moçambique, S.A
-        </p>
-      </div>
+  const DashboardPage = () => {
+    if (loadingDashboard) {
+      return (
+        <div className="max-w-7xl mx-auto flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-emerald-600 mx-auto mb-4" />
+            <p className="text-gray-600">Carregando dados do dashboard...</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Dashboard Geral</h1>
+          <p className="text-emerald-600 text-sm max-w-2xl mx-auto">
+            Visão completa do desempenho do sistema CRM do Imperial Insurance Moçambique, S.A
+          </p>
+        </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {metricCards.map((card, index) => (
@@ -332,7 +431,8 @@ function App() {
         />
       </div>
     </div>
-  );
+    );
+  };
 
   // Se estiver na página de login, mostrar apenas o componente Login
   if (location.pathname === '/login') {
@@ -401,6 +501,11 @@ function App() {
                 <Route path="/crm/acompanhamento" element={
                   <ProtectedRoute>
                     <Acompanhamento />
+                  </ProtectedRoute>
+                } />
+                <Route path="/crm/relatorios" element={
+                  <ProtectedRoute>
+                    <Relatorios />
                   </ProtectedRoute>
                 } />
                 <Route path="/departamentos/:departamento" element={

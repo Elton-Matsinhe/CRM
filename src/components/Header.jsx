@@ -23,21 +23,85 @@ import {
 import { useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { estatisticasService } from "../services/api";
 
 const Header = ({ sidebarOpen, setSidebarOpen }) => {
   const { theme, setTheme, language, setLanguage } = useTheme();
-  const { logout } = useAuth();
+  const { logout, usuario } = useAuth();
   const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [notifications, setNotifications] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [crmMetrics, setCrmMetrics] = useState({
+    totalQuotes: 0,
+    pendingApproval: 0,
+    policiesIssued: 0,
+    activeAgents: 0,
+    conversionRate: "0%",
+    revenue: "MT 0"
+  });
+  const [loadingMetrics, setLoadingMetrics] = useState(true);
   const profileRef = useRef(null);
   const notificationsRef = useRef(null);
   const messagesRef = useRef(null);
   const settingsRef = useRef(null);
   const searchInputRef = useRef(null);
+
+  // Carregar dados dinâmicos
+  useEffect(() => {
+    carregarDadosDinamicos();
+    
+    // Atualizar a cada 30 segundos
+    const interval = setInterval(() => {
+      carregarDadosDinamicos();
+    }, 30000);
+
+    // Escutar evento de cotação criada para atualizar métricas
+    const handleCotacaoCriada = () => {
+      carregarDadosDinamicos();
+    };
+
+    window.addEventListener('cotacaoCriada', handleCotacaoCriada);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('cotacaoCriada', handleCotacaoCriada);
+    };
+  }, []);
+
+  // Carregar dados dinâmicos do backend
+  const carregarDadosDinamicos = async () => {
+    try {
+      setLoadingMetrics(true);
+      
+      // Carregar métricas, notificações e mensagens em paralelo
+      const [metricasResult, notificacoesResult, mensagensResult] = await Promise.all([
+        estatisticasService.buscarMetricas(),
+        estatisticasService.buscarNotificacoes(),
+        estatisticasService.buscarMensagens()
+      ]);
+
+      if (metricasResult.success) {
+        setCrmMetrics(metricasResult.data);
+      }
+
+      if (notificacoesResult.success) {
+        setNotifications(notificacoesResult.data);
+      }
+
+      if (mensagensResult.success) {
+        setMessages(mensagensResult.data);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar dados dinâmicos:", error);
+    } finally {
+      setLoadingMetrics(false);
+    }
+  };
 
   // Fechar dropdowns ao clicar fora
   useEffect(() => {
@@ -60,78 +124,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Dados do Sistema CRM - Imperial Seguros
-  const notifications = [
-    { 
-      id: 1, 
-      text: "Nova cotação aprovada - Aguardando emissão de apólice", 
-      time: "2 min atrás", 
-      unread: true,
-      type: "approval",
-      priority: "high"
-    },
-    { 
-      id: 2, 
-      text: "Cotação #CT-2345 expira em 2 dias", 
-      time: "15 min atrás", 
-      unread: true,
-      type: "expiry",
-      priority: "medium"
-    },
-    {
-      id: 3,
-      text: "3 novas cotações criadas hoje",
-      time: "1 hora atrás",
-      unread: false,
-      type: "achievement",
-      priority: "low"
-    },
-    {
-      id: 4,
-      text: "Relatório mensal gerado com sucesso",
-      time: "2 horas atrás",
-      unread: false,
-      type: "system",
-      priority: "low"
-    }
-  ];
-
-  const messages = [
-    {
-      id: 1,
-      text: "Subscritor: Nova apólice emitida #AP-6789",
-      time: "5 min atrás",
-      unread: true,
-      type: "policy",
-      priority: "high"
-    },
-    { 
-      id: 2, 
-      text: "Agente pediu revisão de permissões", 
-      time: "30 min atrás", 
-      unread: true,
-      type: "admin",
-      priority: "medium"
-    },
-    {
-      id: 3,
-      text: "Backup do sistema realizado com sucesso",
-      time: "2 horas atrás",
-      unread: false,
-      type: "system",
-      priority: "low"
-    }
-  ];
-
-  // Métricas do CRM para Administrador
-  const crmMetrics = {
-    totalQuotes: 156,
-    pendingApproval: 23,
-    policiesIssued: 89,
-    activeAgents: 12,
-    conversionRate: "68%",
-    revenue: "MT 2.4M"
-  };
+  // Dados agora são carregados dinamicamente do backend via useEffect
 
   // Dados de idiomas - Agora com siglas visíveis
   const languages = [
@@ -591,10 +584,12 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                 </div>
                 <div className="hidden lg:block text-left">
                   <p className="text-sm font-semibold text-gray-900 leading-tight">
-                    Elton Matsinhe
+                    {usuario?.nome || 'Usuário'}
                   </p>
                   <p className="text-xs text-green-700">
-                    {getText("Administrador", "Administrator", "Administrateur")}
+                    {usuario?.role === 'admin' 
+                      ? getText("Administrador", "Administrator", "Administrateur")
+                      : getText("Agente", "Agent", "Agent")}
                   </p>
                 </div>
               </button>
@@ -616,10 +611,16 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900 text-sm">
-                          Elton Matsinhe
+                          {usuario?.nome || 'Usuário'}
                         </p>
                         <p className="text-xs text-green-700">
-                          {getText("Administrador do Sistema", "System Administrator", "Administrateur Système")}
+                          {usuario?.email || ''}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {usuario?.role === 'admin' 
+                            ? getText("Administrador do Sistema", "System Administrator", "Administrateur Système")
+                            : getText("Agente", "Agent", "Agent")}
+                          {usuario?.departamento ? ` - ${usuario.departamento}` : ''}
                         </p>
                       </div>
                     </div>

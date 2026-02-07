@@ -12,8 +12,10 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  Loader2,
 } from "lucide-react";
 import CotacoesLayout from "../components/CotacoesLayout";
+import { cotacaoService } from "../services/api";
 
 function ListarCotacoes() {
   const brand = {
@@ -32,46 +34,128 @@ function ListarCotacoes() {
   const [gerandoPDF, setGerandoPDF] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
 
-  // Carregar cotações do localStorage
+  // Carregar cotações do backend
   useEffect(() => {
-    const cotacoesSalvas = localStorage.getItem("cotacoes");
-    if (cotacoesSalvas) {
-      setCotacoes(JSON.parse(cotacoesSalvas));
-    }
+    carregarCotacoes();
+  }, [currentPage, filterStatus, searchTerm]);
+
+  // Escutar evento de cotação criada para atualizar lista
+  useEffect(() => {
+    const handleCotacaoCriada = () => {
+      carregarCotacoes();
+    };
+
+    window.addEventListener('cotacaoCriada', handleCotacaoCriada);
+    return () => window.removeEventListener('cotacaoCriada', handleCotacaoCriada);
   }, []);
 
+  const carregarCotacoes = async () => {
+    try {
+      setLoading(true);
+      const filters = {
+        page: currentPage,
+        limit: itemsPerPage,
+        status: filterStatus !== "all" ? filterStatus : undefined,
+        search: searchTerm || undefined
+      };
+
+      console.log('🔍 [ListarCotacoes] Buscando cotações com filtros:', filters);
+      const result = await cotacaoService.listar(filters);
+      console.log('📊 [ListarCotacoes] Resultado:', {
+        success: result.success,
+        total: result.data?.length || 0,
+        pagination: result.pagination
+      });
+      
+      if (result.success) {
+        // Transformar dados do backend para o formato esperado pelo frontend
+        const cotacoesFormatadas = result.data.map(cotacao => ({
+          id: cotacao.id, // ID numérico do backend (importante para buscar/editar)
+          numero_cotacao: cotacao.numero_cotacao,
+          cliente: {
+            primeiroNome: cotacao.primeiro_nome || '',
+            sobrenome: cotacao.sobrenome || '',
+            email: cotacao.cliente_email || '',
+            telefone: cotacao.cliente_telefone || '',
+            tipo: cotacao.cliente?.tipo || 'Particular',
+            numeroDocumento: cotacao.cliente?.numero_documento || ''
+          },
+          veiculos: cotacao.veiculos || [],
+          totalPremio: parseFloat(cotacao.total_premio) || 0,
+          status: cotacao.status,
+          dataCriacao: cotacao.data_criacao,
+          dataValidade: cotacao.data_validade,
+          agente_nome: cotacao.agente_nome || ''
+        }));
+        
+        setCotacoes(cotacoesFormatadas);
+        setPagination(result.pagination || { page: currentPage, limit: itemsPerPage, total: 0, totalPages: 0 });
+      } else {
+        setCotacoes([]);
+        console.error("Erro ao carregar cotações:", result.message);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar cotações:", error);
+      setCotacoes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filtrar localmente (já vem filtrado do backend, mas manter para compatibilidade)
   const filteredCotações = cotacoes.filter((cotacao) => {
-    const matchesSearch =
-      cotacao.cliente.primeiroNome
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      cotacao.cliente.sobrenome
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      cotacao.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cotacao.veiculos.some(v => 
-        v.matricula?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        v.marcaModelo?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    const matchesFilter =
-      filterStatus === "all" || cotacao.status === filterStatus;
-    return matchesSearch && matchesFilter;
+    if (searchTerm) {
+      const matchesSearch =
+        (cotacao.cliente?.primeiroNome || '')
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        (cotacao.cliente?.sobrenome || '')
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        (cotacao.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (cotacao.numero_cotacao || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (cotacao.veiculos || []).some(v => 
+          (v.matricula || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (v.marca_modelo || '').toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      if (!matchesSearch) return false;
+    }
+    return filterStatus === "all" || cotacao.status === filterStatus;
   });
 
   // Paginação
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredCotações.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredCotações.length / itemsPerPage);
+  const currentItems = filteredCotações;
+  const totalPages = pagination.totalPages || 1;
 
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const paginate = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
   const nextPage = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
   };
   const prevPage = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
   };
+
+  // Recarregar quando mudar filtro ou busca (debounce)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (currentPage === 1) {
+        carregarCotacoes();
+      } else {
+        setCurrentPage(1);
+      }
+    }, 500); // Debounce de 500ms
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -733,13 +817,44 @@ function ListarCotacoes() {
     `;
   };
 
-  // Função para gerar e gerenciar PDF usando o novo componente personalizado
-  const gerarPDFCompleto = (cotacao, acao = 'download') => {
+  // Função para buscar cotação completa e gerar PDF
+  const buscarCotacaoCompletaEgerarPDF = async (cotacao, acao = 'download') => {
     try {
       setGerandoPDF(true);
       
+      // Buscar cotação completa do backend usando o ID numérico
+      const result = await cotacaoService.buscarPorId(cotacao.id);
+      
+      if (!result.success || !result.data) {
+        alert('❌ Erro ao buscar cotação completa. Por favor, tente novamente.');
+        setGerandoPDF(false);
+        return;
+      }
+
+      const cotacaoCompleta = result.data;
+      
+      // Transformar dados do backend para o formato esperado pelo gerador de PDF
+      const cotacaoFormatada = {
+        id: cotacaoCompleta.numero_cotacao || cotacaoCompleta.id,
+        numero_cotacao: cotacaoCompleta.numero_cotacao,
+        cliente: {
+          primeiroNome: cotacaoCompleta.cliente?.primeiro_nome || cotacaoCompleta.primeiro_nome || cotacao.cliente.primeiroNome || '',
+          sobrenome: cotacaoCompleta.cliente?.sobrenome || cotacaoCompleta.sobrenome || cotacao.cliente.sobrenome || '',
+          email: cotacaoCompleta.cliente?.email || cotacaoCompleta.cliente_email || cotacao.cliente.email || '',
+          telefone: cotacaoCompleta.cliente?.telefone || cotacaoCompleta.cliente_telefone || cotacao.cliente.telefone || '',
+          tipo: cotacaoCompleta.cliente?.tipo || cotacao.cliente.tipo || 'Particular',
+          numeroDocumento: cotacaoCompleta.cliente?.numero_documento || cotacao.cliente.numeroDocumento || '',
+          morada: cotacaoCompleta.cliente?.morada || ''
+        },
+        veiculos: cotacaoCompleta.veiculos || cotacao.veiculos || [],
+        totalPremio: parseFloat(cotacaoCompleta.total_premio || cotacao.totalPremio || 0),
+        dataCriacao: cotacaoCompleta.data_criacao || cotacaoCompleta.created_at || cotacao.dataCriacao || new Date().toISOString(),
+        dataValidade: cotacaoCompleta.data_validade || cotacao.dataValidade,
+        status: cotacaoCompleta.status || cotacao.status
+      };
+      
       // Usar o novo gerador de PDF personalizado
-      const sucesso = gerarPDFPersonalizado(cotacao, acao);
+      const sucesso = gerarPDFPersonalizado(cotacaoFormatada, acao);
       
       if (sucesso) {
         setTimeout(() => {
@@ -751,7 +866,7 @@ function ListarCotacoes() {
       
     } catch (error) {
       console.error('Erro ao gerar documento:', error);
-      alert('Erro ao gerar documento. Por favor, tente novamente.');
+      alert('❌ Erro ao gerar documento. Por favor, tente novamente.');
       setGerandoPDF(false);
     }
   };
@@ -759,48 +874,51 @@ function ListarCotacoes() {
   // Funções de ação para os botões
   const visualizarCotacao = (cotacao) => {
     setCotacaoSelecionada(cotacao);
-    gerarPDFCompleto(cotacao, 'visualizar');
+    buscarCotacaoCompletaEgerarPDF(cotacao, 'visualizar');
   };
 
   const baixarCotacao = (cotacao) => {
     setCotacaoSelecionada(cotacao);
-    gerarPDFCompleto(cotacao, 'download');
+    buscarCotacaoCompletaEgerarPDF(cotacao, 'download');
   };
 
   const imprimirCotacao = (cotacao) => {
     setCotacaoSelecionada(cotacao);
-    gerarPDFCompleto(cotacao, 'imprimir');
+    buscarCotacaoCompletaEgerarPDF(cotacao, 'imprimir');
   };
 
   const enviarEmail = async (cotacao) => {
-    if (!cotacao.cliente.email) {
-      alert("O cliente não tem email cadastrado.");
+    if (!cotacao.cliente?.email) {
+      alert("❌ O cliente não tem email cadastrado.");
       return;
     }
+    
+    const confirmarEnvio = window.confirm(
+      `Deseja enviar a cotação ${cotacao.numero_cotacao || cotacao.id} por email para ${cotacao.cliente.email}?`
+    );
+    
+    if (!confirmarEnvio) {
+      return;
+    }
+
     try {
       setProcessandoEmail(true);
-      const subject = `Cotação ${cotacao.id} - Imperial Seguros`;
-      const body = `
-Prezado(a) ${cotacao.cliente.primeiroNome} ${cotacao.cliente.sobrenome},
-
-Segue em anexo a sua cotação ${cotacao.id} da Imperial Seguros.
-Status: ${getStatusText(cotacao.status)}
-Valor total: MT ${parseFloat(cotacao.totalPremio).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })}
-Data: ${new Date(cotacao.dataCriacao).toLocaleDateString("pt-MZ")}
-
-Para mais detalhes, acesse o portal ou responda este email.
-
-Atenciosamente,
-Imperial Seguros
-`.trim();
-
-      const mailto = `mailto:${cotacao.cliente.email}?subject=${encodeURIComponent(
-        subject
-      )}&body=${encodeURIComponent(body)}`;
-      window.location.href = mailto;
-      setMostrarOpcoesPartilha(false);
+      
+      const result = await cotacaoService.enviarEmail(cotacao.id);
+      
+      console.log('📧 Resultado do envio:', result);
+      
+      if (result && result.success) {
+        alert(`✅ Email enviado com sucesso para ${cotacao.cliente.email}!`);
+        setMostrarOpcoesPartilha(false);
+      } else {
+        const errorMsg = result?.message || result?.error || 'Erro desconhecido';
+        alert(`❌ Erro ao enviar email: ${errorMsg}`);
+      }
     } catch (error) {
-      alert("Erro ao abrir o cliente de email.");
+      console.error("Erro ao enviar email:", error);
+      const errorMsg = error.response?.data?.message || error.message || 'Erro desconhecido';
+      alert(`❌ Erro ao enviar email: ${errorMsg}`);
     } finally {
       setProcessandoEmail(false);
     }
@@ -880,7 +998,7 @@ Imperial Seguros
           <div className="mt-4 flex flex-wrap gap-4">
             <div className="px-4 py-2 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 transition-all duration-300 cursor-default">
               <div className="text-sm text-emerald-700">Total de Cotações</div>
-              <div className="text-xl font-bold text-gray-900">{cotacoes.length}</div>
+              <div className="text-xl font-bold text-gray-900">{pagination.total || 0}</div>
             </div>
             <div className="px-4 py-2 bg-green-50 rounded-lg border border-green-200 hover:bg-green-100 hover:border-green-300 transition-all duration-300 cursor-default">
               <div className="text-sm text-green-700">Ativas</div>
@@ -899,38 +1017,44 @@ Imperial Seguros
 
         {/* Tabela de Cotações */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1000px]">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-32">
-                    ID
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-48">
-                    Cliente
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-64">
-                    Email / Telefone
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-32">
-                    Veículos
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-40">
-                    Valor Total
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-32">
-                    Data
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-32">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-56">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {currentItems.length > 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+              <span className="ml-3 text-gray-600">Carregando cotações...</span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1000px]">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-32">
+                      ID
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-48">
+                      Cliente
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-64">
+                      Email / Telefone
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-32">
+                      Veículos
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-40">
+                      Valor Total
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-32">
+                      Data
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-32">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-56">
+                      Ações
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {currentItems.length > 0 ? (
                   currentItems.map((cotacao) => (
                     <tr
                       key={cotacao.id}
@@ -963,25 +1087,27 @@ Imperial Seguros
                       </td>
                       <td className="px-6 py-4 group-hover:pl-7 transition-all duration-300">
                         <div className="text-gray-700 group-hover:text-gray-800 transition-colors duration-300">
-                          {cotacao.veiculos.length} veículo(s)
+                          {cotacao.veiculos?.length || 0} veículo(s)
                         </div>
-                        {cotacao.veiculos.length > 0 && (
-                          <div className="text-gray-600 text-xs mt-1 truncate max-w-[120px] group-hover:text-gray-700 transition-colors duration-300" title={cotacao.veiculos[0].marcaModelo}>
-                            {cotacao.veiculos[0].marcaModelo}
+                        {cotacao.veiculos && cotacao.veiculos.length > 0 && (
+                          <div className="text-gray-600 text-xs mt-1 truncate max-w-[120px] group-hover:text-gray-700 transition-colors duration-300" title={cotacao.veiculos[0].marca_modelo || cotacao.veiculos[0].marcaModelo}>
+                            {cotacao.veiculos[0].marca_modelo || cotacao.veiculos[0].marcaModelo || 'N/A'}
                           </div>
                         )}
                       </td>
                       <td className="px-6 py-4 group-hover:pl-7 transition-all duration-300">
                         <span className="text-gray-900 font-semibold group-hover:text-gray-950 transition-colors duration-300">
                           MT{" "}
-                          {parseFloat(cotacao.totalPremio).toLocaleString(
+                          {parseFloat(cotacao.totalPremio || 0).toLocaleString(
                             "pt-MZ",
                             { minimumFractionDigits: 2 }
                           )}
                         </span>
-                        <div className="text-gray-600 text-xs mt-1 group-hover:text-gray-700 transition-colors duration-300">
-                          {cotacao.veiculos.length} x MT {parseFloat(cotacao.totalPremio / cotacao.veiculos.length).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })}
-                        </div>
+                        {cotacao.veiculos && cotacao.veiculos.length > 0 && (
+                          <div className="text-gray-600 text-xs mt-1 group-hover:text-gray-700 transition-colors duration-300">
+                            {cotacao.veiculos.length} x MT {parseFloat((cotacao.totalPremio || 0) / cotacao.veiculos.length).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 group-hover:pl-7 transition-all duration-300">
                         <span className="text-gray-700 group-hover:text-gray-800 transition-colors duration-300">
@@ -1069,16 +1195,18 @@ Imperial Seguros
                     </td>
                   </tr>
                 )}
-              </tbody>
-            </table>
-          </div>
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Rodapé da Tabela com Paginação */}
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-            <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
-              <span className="text-sm text-gray-600">
-                Mostrando {indexOfFirstItem + 1} a {Math.min(indexOfLastItem, filteredCotações.length)} de {filteredCotações.length} cotações
-              </span>
+          {!loading && (
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
+                <span className="text-sm text-gray-600">
+                  Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, pagination.total || 0)} de {pagination.total || 0} cotações
+                </span>
               
               <div className="flex items-center space-x-2">
                 <button
@@ -1128,6 +1256,7 @@ Imperial Seguros
               </div>
             </div>
           </div>
+          )}
         </div>
 
         {/* Modal de Partilha */}

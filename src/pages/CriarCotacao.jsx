@@ -27,9 +27,11 @@ import {
   Eye,
   Upload,
   File,
+  Loader2,
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import emailjs from "@emailjs/browser";
+import { cotacaoService } from "../services/api";
 
 function CriarCliente() {
   const [tipoCliente, setTipoCliente] = useState("Particular");
@@ -38,6 +40,7 @@ function CriarCliente() {
   const [mostrarOpcoesPartilha, setMostrarOpcoesPartilha] = useState(false);
   const [cotacaoGerada, setCotacaoGerada] = useState(null);
   const [enviandoEmail, setEnviandoEmail] = useState(false);
+  const [salvandoCotacao, setSalvandoCotacao] = useState(false);
   const [debitoDiretoAtivo, setDebitoDiretoAtivo] = useState(false);
   const [showMatriculaOptions, setShowMatriculaOptions] = useState(false);
   const [paisMatricula, setPaisMatricula] = useState("");
@@ -1274,8 +1277,8 @@ function CriarCliente() {
     return `CT${timestamp}${random}`;
   };
 
-  // Função para salvar cotação
-  const salvarCotacao = () => {
+  // Função para salvar cotação no backend
+  const salvarCotacao = async () => {
     if (!formData.email || veiculos.length === 0) {
       alert(
         "Preencha todos os dados do cliente e adicione pelo menos um veículo!"
@@ -1296,43 +1299,94 @@ function CriarCliente() {
       }
     }
 
-    const novaCotacao = {
-      id: gerarIdCotacao(),
-      dataCriacao: new Date().toISOString(),
-      cliente: {
-        tipo: tipoCliente,
-        ...formData,
-      },
-      documentos: {
-        bi: tipoCliente === "Particular" ? docBI?.name : null,
-        livrete: docLivrete?.name
-      },
-      veiculos: veiculos.map((v) => ({
-        ...v,
-        tipoCobertura: tipoCobertura,
-        classificacao: classificacao,
-        configCobertura: configCoberturas[tipoCobertura],
-        classificacaoConfig: getClassificacaoConfig()
-      })),
-      totalPremio: calcularTotalPremio(),
-      status: "ativa",
-      dataInicio: new Date().toISOString(),
-      dataFim: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-      debitoDireto: debitoDiretoAtivo
-    };
+    try {
+      setSalvandoCotacao(true);
 
-    setCotacaoGerada(novaCotacao);
-    setMostrarOpcoesPartilha(true);
+      // Preparar dados para o backend
+      const cotacaoData = {
+        cliente: {
+          tipo: tipoCliente,
+          nacionalidade: formData.nacionalidade,
+          titulo_contato: formData.tituloContato || null,
+          primeiro_nome: formData.primeiroNome,
+          sobrenome: formData.sobrenome,
+          telefone: formData.telefone,
+          email: formData.email,
+          numero_documento: formData.numeroDocumento,
+          data_nascimento: formData.dataNascimento || null,
+          nome_empresa: formData.nomeEmpresa || null,
+          numero_referencia_fiscal: formData.numeroReferenciaFiscal || null
+        },
+        veiculos: veiculos.map((v) => ({
+          marca: v.marca,
+          modelo: v.modelo,
+          matricula: v.matriculaCompleta || v.matricula || null,
+          ano: v.ano || null,
+          motor: v.motor || null,
+          chassis: v.chassis || null,
+          lotacao: v.lotacao || null,
+          tipo_cobertura: tipoCobertura,
+          classificacao: classificacao,
+          capital_seguro: parseFloat(v.capitalSeguro) || 0,
+          taxa: parseFloat(v.taxaAplicada?.replace('%', '')) || 0,
+          premio_anual: parseFloat(v.premioAnnual) || 0,
+          premio_semestral: parseFloat(v.premioSemestral) || 0,
+          premio_trimestral: parseFloat(v.premioTrimestral) || 0,
+          premio_mensal: parseFloat(v.premioMensal) || 0
+        })),
+        total_premio: calcularTotalPremio(),
+        status: "ativa",
+        debito_direto: debitoDiretoAtivo
+      };
 
-    const cotacoesExistentes = JSON.parse(
-      localStorage.getItem("cotacoes") || "[]"
-    );
-    localStorage.setItem(
-      "cotacoes",
-      JSON.stringify([...cotacoesExistentes, novaCotacao])
-    );
+      const result = await cotacaoService.criar(cotacaoData);
 
-    alert("✅ Cotação criada com sucesso! ID: " + novaCotacao.id);
+      if (result.success) {
+        // Formatar cotação para exibição
+        const novaCotacao = {
+          id: result.data.numero_cotacao || result.data.id,
+          numero_cotacao: result.data.numero_cotacao || result.data.id,
+          dataCriacao: result.data.data_criacao || new Date().toISOString(),
+          cliente: {
+            tipo: tipoCliente,
+            ...formData,
+          },
+          documentos: {
+            bi: tipoCliente === "Particular" ? docBI?.name : null,
+            livrete: docLivrete?.name
+          },
+          veiculos: veiculos.map((v) => ({
+            ...v,
+            tipoCobertura: tipoCobertura,
+            classificacao: classificacao,
+            configCobertura: configCoberturas[tipoCobertura],
+            classificacaoConfig: getClassificacaoConfig()
+          })),
+          totalPremio: calcularTotalPremio(),
+          status: "ativa",
+          dataInicio: new Date().toISOString(),
+          dataFim: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          debitoDireto: debitoDiretoAtivo
+        };
+
+        setCotacaoGerada(novaCotacao);
+        setMostrarOpcoesPartilha(true);
+        
+        // Disparar evento customizado para atualizar listas em outras páginas
+        window.dispatchEvent(new CustomEvent('cotacaoCriada', {
+          detail: { cotacao: novaCotacao }
+        }));
+        
+        alert("✅ Cotação criada com sucesso! ID: " + novaCotacao.id);
+      } else {
+        alert("❌ Erro ao criar cotação: " + (result.message || "Erro desconhecido"));
+      }
+    } catch (error) {
+      console.error("Erro ao salvar cotação:", error);
+      alert("❌ Erro ao criar cotação. Por favor, tente novamente.");
+    } finally {
+      setSalvandoCotacao(false);
+    }
   };
 
   // Função para enviar cotação por email
@@ -2639,10 +2693,20 @@ function CriarCliente() {
 
                   <button
                     type="submit"
-                    className="px-8 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-3 group bg-emerald-600 text-white hover:bg-emerald-700"
+                    disabled={salvandoCotacao}
+                    className="px-8 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-3 group bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Save className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    <span>Gerar Cotação</span>
+                    {salvandoCotacao ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span>Salvando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
+                        <span>Gerar Cotação</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

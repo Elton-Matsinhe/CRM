@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, Filter, Download, Eye, Edit, MoreVertical, 
   FileText, CheckCircle, Clock, XCircle, TrendingUp,
   Calendar, User, Building, Phone, Mail, MapPin,
   Printer, Send, X, AlertCircle, ChevronRight,
-  ChevronLeft, ChevronsLeft, ChevronsRight
+  ChevronLeft, ChevronsLeft, ChevronsRight, Loader2, Trash2
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { cotacaoService } from '../services/api';
 
 function GestaoCotacoes() {
   const { themeConfig, language } = useTheme();
@@ -15,6 +16,8 @@ function GestaoCotacoes() {
   const [selectedCotacao, setSelectedCotacao] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [cotacoes, setCotacoes] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const getText = (pt, en, fr) => {
     switch (language) {
@@ -25,7 +28,82 @@ function GestaoCotacoes() {
     }
   };
 
-  const cotacoes = [
+  // Carregar cotações do backend
+  useEffect(() => {
+    carregarCotacoes();
+  }, [currentPage, filterStatus, searchTerm]);
+
+  // Escutar evento de cotação criada para atualizar lista
+  useEffect(() => {
+    const handleCotacaoCriada = () => {
+      carregarCotacoes();
+    };
+
+    window.addEventListener('cotacaoCriada', handleCotacaoCriada);
+    return () => window.removeEventListener('cotacaoCriada', handleCotacaoCriada);
+  }, []);
+
+  const carregarCotacoes = async () => {
+    try {
+      setLoading(true);
+      const filters = {
+        page: currentPage,
+        limit: itemsPerPage,
+        status: filterStatus !== 'all' ? filterStatus : undefined,
+        search: searchTerm || undefined
+      };
+
+      console.log('🔍 [GestaoCotacoes] Buscando cotações com filtros:', filters);
+      const result = await cotacaoService.listar(filters);
+      console.log('📊 [GestaoCotacoes] Resultado:', {
+        success: result.success,
+        total: result.data?.length || 0,
+        pagination: result.pagination
+      });
+      
+      if (result.success) {
+        // Transformar dados do backend para o formato esperado
+        const cotacoesFormatadas = result.data.map(cotacao => ({
+          id: cotacao.id, // ID numérico do backend (importante para buscar/editar)
+          idNumerico: cotacao.id, // Manter referência ao ID numérico
+          numero_cotacao: cotacao.numero_cotacao, // Número da cotação para exibição
+          cliente: `${cotacao.primeiro_nome || ''} ${cotacao.sobrenome || ''}`.trim() || cotacao.cliente?.nome_empresa || 'N/A',
+          cliente_email: cotacao.cliente_email || cotacao.cliente?.email || '',
+          tipo: 'Automóvel',
+          valor: parseFloat(cotacao.total_premio) || 0,
+          data: cotacao.data_criacao,
+          status: cotacao.status,
+          agente: cotacao.agente_nome || 'N/A',
+          seguradora: 'Imperial Seguros',
+          vencimento: cotacao.data_validade,
+          progresso: calcularProgresso(cotacao.status),
+          ultimaAtualizacao: cotacao.data_atualizacao || cotacao.data_criacao
+        }));
+        
+        setCotacoes(cotacoesFormatadas);
+      } else {
+        setCotacoes([]);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar cotações:", error);
+      setCotacoes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calcularProgresso = (status) => {
+    switch (status) {
+      case 'ativa': return 75;
+      case 'aprovada': return 100;
+      case 'pendente': return 45;
+      case 'expirada': return 30;
+      default: return 0;
+    }
+  };
+
+  // Dados fictícios removidos - agora vem do backend
+  const cotacoesFicticias = [
     {
       id: 'CT-2024-001',
       cliente: 'João Santos',
@@ -192,21 +270,126 @@ function GestaoCotacoes() {
     }
   };
 
-  const handleClose = (id) => {
-    console.log('Fechar cotação:', id);
-    alert(`Cotação ${id} será fechada.`);
+  const handleEliminar = async (cotacao) => {
+    if (!cotacao || (!cotacao.id && !cotacao.idNumerico)) {
+      alert("❌ Cotação inválida.");
+      return;
+    }
+
+    // Usar o ID numérico do backend
+    const idParaEliminar = cotacao.idNumerico || cotacao.id;
+
+    const confirmarEliminacao = window.confirm(
+      `⚠️ ATENÇÃO: Deseja realmente ELIMINAR a cotação ${cotacao.numero_cotacao || cotacao.id}?\n\nEsta ação não pode ser desfeita!`
+    );
+
+    if (!confirmarEliminacao) {
+      return;
+    }
+
+    try {
+      const result = await cotacaoService.excluir(idParaEliminar);
+      
+      if (result.success) {
+        alert(`✅ Cotação ${cotacao.numero_cotacao || cotacao.id} eliminada com sucesso!`);
+        carregarCotacoes(); // Recarregar lista
+      } else {
+        alert(`❌ Erro ao eliminar cotação: ${result.message || 'Erro desconhecido'}`);
+      }
+    } catch (error) {
+      console.error("Erro ao eliminar cotação:", error);
+      alert(`❌ Erro ao eliminar cotação: ${error.response?.data?.message || error.message || 'Erro desconhecido'}`);
+    }
   };
 
-  const handlePrint = (cotacao) => {
-    console.log('Imprimir cotação:', cotacao);
-    window.print();
+  const handlePrint = async (cotacao) => {
+    if (!cotacao || (!cotacao.id && !cotacao.idNumerico)) {
+      alert("❌ Cotação inválida.");
+      return;
+    }
+
+    try {
+      // Usar o ID numérico do backend (idNumerico ou id)
+      const idParaBuscar = cotacao.idNumerico || cotacao.id;
+      
+      // Buscar cotação completa do backend
+      const result = await cotacaoService.buscarPorId(idParaBuscar);
+      
+      if (result.success && result.data) {
+        const cotacaoCompleta = result.data;
+        
+        // Transformar dados para o formato esperado pelo gerador de PDF
+        const cotacaoFormatada = {
+          id: cotacaoCompleta.numero_cotacao || cotacaoCompleta.id,
+          numero_cotacao: cotacaoCompleta.numero_cotacao,
+          cliente: {
+            primeiroNome: cotacaoCompleta.cliente?.primeiro_nome || cotacaoCompleta.primeiro_nome || '',
+            sobrenome: cotacaoCompleta.cliente?.sobrenome || cotacaoCompleta.sobrenome || '',
+            email: cotacaoCompleta.cliente?.email || cotacaoCompleta.cliente_email || '',
+            telefone: cotacaoCompleta.cliente?.telefone || cotacaoCompleta.cliente_telefone || '',
+            tipo: cotacaoCompleta.cliente?.tipo || 'Particular',
+            numeroDocumento: cotacaoCompleta.cliente?.numero_documento || '',
+            morada: cotacaoCompleta.cliente?.morada || ''
+          },
+          veiculos: cotacaoCompleta.veiculos || [],
+          totalPremio: parseFloat(cotacaoCompleta.total_premio || 0),
+          dataCriacao: cotacaoCompleta.data_criacao || cotacaoCompleta.created_at || new Date().toISOString(),
+          dataValidade: cotacaoCompleta.data_validade,
+          status: cotacaoCompleta.status
+        };
+        
+        // Importar e usar o gerador de PDF
+        const { gerarPDFPersonalizado } = await import('../components/GeradorPDFPersonalizado');
+        gerarPDFPersonalizado(cotacaoFormatada, 'imprimir');
+      } else {
+        alert("❌ Erro ao buscar cotação para impressão.");
+      }
+    } catch (error) {
+      console.error("Erro ao imprimir cotação:", error);
+      alert("❌ Erro ao imprimir cotação.");
+    }
   };
 
-  const handleEmail = (cotacao) => {
-    console.log('Enviar email:', cotacao);
-    const subject = encodeURIComponent(`Cotação ${cotacao.id} - ${cotacao.cliente}`);
-    const body = encodeURIComponent(`Prezado(a) ${cotacao.cliente},\n\nSegue em anexo a cotação ${cotacao.id}.\n\nAtenciosamente,\nImperial Seguros`);
-    window.location.href = `mailto:${cotacao.cliente}@example.com?subject=${subject}&body=${body}`;
+  const handleEmail = async (cotacao) => {
+    // Usar o ID numérico do backend
+    const idParaBuscar = cotacao.idNumerico || cotacao.id;
+    
+    // Buscar cotação completa para obter email do cliente
+    try {
+      const result = await cotacaoService.buscarPorId(idParaBuscar);
+      
+      if (!result.success || !result.data) {
+        alert("❌ Erro ao buscar cotação.");
+        return;
+      }
+      
+      const cotacaoCompleta = result.data;
+      const clienteEmail = cotacaoCompleta.cliente?.email || cotacaoCompleta.cliente_email || cotacao.cliente_email;
+      
+      if (!clienteEmail) {
+        alert("❌ O cliente não tem email cadastrado.");
+        return;
+      }
+      
+      const confirmarEnvio = window.confirm(
+        `Deseja enviar a cotação ${cotacaoCompleta.numero_cotacao || cotacao.numero_cotacao || cotacao.id} por email para ${clienteEmail}?`
+      );
+      
+      if (!confirmarEnvio) {
+        return;
+      }
+
+      const emailResult = await cotacaoService.enviarEmail(idParaBuscar);
+      
+      if (emailResult.success) {
+        alert(`✅ Email enviado com sucesso para ${clienteEmail}!`);
+      } else {
+        alert(`❌ Erro ao enviar email: ${emailResult.message || 'Erro desconhecido'}`);
+      }
+    } catch (error) {
+      console.error("Erro ao enviar email:", error);
+      alert(`❌ Erro ao enviar email: ${error.response?.data?.message || error.message || 'Erro desconhecido'}`);
+    }
   };
 
   // Função para gerar números de página com animação
@@ -386,7 +569,7 @@ function GestaoCotacoes() {
                     >
                       <td className="px-6 py-4">
                         <span className="font-mono text-emerald-700 font-semibold">
-                          {cotacao.id}
+                          {cotacao.numero_cotacao || cotacao.id}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -442,18 +625,32 @@ function GestaoCotacoes() {
                             <Send className="h-4 w-4" />
                           </button>
                           <button 
-                            onClick={() => setSelectedCotacao(cotacao)}
+                            onClick={async () => {
+                              try {
+                                // Usar o ID numérico do backend
+                                const idParaBuscar = cotacao.idNumerico || cotacao.id;
+                                const result = await cotacaoService.buscarPorId(idParaBuscar);
+                                if (result.success && result.data) {
+                                  setSelectedCotacao(result.data);
+                                } else {
+                                  alert("❌ Erro ao buscar cotação.");
+                                }
+                              } catch (error) {
+                                console.error("Erro ao buscar cotação:", error);
+                                alert("❌ Erro ao buscar cotação.");
+                              }
+                            }}
                             className="p-2 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors duration-200"
                             title="Ver Detalhes"
                           >
                             <Eye className="h-4 w-4" />
                           </button>
                           <button 
-                            onClick={() => handleClose(cotacao.id)}
+                            onClick={() => handleEliminar(cotacao)}
                             className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors duration-200"
-                            title="Fechar Cotação"
+                            title="Eliminar Cotação"
                           >
-                            <X className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                       </td>
