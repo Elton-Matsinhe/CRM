@@ -7,6 +7,7 @@ import {
   FileUp, CheckSquare, ChevronsLeft, ChevronsRight, Ban, Loader2
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { cotacaoService, followUpService, usuarioService } from '../services/api';
 
 // Dados fictícios removidos - agora vem do backend
@@ -146,11 +147,15 @@ const titulosPorSemana = [
 
 function Acompanhamento() {
   const { themeConfig, language } = useTheme();
+  const { usuario } = useAuth();
+  const userRole = usuario?.role || 'agente'; // admin, agente ou subscritor
+  const isAgente = userRole === 'agente';
+  const isAdminOuSubscritor = userRole === 'admin' || userRole === 'subscritor';
+  
   const [cotacoes, setCotacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedCotacao, setSelectedCotacao] = useState(null);
   const [followUps, setFollowUps] = useState([]);
   const [loadingFollowUps, setLoadingFollowUps] = useState(false);
   const [showAcompanhamentoModal, setShowAcompanhamentoModal] = useState(false);
@@ -167,6 +172,7 @@ function Acompanhamento() {
   const [subscritoresSelecionados, setSubscritoresSelecionados] = useState([]);
   const [enviarTodosSubscritores, setEnviarTodosSubscritores] = useState(false);
   const [loadingFinalizar, setLoadingFinalizar] = useState(false);
+  const [tipoContato, setTipoContato] = useState('telefone'); // Para seleção de tipo de contato
   
   // Paginação - 3 cotações por página
   const [currentPage, setCurrentPage] = useState(1);
@@ -187,12 +193,19 @@ function Acompanhamento() {
     return () => window.removeEventListener('cotacaoCriada', handleCotacaoCriada);
   }, []);
 
-  // Carregar follow-ups quando uma cotação for selecionada
+
+  // Atualizar tipoContato quando mudar de semana
   useEffect(() => {
-    if (selectedCotacao) {
-      carregarFollowUps(selectedCotacao);
+    if (cotacaoSelecionada && cotacaoSelecionada.acompanhamentoSemanas) {
+      const semanaData = cotacaoSelecionada.acompanhamentoSemanas[semanaAtual];
+      if (semanaData?.tipoContato) {
+        setTipoContato(semanaData.tipoContato);
+      } else if (isAgente) {
+        // Para agentes, resetar para telefone se não houver tipo definido
+        setTipoContato('telefone');
+      }
     }
-  }, [selectedCotacao]);
+  }, [semanaAtual, cotacaoSelecionada]);
 
   // Carregar subscritores quando mostrar encerramento
   useEffect(() => {
@@ -223,42 +236,77 @@ function Acompanhamento() {
         console.log('✅ [Acompanhamento] Dados recebidos:', result.data.length, 'cotações');
         console.log('📋 [Acompanhamento] Primeira cotação (exemplo):', result.data[0]);
         
-        const cotacoesFormatadas = result.data.map((cotacao, index) => {
-          const cotacaoFormatada = {
-            id: cotacao.numero_cotacao || cotacao.id, // Para exibição
-            idNumerico: cotacao.id, // ID numérico do backend (importante para operações)
-            cliente: `${cotacao.primeiro_nome || ''} ${cotacao.sobrenome || ''}`.trim() || cotacao.cliente?.nome_empresa || 'N/A',
-            tipo: 'Automóvel',
-            valor: parseFloat(cotacao.total_premio) || 0,
-            dataCriacao: cotacao.data_criacao || cotacao.created_at,
-            status: cotacao.status || 'pendente',
-            finalizada: cotacao.status === 'aprovada' || cotacao.status === 'cancelada',
-            agente: cotacao.agente_nome || 'N/A',
-            agenteInicial: cotacao.agente_nome || 'N/A',
-            telefone: cotacao.cliente_telefone || 'N/A',
-            email: cotacao.cliente_email || 'N/A',
-            estagio: getEstagio(cotacao.status || 'pendente'),
-            progresso: gerarProgresso(cotacao),
-            ultimaAtualizacao: cotacao.data_atualizacao || cotacao.updated_at || cotacao.data_criacao || cotacao.created_at,
-            motivoNaoFinalizada: '',
-            motivoRecusa: '',
-            proximaAcao: 'Aguardando follow-up',
-            acompanhamentoSemanas: gerarAcompanhamentoSemanas(),
-            encerrado: false,
-            recusado: false,
-            dataEncerramento: null,
-            dataRecusa: null,
-            comprovativoEncerramento: null,
-            reencaminhadoSubscricao: false,
-            dadosSubscricao: null
-          };
-          
-          if (index === 0) {
-            console.log('📝 [Acompanhamento] Cotação formatada (exemplo):', cotacaoFormatada);
-          }
-          
-          return cotacaoFormatada;
-        });
+        // Carregar follow-ups para todas as cotações
+        const cotacoesFormatadas = await Promise.all(
+          result.data.map(async (cotacao, index) => {
+            const cotacaoFormatada = {
+              id: cotacao.numero_cotacao || cotacao.id, // Para exibição
+              idNumerico: cotacao.id, // ID numérico do backend (importante para operações)
+              cliente: `${cotacao.primeiro_nome || ''} ${cotacao.sobrenome || ''}`.trim() || cotacao.cliente?.nome_empresa || 'N/A',
+              tipo: 'Automóvel',
+              valor: parseFloat(cotacao.total_premio) || 0,
+              dataCriacao: cotacao.data_criacao || cotacao.created_at,
+              status: cotacao.status || 'pendente',
+              finalizada: cotacao.status === 'aprovada' || cotacao.status === 'cancelada',
+              agente: cotacao.agente_nome || 'N/A',
+              agenteInicial: cotacao.agente_nome || 'N/A',
+              telefone: cotacao.cliente_telefone || 'N/A',
+              email: cotacao.cliente_email || 'N/A',
+              estagio: getEstagio(cotacao.status || 'pendente'),
+              progresso: gerarProgresso(cotacao),
+              ultimaAtualizacao: cotacao.data_atualizacao || cotacao.updated_at || cotacao.data_criacao || cotacao.created_at,
+              motivoNaoFinalizada: '',
+              motivoRecusa: '',
+              proximaAcao: 'Aguardando follow-up',
+              acompanhamentoSemanas: gerarAcompanhamentoSemanas(),
+              encerrado: false,
+              recusado: false,
+              dataEncerramento: null,
+              dataRecusa: null,
+              comprovativoEncerramento: null,
+              reencaminhadoSubscricao: false,
+              dadosSubscricao: null
+            };
+            
+            // Carregar follow-ups para esta cotação
+            try {
+              const followUpsResult = await followUpService.listar({ cotacao_id: cotacao.id });
+              if (followUpsResult.success && followUpsResult.data && followUpsResult.data.length > 0) {
+                // Atualizar acompanhamentoSemanas com dados do backend
+                cotacaoFormatada.acompanhamentoSemanas = cotacaoFormatada.acompanhamentoSemanas.map((semana, idx) => {
+                  const followUpSemana = followUpsResult.data.find(f => f.semana === idx + 1);
+                  if (followUpSemana) {
+                    return {
+                      ...semana,
+                      status: followUpSemana.status || 'concluida',
+                      data: followUpSemana.data || semana.data,
+                      feedback: followUpSemana.feedback || semana.feedback,
+                      tipoContato: followUpSemana.tipo_contato || 'telefone',
+                      impasses: {
+                        opcao1: followUpSemana.impasse_opcao1 || false,
+                        opcao2: followUpSemana.impasse_opcao2 || false,
+                        opcao3: followUpSemana.impasse_opcao3 || false,
+                        opcao4: followUpSemana.impasse_opcao4 || false,
+                        outros: followUpSemana.impasse_outros || false,
+                        outrosTexto: followUpSemana.impasse_outros_texto || ''
+                      },
+                      comprovativo: followUpSemana.comprovativo_path || null
+                    };
+                  }
+                  return semana;
+                });
+              }
+            } catch (error) {
+              console.error(`Erro ao carregar follow-ups para cotação ${cotacao.id}:`, error);
+            }
+            
+            if (index === 0) {
+              console.log('📝 [Acompanhamento] Cotação formatada (exemplo):', cotacaoFormatada);
+            }
+            
+            return cotacaoFormatada;
+          })
+        );
         
         console.log('✅ [Acompanhamento] Total de cotações formatadas:', cotacoesFormatadas.length);
         setCotacoes(cotacoesFormatadas);
@@ -299,6 +347,7 @@ function Acompanhamento() {
                 status: followUpSemana.status || 'concluida',
                 data: followUpSemana.data || semana.data,
                 feedback: followUpSemana.feedback || semana.feedback,
+                tipoContato: followUpSemana.tipo_contato || 'telefone',
                 impasses: {
                   opcao1: followUpSemana.impasse_opcao1 || false,
                   opcao2: followUpSemana.impasse_opcao2 || false,
@@ -495,7 +544,14 @@ function Acompanhamento() {
 
   const handleAcompanhamentoClick = async (cotacao) => {
     setCotacaoSelecionada(cotacao);
-    setSemanaAtual(0);
+    // Se for admin/subscritor, começar na primeira semana, senão começar na primeira pendente
+    if (isAdminOuSubscritor) {
+      setSemanaAtual(0);
+    } else {
+      // Para agentes, encontrar a primeira semana pendente
+      const primeiraPendente = cotacao.acompanhamentoSemanas?.findIndex(s => s.status !== 'concluida') ?? 0;
+      setSemanaAtual(primeiraPendente >= 0 ? primeiraPendente : 0);
+    }
     setShowAcompanhamentoModal(true);
     setUploadedFile(null);
     setUploadedComprovativo(null);
@@ -508,6 +564,15 @@ function Acompanhamento() {
     const cotacaoId = cotacao.idNumerico || cotacao.id;
     if (cotacaoId) {
       await carregarFollowUps(cotacaoId);
+      // Após carregar, definir o tipo de contato da semana atual se existir
+      const semanaData = cotacao.acompanhamentoSemanas?.[isAdminOuSubscritor ? 0 : (cotacao.acompanhamentoSemanas?.findIndex(s => s.status !== 'concluida') ?? 0)];
+      if (semanaData?.tipoContato) {
+        setTipoContato(semanaData.tipoContato);
+      } else {
+        setTipoContato('telefone');
+      }
+    } else {
+      setTipoContato('telefone');
     }
   };
 
@@ -569,69 +634,145 @@ function Acompanhamento() {
         .some(([key, value]) => key !== 'outrosTexto' && value === true);
 
       // Preparar dados do follow-up para salvar no backend
+      // Se houver arquivo, usar o nome do arquivo (por enquanto, até implementar upload real)
+      const comprovativoPath = uploadedFile 
+        ? uploadedFile.nome || (typeof uploadedFile === 'string' ? uploadedFile : null)
+        : null;
+
       const followUpData = {
         cotacao_id: cotacaoId,
         semana: semanaAtual + 1, // Semana 1, 2, 3 ou 4
         data: new Date().toISOString().slice(0, 10),
         feedback: semanasAtual.feedback || '',
-        tipo_contato: 'telefone', // Pode ser expandido para permitir seleção
-        impasses: {
-          opcao1: semanasAtual.impasses?.opcao1 || false,
-          opcao2: semanasAtual.impasses?.opcao2 || false,
-          opcao3: semanasAtual.impasses?.opcao3 || false,
-          opcao4: semanasAtual.impasses?.opcao4 || false,
-          outros: semanasAtual.impasses?.outros || false,
-          outrosTexto: semanasAtual.impasses?.outrosTexto || null
-        },
-        comprovativo_path: uploadedComprovativo || null
+        tipo_contato: tipoContato, // Usar o tipo selecionado
+        impasse_opcao1: semanasAtual.impasses?.opcao1 || false,
+        impasse_opcao2: semanasAtual.impasses?.opcao2 || false,
+        impasse_opcao3: semanasAtual.impasses?.opcao3 || false,
+        impasse_opcao4: semanasAtual.impasses?.opcao4 || false,
+        impasse_outros: semanasAtual.impasses?.outros || false,
+        impasse_outros_texto: semanasAtual.impasses?.outrosTexto || null,
+        comprovativo_path: comprovativoPath
       };
 
+      console.log('📤 [Acompanhamento] Enviando follow-up para backend:', followUpData);
+      
       // Salvar no backend
       const result = await followUpService.criar(followUpData);
 
       if (!result.success) {
+        console.error('❌ [Acompanhamento] Erro ao salvar:', result);
         alert(`❌ Erro ao salvar acompanhamento: ${result.message || 'Erro desconhecido'}`);
         return;
       }
 
-      // Atualizar estado local após sucesso
-      const updatedCotacao = {
-        ...cotacaoSelecionada,
-        acompanhamentoSemanas: cotacaoSelecionada.acompanhamentoSemanas.map((semana, idx) => {
+      console.log('✅ [Acompanhamento] Follow-up salvo com sucesso:', result.data);
+
+      // Recarregar follow-ups para obter dados atualizados do backend
+      await carregarFollowUps(cotacaoId);
+      
+      // Aguardar um pouco para garantir que o banco foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Atualizar estado local após sucesso com dados do backend
+      const followUpsResult = await followUpService.listar({ cotacao_id: cotacaoId });
+      console.log('📥 [Acompanhamento] Follow-ups recarregados:', followUpsResult);
+      
+      if (followUpsResult.success && followUpsResult.data) {
+        const updatedSemanas = cotacaoSelecionada.acompanhamentoSemanas.map((semana, idx) => {
+          const followUpSemana = followUpsResult.data.find(f => f.semana === idx + 1);
+          if (followUpSemana) {
+            return {
+              ...semana,
+              status: followUpSemana.status || 'concluida',
+              data: followUpSemana.data || semana.data,
+              feedback: followUpSemana.feedback || semana.feedback,
+              tipoContato: followUpSemana.tipo_contato || tipoContato,
+              impasses: {
+                opcao1: followUpSemana.impasse_opcao1 || false,
+                opcao2: followUpSemana.impasse_opcao2 || false,
+                opcao3: followUpSemana.impasse_opcao3 || false,
+                opcao4: followUpSemana.impasse_opcao4 || false,
+                outros: followUpSemana.impasse_outros || false,
+                outrosTexto: followUpSemana.impasse_outros_texto || ''
+              },
+              comprovativo: followUpSemana.comprovativo_path || null
+            };
+          }
+          // Se for a semana atual que acabou de ser salva, atualizar mesmo sem encontrar no resultado
           if (idx === semanaAtual) {
             return {
               ...semana,
               status: 'concluida',
               data: new Date().toISOString().slice(0, 10),
-              comprovativo: uploadedComprovativo
+              tipoContato: tipoContato,
+              comprovativo: comprovativoPath || uploadedFile?.nome || null
             };
           }
           return semana;
-        }),
-        ultimaAtualizacao: new Date().toISOString().slice(0, 10)
-      };
+        });
 
-      setCotacoes(prev => prev.map(c => {
-        if (c.id === cotacaoSelecionada.id || c.idNumerico === cotacaoId) {
-          return {
-            ...c,
-            acompanhamentoSemanas: updatedCotacao.acompanhamentoSemanas,
-            ultimaAtualizacao: updatedCotacao.ultimaAtualizacao,
-            status: temImpassesMarcados ? 'pendente' : c.status,
-            motivoNaoFinalizada: temImpassesMarcados ? 
-              'Identificado impasse durante acompanhamento' : 
-              c.motivoNaoFinalizada
-          };
-        }
-        return c;
-      }));
+        const updatedCotacao = {
+          ...cotacaoSelecionada,
+          acompanhamentoSemanas: updatedSemanas,
+          ultimaAtualizacao: new Date().toISOString().slice(0, 10)
+        };
 
-      setCotacaoSelecionada(updatedCotacao);
+        // Atualizar lista de cotações
+        setCotacoes(prev => prev.map(c => {
+          if (c.id === cotacaoSelecionada.id || c.idNumerico === cotacaoId) {
+            return {
+              ...c,
+              acompanhamentoSemanas: updatedSemanas,
+              ultimaAtualizacao: updatedCotacao.ultimaAtualizacao,
+              status: temImpassesMarcados ? 'pendente' : c.status,
+              motivoNaoFinalizada: temImpassesMarcados ? 
+                'Identificado impasse durante acompanhamento' : 
+                c.motivoNaoFinalizada
+            };
+          }
+          return c;
+        }));
+
+        setCotacaoSelecionada(updatedCotacao);
+      } else {
+        // Fallback: atualizar apenas localmente se não conseguir recarregar
+        const updatedCotacao = {
+          ...cotacaoSelecionada,
+          acompanhamentoSemanas: cotacaoSelecionada.acompanhamentoSemanas.map((semana, idx) => {
+            if (idx === semanaAtual) {
+              return {
+                ...semana,
+                status: 'concluida',
+                data: new Date().toISOString().slice(0, 10),
+                tipoContato: tipoContato,
+                comprovativo: comprovativoPath || uploadedFile?.nome || null
+              };
+            }
+            return semana;
+          }),
+          ultimaAtualizacao: new Date().toISOString().slice(0, 10)
+        };
+
+        setCotacoes(prev => prev.map(c => {
+          if (c.id === cotacaoSelecionada.id || c.idNumerico === cotacaoId) {
+            return {
+              ...c,
+              acompanhamentoSemanas: updatedCotacao.acompanhamentoSemanas,
+              ultimaAtualizacao: updatedCotacao.ultimaAtualizacao,
+              status: temImpassesMarcados ? 'pendente' : c.status,
+              motivoNaoFinalizada: temImpassesMarcados ? 
+                'Identificado impasse durante acompanhamento' : 
+                c.motivoNaoFinalizada
+            };
+          }
+          return c;
+        }));
+
+        setCotacaoSelecionada(updatedCotacao);
+      }
+
       setUploadedComprovativo(null);
       setUploadedFile(null);
-
-      // Recarregar follow-ups para mostrar os salvos
-      await carregarFollowUps(cotacaoId);
 
       if (semanaAtual < 3) {
         setSemanaAtual(prev => prev + 1);
@@ -803,9 +944,15 @@ Sistema de Gestão de Cotações
       setLoadingFinalizar(true);
       const cotacaoId = cotacaoSelecionada.idNumerico || cotacaoSelecionada.id;
 
+      // Preparar comprovativo (nome do arquivo)
+      const comprovativoPath = uploadedComprovativo 
+        ? (uploadedComprovativo.nome || (typeof uploadedComprovativo === 'string' ? uploadedComprovativo : 'comprovativo_aceitacao.pdf'))
+        : null;
+
       const dadosFinalizacao = {
         enviar_todos: enviarTodosSubscritores,
-        subscritor_ids: enviarTodosSubscritores ? [] : subscritoresSelecionados
+        subscritor_ids: enviarTodosSubscritores ? [] : subscritoresSelecionados,
+        comprovativo_path: comprovativoPath
       };
 
       const result = await cotacaoService.finalizar(cotacaoId, dadosFinalizacao);
@@ -1296,17 +1443,114 @@ Sistema de Gestão de Cotações
 
             {/* Corpo do Modal */}
             <div className="p-8">
+              {/* Seleção de Tipo de Contato - Apenas para agentes */}
+              {isAgente && (
+                <div className="bg-blue-50 rounded-2xl p-6 border border-blue-200 mb-6">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <Phone className="h-5 w-5 text-blue-600" />
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      Tipo de Contato
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { value: 'telefone', label: '📞 Telefone', icon: Phone },
+                      { value: 'email', label: '📧 Email', icon: Mail },
+                      { value: 'visita', label: '🏠 Visita', icon: MapPin },
+                      { value: 'outro', label: '📝 Outro', icon: FileText }
+                    ].map((tipo) => {
+                      const IconComponent = tipo.icon;
+                      return (
+                        <label
+                          key={tipo.value}
+                          className={`flex items-center justify-center p-3 rounded-lg cursor-pointer transition-all duration-200 border-2 ${
+                            tipoContato === tipo.value
+                              ? 'bg-blue-500 text-white border-blue-600'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="tipoContato"
+                            value={tipo.value}
+                            checked={tipoContato === tipo.value}
+                            onChange={(e) => setTipoContato(e.target.value)}
+                            className="hidden"
+                          />
+                          <span className="text-sm font-medium">{tipo.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Mostrar tipo de contato para admin/subscritor */}
+              {isAdminOuSubscritor && cotacaoSelecionada.acompanhamentoSemanas[semanaAtual] && (
+                <div className="bg-blue-50 rounded-2xl p-4 border border-blue-200 mb-6">
+                  <div className="flex items-center space-x-2">
+                    <Phone className="h-5 w-5 text-blue-600" />
+                    <span className="text-sm font-medium text-gray-700">Tipo de Contato:</span>
+                    <span className="text-sm font-semibold text-blue-700">
+                      {(() => {
+                        const tipo = cotacaoSelecionada.acompanhamentoSemanas[semanaAtual].tipoContato || 'telefone';
+                        return tipo === 'telefone' ? '📞 Telefone' :
+                               tipo === 'email' ? '📧 Email' :
+                               tipo === 'visita' ? '🏠 Visita' : '📝 Outro';
+                      })()}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Checkboxes de Impasses */}
               <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200 mb-6">
                 <div className="flex items-center space-x-2 mb-4">
                   <AlertCircle className="h-5 w-5 text-blue-600" />
                   <h3 className="text-lg font-semibold text-gray-800">
-                    Identificação de Possíveis Impasses
+                    {isAgente ? 'Identificação de Possíveis Impasses' : 'Impasses Identificados pelo Agente'}
                   </h3>
                 </div>
                 <p className="text-gray-600 mb-6">
-                  Selecione os motivos que podem estar impedindo o fechamento do negócio nesta semana:
+                  {isAgente 
+                    ? 'Selecione os motivos que podem estar impedindo o fechamento do negócio nesta semana:'
+                    : `O agente identificou os seguintes pontos de atenção na Semana ${semanaAtual + 1}:`}
                 </p>
+                
+                {/* Resumo para admin/subscritor */}
+                {isAdminOuSubscritor && (() => {
+                  const impasses = cotacaoSelecionada.acompanhamentoSemanas[semanaAtual]?.impasses || {};
+                  const temImpasses = impasses.opcao1 || impasses.opcao2 || impasses.opcao3 || impasses.opcao4 || impasses.outros;
+                  
+                  if (temImpasses) {
+                    const opcoesSelecionadas = questoesPorSemana[semanaAtual].filter(item => impasses[item.id]);
+                    return (
+                      <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <AlertCircle className="h-5 w-5 text-yellow-600" />
+                          <span className="font-semibold text-yellow-800">Resumo das Opções Selecionadas:</span>
+                        </div>
+                        <ul className="list-disc list-inside space-y-1 text-sm text-yellow-700">
+                          {opcoesSelecionadas.map(item => (
+                            <li key={item.id}>{item.label}</li>
+                          ))}
+                          {impasses.outros && impasses.outrosTexto && (
+                            <li>Outros: {impasses.outrosTexto}</li>
+                          )}
+                        </ul>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          <span className="font-semibold text-green-800">Nenhum impasse identificado nesta semana</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                })()}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {questoesPorSemana[semanaAtual].map((item) => {
@@ -1314,18 +1558,19 @@ Sistema de Gestão de Cotações
                     return (
                       <label 
                         key={item.id}
-                        className={`flex items-start p-4 rounded-lg cursor-pointer transition-all duration-200 ${
+                        className={`flex items-start p-4 rounded-lg transition-all duration-200 ${
                           isChecked 
                             ? 'bg-blue-50 border-2 border-blue-200' 
-                            : 'bg-white border border-gray-200 hover:border-blue-300'
-                        }`}
+                            : 'bg-white border border-gray-200'
+                        } ${isAgente ? 'cursor-pointer hover:border-blue-300' : 'cursor-default'}`}
                       >
                         <div className="flex items-center h-5 mr-3 mt-1">
                           <input
                             type="checkbox"
                             checked={isChecked}
-                            onChange={(e) => handleImpassesChange(semanaAtual, item.id, e.target.checked)}
-                            className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                            onChange={(e) => isAgente && handleImpassesChange(semanaAtual, item.id, e.target.checked)}
+                            disabled={!isAgente}
+                            className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           />
                         </div>
                         <div className="flex-1">
@@ -1346,13 +1591,16 @@ Sistema de Gestão de Cotações
 
                 {/* Campo Outros */}
                 <div className="mt-6">
-                  <label className="flex items-start p-4 rounded-lg cursor-pointer border border-gray-200 hover:border-blue-300 bg-white">
+                  <label className={`flex items-start p-4 rounded-lg border border-gray-200 bg-white ${
+                    isAgente ? 'cursor-pointer hover:border-blue-300' : 'cursor-default'
+                  }`}>
                     <div className="flex items-center h-5 mr-3 mt-1">
                       <input
                         type="checkbox"
                         checked={cotacaoSelecionada.acompanhamentoSemanas[semanaAtual]?.impasses.outros || false}
-                        onChange={(e) => handleImpassesChange(semanaAtual, 'outros', e.target.checked)}
-                        className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        onChange={(e) => isAgente && handleImpassesChange(semanaAtual, 'outros', e.target.checked)}
+                        disabled={!isAgente}
+                        className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                     <div className="flex-1">
@@ -1362,9 +1610,10 @@ Sistema de Gestão de Cotações
                       {cotacaoSelecionada.acompanhamentoSemanas[semanaAtual]?.impasses.outros && (
                         <textarea
                           value={cotacaoSelecionada.acompanhamentoSemanas[semanaAtual]?.impasses.outrosTexto || ''}
-                          onChange={(e) => handleImpassesChange(semanaAtual, 'outrosTexto', e.target.value)}
+                          onChange={(e) => isAgente && handleImpassesChange(semanaAtual, 'outrosTexto', e.target.value)}
+                          disabled={!isAgente}
                           placeholder="Descreva outros motivos específicos..."
-                          className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                           rows="2"
                         />
                       )}
@@ -1379,17 +1628,18 @@ Sistema de Gestão de Cotações
                   <div className="flex items-center space-x-2">
                     <MessageSquare className="h-5 w-5 text-blue-600" />
                     <h3 className="text-lg font-semibold text-gray-800">
-                      Feedback da Interação (Opcional)
+                      Feedback da Interação {isAgente ? '(Opcional)' : ''}
                     </h3>
                   </div>
-                  <span className="text-sm text-gray-500">Opcional</span>
+                  {isAgente && <span className="text-sm text-gray-500">Opcional</span>}
                 </div>
                 <textarea
                   value={cotacaoSelecionada.acompanhamentoSemanas[semanaAtual]?.feedback || ''}
-                  onChange={(e) => handleFeedbackChange(semanaAtual, e.target.value)}
+                  onChange={(e) => isAgente && handleFeedbackChange(semanaAtual, e.target.value)}
+                  disabled={!isAgente}
                   rows="4"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                  placeholder="Descreva detalhadamente a interação com o cliente..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder={isAgente ? "Descreva detalhadamente a interação com o cliente..." : "Nenhum feedback registrado para esta semana."}
                 />
               </div>
 
@@ -1402,81 +1652,133 @@ Sistema de Gestão de Cotações
                   </h3>
                 </div>
                 
-                {uploadedFile ? (
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
+                {/* Para agentes: upload de arquivo */}
+                {isAgente && (
+                  uploadedFile ? (
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <FileCheck className="h-5 w-5 text-green-600" />
+                          <span className="font-medium text-green-700">
+                            Arquivo Carregado
+                          </span>
+                        </div>
+                        <button
+                          onClick={removeUploadedFile}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <p className="text-sm text-green-600 truncate">
+                        {uploadedFile.nome}
+                      </p>
+                      <p className="text-xs text-green-500 mt-1">
+                        {uploadedFile.tamanho} MB
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
+                      <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600 mb-4">
+                        Arraste arquivos ou clique para fazer upload
+                      </p>
+                      <input
+                        type="file"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        id="file-upload"
+                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                      />
+                      <label
+                        htmlFor="file-upload"
+                        className="inline-block px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 cursor-pointer transition-colors font-medium"
+                      >
+                        Selecionar Arquivo
+                      </label>
+                      <p className="text-xs text-gray-500 mt-4">
+                        Formatos aceitos: PDF, JPG, PNG, DOC<br />
+                        Tamanho máximo: 10MB
+                      </p>
+                    </div>
+                  )
+                )}
+
+                {/* Para admin/subscritor: mostrar documento anexado se existir */}
+                {isAdminOuSubscritor && (
+                  cotacaoSelecionada.acompanhamentoSemanas[semanaAtual]?.comprovativo ? (
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                      <div className="flex items-center space-x-2 mb-3">
                         <FileCheck className="h-5 w-5 text-green-600" />
                         <span className="font-medium text-green-700">
-                          Arquivo Carregado
+                          Documento Anexado pelo Agente
                         </span>
                       </div>
-                      <button
-                        onClick={removeUploadedFile}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+                      <div className="bg-white rounded-lg p-3 border border-green-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <FileText className="h-4 w-4 text-gray-600" />
+                            <span className="text-sm font-medium text-gray-700">
+                              {cotacaoSelecionada.acompanhamentoSemanas[semanaAtual].comprovativo}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          📌 Nota: O arquivo foi registrado pelo agente. Para acessar o documento completo, entre em contato com o agente responsável.
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm text-green-600 truncate">
-                      {uploadedFile.nome}
-                    </p>
-                    <p className="text-xs text-green-500 mt-1">
-                      {uploadedFile.tamanho} MB
-                    </p>
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
-                    <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-4">
-                      Arraste arquivos ou clique para fazer upload
-                    </p>
-                    <input
-                      type="file"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                      id="file-upload"
-                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                    />
-                    <label
-                      htmlFor="file-upload"
-                      className="inline-block px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 cursor-pointer transition-colors font-medium"
-                    >
-                      Selecionar Arquivo
-                    </label>
-                    <p className="text-xs text-gray-500 mt-4">
-                      Formatos aceitos: PDF, JPG, PNG, DOC<br />
-                      Tamanho máximo: 10MB
-                    </p>
-                  </div>
+                  ) : (
+                    <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 text-center">
+                      <p className="text-gray-500 text-sm">Nenhum documento anexado para esta semana</p>
+                    </div>
+                  )
                 )}
               </div>
 
-              {/* Botão Salvar e Avançar */}
+              {/* Navegação entre Semanas e Botões de Ação */}
               <div className="mb-8">
-                <button
-                  onClick={handleUpdateAcompanhamento}
-                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-colors duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2 font-bold text-lg mb-4"
-                >
-                  <CheckCircle className="h-6 w-6" />
-                  <span>
-                    {semanaAtual < 3 ? 'Salvar e Avançar para Semana ' + (semanaAtual + 2) : 'Concluir Acompanhamento'}
-                  </span>
-                </button>
-
-                {semanaAtual > 0 && (
+                {/* Navegação entre semanas - Para todos */}
+                <div className="flex items-center justify-between mb-4">
                   <button
-                    onClick={() => setSemanaAtual(prev => prev - 1)}
-                    className="w-full py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    onClick={() => setSemanaAtual(prev => Math.max(0, prev - 1))}
+                    disabled={semanaAtual === 0}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                   >
-                    <ChevronLeft className="h-4 w-4 inline mr-1" />
-                    Voltar para Semana {semanaAtual}
+                    <ChevronLeft className="h-4 w-4" />
+                    <span>Semana Anterior</span>
+                  </button>
+                  
+                  <span className="text-sm font-medium text-gray-600">
+                    Semana {semanaAtual + 1} de 4
+                  </span>
+                  
+                  <button
+                    onClick={() => setSemanaAtual(prev => Math.min(3, prev + 1))}
+                    disabled={semanaAtual === 3}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    <span>Próxima Semana</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Botões de ação - Apenas para agentes */}
+                {isAgente && (
+                  <button
+                    onClick={handleUpdateAcompanhamento}
+                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-colors duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2 font-bold text-lg"
+                  >
+                    <CheckCircle className="h-6 w-6" />
+                    <span>
+                      {semanaAtual < 3 ? 'Salvar e Avançar para Semana ' + (semanaAtual + 2) : 'Concluir Acompanhamento'}
+                    </span>
                   </button>
                 )}
               </div>
 
-              {/* Seção de Recusa da Cotação */}
-              {showRecusa ? (
+              {/* Seção de Recusa da Cotação - Apenas para agentes */}
+              {isAgente && showRecusa ? (
                 <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-2xl p-6 mb-6">
                   <div className="flex items-center space-x-3 mb-4">
                     <Ban className="h-6 w-6 text-red-600" />
@@ -1576,7 +1878,7 @@ Sistema de Gestão de Cotações
                     </div>
                   </div>
                 </div>
-              ) : (
+              ) : isAgente ? (
                 <button
                   onClick={() => setShowRecusa(true)}
                   className="w-full py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-colors duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2 font-bold text-lg mb-6"
@@ -1584,9 +1886,10 @@ Sistema de Gestão de Cotações
                   <Ban className="h-6 w-6" />
                   <span>Recusar Cotação (Cliente Não Aceitou)</span>
                 </button>
-              )}
+              ) : null}
 
-              {/* Seção de Encerramento */}
+              {/* Seção de Encerramento - Apenas para agentes */}
+              {isAgente && (
               <div className="border-t border-gray-200 pt-6">
                 {showEncerramento ? (
                   <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6">
@@ -1754,6 +2057,7 @@ Sistema de Gestão de Cotações
                   </button>
                 )}
               </div>
+              )}
             </div>
           </div>
         </div>
@@ -1905,18 +2209,12 @@ Sistema de Gestão de Cotações
                       <button
                         onClick={() => handleAcompanhamentoClick(cotacao)}
                         className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
-                        title="Iniciar Acompanhamento Semanal"
+                        title={isAgente ? "Iniciar Acompanhamento Semanal" : "Visualizar Acompanhamento"}
                       >
                         <Clock className="h-4 w-4" />
-                        <span>Acompanhamento</span>
+                        <span>{isAgente ? "Acompanhamento" : "Ver Acompanhamento"}</span>
                       </button>
                     )}
-                    <button
-                      onClick={() => setSelectedCotacao(selectedCotacao === cotacao.id ? null : cotacao.id)}
-                      className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
                   </div>
                 </div>
 
@@ -1937,177 +2235,6 @@ Sistema de Gestão de Cotações
                   </div>
                 </div>
 
-                {/* Timeline de Progresso (expandido) */}
-                {selectedCotacao === cotacao.id && (
-                  <div className="mt-6 pt-6 border-t border-gray-200">
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="text-sm font-semibold text-gray-900">Histórico de Progresso</h4>
-                      {cotacao.reencaminhadoSubscricao && (
-                        <button
-                          onClick={() => {
-                            const emailBody = `
-                              Dados da Apólice para Emissão:
-                              
-                              Cliente: ${cotacao.dadosSubscricao.cliente}
-                              Código: ${cotacao.dadosSubscricao.codigoCotacao}
-                              Tipo: ${cotacao.dadosSubscricao.tipoSeguro}
-                              Valor: ${cotacao.dadosSubscricao.valor.toLocaleString('pt-MZ')} MZN
-                              Agente: ${cotacao.dadosSubscricao.agenteResponsavel}
-                              Data: ${cotacao.dadosSubscricao.dataEncerramento}
-                            `;
-                            alert(emailBody);
-                          }}
-                          className="text-xs text-blue-600 hover:text-blue-700"
-                        >
-                          Ver dados para subscrição
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div className="space-y-3">
-                      {cotacao.progresso.map((etapa, idx) => {
-                        const IconComponent = getStatusIcon(etapa.tipo);
-                        const statusColors = getStatusColor(etapa.status);
-                        return (
-                          <div key={idx} className="flex items-start space-x-3">
-                            <div className={`p-2 rounded-lg border ${statusColors.bg} ${statusColors.border}`}>
-                              <IconComponent className={`h-4 w-4 ${statusColors.text}`} />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-900">
-                                  {etapa.etapa}
-                                </span>
-                                {etapa.data && (
-                                  <span className="text-xs text-gray-600">{etapa.data}</span>
-                                )}
-                              </div>
-                              {etapa.tipo && (
-                                <span className="text-xs text-gray-600">
-                                  Via {etapa.tipo === 'telefone' ? 'Chamada Telefónica' : 
-                                       etapa.tipo === 'email' ? 'Email' : 
-                                       etapa.tipo === 'visita' ? 'Visita ao Cliente' : 'Sistema'}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Informação de Recusa */}
-                    {cotacao.recusado && (
-                      <div className="mt-6 p-4 rounded-xl border border-red-200 bg-red-50">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-red-700 mb-1">Cotação Recusada pelo Cliente</p>
-                            <p className="text-xs text-red-600">
-                              Motivo: {cotacao.motivoRecusa}
-                            </p>
-                            <p className="text-xs text-red-600 mt-1">
-                              Data da Recusa: {cotacao.dataRecusa}
-                            </p>
-                          </div>
-                          <Ban className="h-5 w-5 text-red-600" />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Botão para reencaminhar para subscrição se encerrado */}
-                    {cotacao.encerrado && !cotacao.reencaminhadoSubscricao && !cotacao.recusado && (
-                      <div className="mt-6 p-4 rounded-xl border border-blue-200 bg-blue-50">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-blue-700 mb-1">Cotação Encerrada com Sucesso!</p>
-                            <p className="text-xs text-blue-600">
-                              Cliente aceitou os termos. Pronto para emissão da apólice.
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => {
-                              setCotacaoSelecionada(cotacao);
-                              handleReencaminharSubscricao();
-                            }}
-                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm transition-colors"
-                          >
-                            <SendHorizontal className="h-4 w-4 inline mr-1" />
-                            Enviar para Subscrição
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Formulário de atualização */}
-                    {!cotacao.encerrado && !cotacao.recusado && (
-                      <div className="mt-6 p-4 rounded-xl border border-gray-200 bg-gray-50">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-sm font-semibold text-gray-900">Adicionar atualização</h4>
-                          <span className="text-[11px] text-gray-600">Registre novas etapas, responsáveis e observações</span>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <input
-                            type="text"
-                            value={currentForm.etapa}
-                            onChange={(e) => updateFormState(cotacao, 'etapa', e.target.value)}
-                            placeholder="Etapa / atividade"
-                            className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                          />
-                          <input
-                            type="date"
-                            value={currentForm.data}
-                            onChange={(e) => updateFormState(cotacao, 'data', e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                          />
-                          <select
-                            value={currentForm.tipo}
-                            onChange={(e) => updateFormState(cotacao, 'tipo', e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                          >
-                            <option value="telefone">Telefone</option>
-                            <option value="email">Email</option>
-                            <option value="visita">Visita</option>
-                            <option value="sistema">Sistema</option>
-                          </select>
-                          <select
-                            value={currentForm.status}
-                            onChange={(e) => updateFormState(cotacao, 'status', e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                          >
-                            <option value="concluida">Concluída</option>
-                            <option value="em_andamento">Em andamento</option>
-                            <option value="pendente">Pendente</option>
-                          </select>
-                        </div>
-                        <textarea
-                          rows="3"
-                          value={currentForm.observacoes}
-                          onChange={(e) => updateFormState(cotacao, 'observacoes', e.target.value)}
-                          placeholder="Observações ou notas adicionais"
-                          className="w-full mt-3 px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                        />
-                        <div className="flex justify-end mt-3">
-                          <button
-                            onClick={() => handleAddProgress(cotacao)}
-                            className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors"
-                          >
-                            Guardar atualização
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Botão para expandir */}
-                {selectedCotacao !== cotacao.id && (
-                  <button
-                    onClick={() => setSelectedCotacao(cotacao.id)}
-                    className="mt-4 text-sm text-emerald-600 hover:text-emerald-700 flex items-center space-x-1 transition-colors"
-                  >
-                    <span>Ver detalhes completos</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                )}
               </div>
             );
           })
