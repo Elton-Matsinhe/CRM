@@ -15,8 +15,18 @@ import {
   Trash2,
 } from "lucide-react";
 import CotacoesLayout from "../components/CotacoesLayout";
-import { gerarPDFPersonalizado } from "../components/GeradorPDFPersonalizado";
+import { jsPDF } from "jspdf";
+import logo from "../assets/logo.png";
 import { cotacaoService } from "../services/api";
+
+const loadLogo = (src) =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
 
 function EditarCotacao() {
   const [cotacaoId, setCotacaoId] = useState("");
@@ -277,36 +287,285 @@ function EditarCotacao() {
     }));
   };
 
-  // Template único: GeradorPDFPersonalizado
-  const cotacaoParaPDF = () => {
-    if (!formData) return null;
-    return {
-      id: formData.id || formData.numero_cotacao,
-      dataCriacao: formData.data_criacao || formData.updated_at || new Date().toISOString(),
-      cliente: formData.cliente || {},
-      veiculos: (formData.veiculos || []).map((v) => ({
-        ...v,
-        marca: v.marca || (v.marcaModelo && v.marcaModelo.split(" ")[0]),
-        modelo: v.modelo || (v.marcaModelo && v.marcaModelo.split(" ").slice(1).join(" ")),
-      })),
-      totalPremio: formData.totalPremio,
-      debitoDireto: formData.debitoDireto,
+  // Função para gerar PDF da cotação atualizada
+  const gerarPDF = async () => {
+    if (!formData) return;
+
+    const doc = new jsPDF();
+
+    let yPosition = 20;
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 20;
+    const lineHeight = 7;
+
+    const checkPageBreak = (heightNeeded) => {
+      if (yPosition + heightNeeded > pageHeight - margin) {
+        doc.addPage();
+        yPosition = margin;
+      }
     };
+
+    // Cabeçalho
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, 210, 40, "F");
+
+    try {
+      const img = await loadLogo(logo);
+      doc.addImage(img, "PNG", margin, 8, 26, 26);
+    } catch (e) {
+      // fallback sem imagem
+    }
+
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 0, 0);
+    doc.text("Imperial Seguros", margin + 32, 20);
+
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Cotação Atualizada", margin + 32, 32);
+
+    yPosition = 50;
+
+    // Título
+    doc.setFontSize(16);
+    doc.setTextColor(22, 101, 52);
+    doc.text("COTAÇÃO DE SEGURO - ATUALIZADA", margin, yPosition);
+
+    yPosition += 10;
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(
+      `Nº: ${formData.id} | Atualizada em: ${new Date().toLocaleDateString(
+        "pt-MZ"
+      )}`,
+      margin,
+      yPosition
+    );
+
+    // Informações do Segurado
+    yPosition += 15;
+    checkPageBreak(30);
+
+    doc.setFillColor(240, 240, 240);
+    doc.rect(margin, yPosition, 170, 8, "F");
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(22, 101, 52);
+    doc.text("INFORMAÇÕES DO SEGURADO", margin + 2, yPosition + 6);
+
+    yPosition += 15;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+
+    const infoCliente = [
+      `Nome: ${formData.cliente.tituloContato || ""} ${
+        formData.cliente.primeiroNome
+      } ${formData.cliente.sobrenome}`,
+      `Email: ${formData.cliente.email}`,
+      `Telefone: ${formData.cliente.telefone}`,
+      `Documento: ${formData.cliente.numeroDocumento}`,
+      `Tipo: ${formData.cliente.tipo}`,
+      `Status: ${formData.status}`,
+    ];
+
+    infoCliente.forEach((info) => {
+      doc.text(info, margin, yPosition);
+      yPosition += lineHeight;
+    });
+
+    // Detalhes dos Veículos Atualizados
+    formData.veiculos.forEach((veiculo, index) => {
+      yPosition += 20;
+      checkPageBreak(100);
+
+      doc.setFillColor(240, 240, 240);
+      doc.rect(margin, yPosition, 170, 8, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(22, 101, 52);
+      doc.text(`VIATURA ${index + 1} - ATUALIZADA`, margin + 2, yPosition + 6);
+
+      yPosition += 15;
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
+
+      const infoVeiculo = [
+        `Marca/Modelo: ${veiculo.marcaModelo}`,
+        `Matrícula: ${veiculo.matricula || "Por atribuir"}`,
+        `Ano: ${veiculo.ano || "N/A"}`,
+        `Motor: ${veiculo.motor || "N/A"}`,
+        `Chassis: ${veiculo.chassis || "N/A"}`,
+        `Lotação: ${veiculo.lotacao || "N/A"}`,
+        `Tipo: ${veiculo.tipoViatura}`,
+        `Cobertura: ${configCoberturas[veiculo.tipoCobertura]?.nome || "N/A"}`,
+        `Capital Seguro: MT ${parseFloat(veiculo.capitalSeguro).toLocaleString(
+          "pt-MZ"
+        )}`,
+        `Taxa: ${(veiculo.taxa * 100).toFixed(1)}%`,
+        `Prémio Annual: MT ${parseFloat(veiculo.premioAnnual).toLocaleString(
+          "pt-MZ",
+          { minimumFractionDigits: 2 }
+        )}`,
+      ];
+
+      infoVeiculo.forEach((info) => {
+        if (yPosition > pageHeight - 20) {
+          doc.addPage();
+          yPosition = margin;
+        }
+        doc.text(info, margin, yPosition);
+        yPosition += lineHeight;
+      });
+    });
+
+    // Total Atualizado
+    yPosition += 15;
+    checkPageBreak(20);
+
+    doc.setFillColor(22, 101, 52);
+    doc.rect(margin, yPosition, 170, 10, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("TOTAL ATUALIZADO", margin + 2, yPosition + 7);
+    doc.text(
+      `MT ${parseFloat(formData.totalPremio).toLocaleString("pt-MZ", {
+        minimumFractionDigits: 2,
+      })}`,
+      150,
+      yPosition + 7
+    );
+    yPosition += 14;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(60, 60, 60);
+    doc.text(
+      `Prémio Semestral: MT ${parseFloat(formData.totalPremio / 2).toLocaleString("pt-MZ", {
+        minimumFractionDigits: 2,
+      })}`,
+      margin,
+      yPosition
+    );
+    doc.text(
+      `Prémio Trimestral: MT ${parseFloat(formData.totalPremio / 4).toLocaleString("pt-MZ", {
+        minimumFractionDigits: 2,
+      })}`,
+      margin,
+      yPosition + 6
+    );
+
+    // Rodapé
+    const ultimaPagina = doc.internal.getNumberOfPages();
+    doc.setPage(ultimaPagina);
+
+    yPosition = pageHeight - 30;
+    doc.setFillColor(22, 101, 52);
+    doc.rect(0, yPosition, 210, 30, "F");
+
+    doc.setFontSize(8);
+    doc.setTextColor(255, 255, 255);
+    doc.text(
+      "Imperial Seguros Moçambique, S.A. | www.imperialinsurance-mz.com",
+      margin,
+      yPosition + 8
+    );
+    doc.text(
+      `Documento atualizado em ${new Date().toLocaleString("pt-MZ")}`,
+      margin,
+      yPosition + 16
+    );
+
+    doc.save(`cotacao-atualizada-${formData.id}.pdf`);
   };
 
-  const gerarPDF = () => {
-    const cotacao = cotacaoParaPDF();
-    if (cotacao) gerarPDFPersonalizado(cotacao, "download");
+  // Função para visualizar PDF
+  const visualizarPDF = async () => {
+    await gerarPDF();
   };
 
-  const visualizarPDF = () => {
-    const cotacao = cotacaoParaPDF();
-    if (cotacao) gerarPDFPersonalizado(cotacao, "visualizar");
-  };
-
+  // Função para imprimir
   const imprimirCotacao = () => {
-    const cotacao = cotacaoParaPDF();
-    if (cotacao) gerarPDFPersonalizado(cotacao, "imprimir");
+    const conteudo = `
+      <html>
+        <head>
+          <title>Cotacao Atualizada ${formData.id}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+            .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+            .table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+            .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            .table th { background-color: #f5f5f5; }
+            .total { font-weight: bold; font-size: 1.2em; color: #2d3748; background-color: #e2e8f0; padding: 10px; }
+            .update-info { background-color: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0; }
+            .vehicle-card { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #007bff; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Imperial Seguros</h1>
+            <h2>COTAÇÃO DE SEGURO - ATUALIZADA</h2>
+            <div class="update-info">
+              <strong>Atualizada em:</strong> ${new Date().toLocaleDateString(
+                "pt-MZ"
+              )}
+            </div>
+          </div>
+          
+          <div class="section">
+            <h3>INFORMAÇÕES DO SEGURADO</h3>
+            <p><strong>Nome:</strong> ${formData.cliente.tituloContato || ""} ${
+      formData.cliente.primeiroNome
+    } ${formData.cliente.sobrenome}</p>
+            <p><strong>Email:</strong> ${formData.cliente.email}</p>
+            <p><strong>Telefone:</strong> ${formData.cliente.telefone}</p>
+            <p><strong>Documento:</strong> ${
+              formData.cliente.numeroDocumento
+            }</p>
+            <p><strong>Status:</strong> ${formData.status}</p>
+          </div>
+
+          <div class="section">
+            <h3>VEÍCULOS SEGURADOS - ATUALIZADOS</h3>
+            ${formData.veiculos
+              .map(
+                (veiculo, index) => `
+              <div class="vehicle-card">
+                <h4>Viatura ${index + 1}: ${veiculo.marcaModelo}</h4>
+                <p><strong>Matrícula:</strong> ${
+                  veiculo.matricula || "Por atribuir"
+                }</p>
+                <p><strong>Ano:</strong> ${veiculo.ano || "N/A"}</p>
+                <p><strong>Motor:</strong> ${veiculo.motor || "N/A"}</p>
+                <p><strong>Chassis:</strong> ${veiculo.chassis || "N/A"}</p>
+                <p><strong>Lotacao:</strong> ${veiculo.lotacao || "N/A"}</p>
+                <p><strong>Tipo:</strong> ${veiculo.tipoViatura}</p>
+                <p><strong>Cobertura:</strong> ${
+                  configCoberturas[veiculo.tipoCobertura]?.nome || "N/A"
+                }</p>
+                <p><strong>Capital Seguro:</strong> MT ${parseFloat(
+                  veiculo.capitalSeguro
+                ).toLocaleString("pt-MZ")}</p>
+                <p><strong>Prémio:</strong> MT ${parseFloat(
+                  veiculo.premioAnnual
+                ).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })}</p>
+              </div>
+            `
+              )
+              .join("")}
+          </div>
+
+          <div class="total">
+            TOTAL ATUALIZADO: MT ${parseFloat(
+              formData.totalPremio
+            ).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const janela = window.open("", "_blank");
+    janela.document.write(conteudo);
+    janela.document.close();
+    janela.print();
   };
 
   // Função para enviar email

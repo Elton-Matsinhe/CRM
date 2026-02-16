@@ -29,7 +29,7 @@ import {
   File,
   Loader2,
 } from "lucide-react";
-import { gerarPDFPersonalizado } from "../components/GeradorPDFPersonalizado";
+import { jsPDF } from "jspdf";
 import emailjs from "@emailjs/browser";
 import { cotacaoService } from "../services/api";
 
@@ -745,6 +745,458 @@ function CriarCliente() {
     })}`;
   };
 
+  // FUNÇÃO PARA GERAR PDF (mantida do código original)
+  const gerarPDFBlob = () => {
+    if (!cotacaoGerada) return null;
+
+    const doc = new jsPDF();
+
+    let yPosition = 20;
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 20;
+    const lineHeight = 7;
+
+    const checkPageBreak = (heightNeeded) => {
+      if (yPosition + heightNeeded > pageHeight - margin) {
+        doc.addPage();
+        yPosition = margin;
+      }
+    };
+
+    // Cabeçalho
+    doc.setFillColor(0, 82, 155);
+    doc.rect(0, 0, 210, 50, "F");
+
+    doc.setFillColor(255, 255, 255);
+    doc.rect(margin, 10, 30, 30, "F");
+    doc.setTextColor(0, 82, 155);
+    doc.setFontSize(8);
+    doc.text("LOGO", margin + 15, 25, { align: "center" });
+
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("IMPERIAL SEGUROS", margin + 40, 20);
+
+    doc.setFontSize(10);
+    doc.text("Seguradora Confiável | Serviço de Excelência", margin + 40, 27);
+    doc.text(
+      "Tel: +258 84 300 0000 | Email: comercial@imperialinsurance-mz.com",
+      margin + 40,
+      34
+    );
+
+    yPosition = 60;
+
+    doc.setFontSize(18);
+    doc.setTextColor(0, 82, 155);
+    doc.text("COTAÇÃO DE SEGURO AUTOMÓVEL", 105, yPosition, {
+      align: "center",
+    });
+
+    yPosition += 10;
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text(
+      `Nº: ${cotacaoGerada.id} | Emitida em: ${new Date().toLocaleDateString(
+        "pt-MZ"
+      )} | Válida por 30 dias`,
+      105,
+      yPosition,
+      { align: "center" }
+    );
+
+    yPosition += 15;
+    checkPageBreak(40);
+
+    doc.setFillColor(240, 240, 240);
+    doc.rect(margin, yPosition, 170, 8, "F");
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 82, 155);
+    doc.text("INFORMAÇÕES DO SEGURADO", margin + 2, yPosition + 6);
+
+    yPosition += 12;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+
+    const col1 = margin;
+    const col2 = margin + 90;
+
+    doc.text(
+      `Nome: ${cotacaoGerada.cliente.tituloContato || ""} ${
+        cotacaoGerada.cliente.primeiroNome
+      } ${cotacaoGerada.cliente.sobrenome}`,
+      col1,
+      yPosition
+    );
+    doc.text(`Email: ${cotacaoGerada.cliente.email}`, col2, yPosition);
+    yPosition += lineHeight;
+
+    doc.text(
+      `Documento: ${cotacaoGerada.cliente.numeroDocumento}`,
+      col1,
+      yPosition
+    );
+    doc.text(`Telefone: ${cotacaoGerada.cliente.telefone}`, col2, yPosition);
+    yPosition += lineHeight;
+
+    doc.text(
+      `Tipo: ${
+        cotacaoGerada.cliente.tipo === "Particular"
+          ? "Cliente Particular"
+          : "Cliente Empresarial"
+      }`,
+      col1,
+      yPosition
+    );
+    yPosition += lineHeight;
+
+    yPosition += 8;
+    checkPageBreak(20);
+
+    doc.setFillColor(240, 240, 240);
+    doc.rect(margin, yPosition, 170, 8, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 82, 155);
+    doc.text("PERÍODO DE VIGÊNCIA", margin + 2, yPosition + 6);
+
+    yPosition += 12;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+    const dataInicio = new Date(cotacaoGerada.dataInicio).toLocaleDateString(
+      "pt-MZ"
+    );
+    const dataFim = new Date(cotacaoGerada.dataFim).toLocaleDateString("pt-MZ");
+    doc.text(
+      `Início: ${dataInicio} | Término: ${dataFim} | Duração: 12 meses`,
+      margin,
+      yPosition
+    );
+
+    yPosition += 15;
+    checkPageBreak(100);
+
+    doc.setFillColor(240, 240, 240);
+    doc.rect(margin, yPosition, 170, 8, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 82, 155);
+    doc.text("COMPOSIÇÃO DO PRÉMIO", margin + 2, yPosition + 6);
+
+    yPosition += 12;
+
+    doc.setFillColor(0, 82, 155);
+    doc.rect(margin, yPosition, 170, 8, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.text("DESCRIÇÃO", margin + 2, yPosition + 6);
+    doc.text("VALOR (MT)", 160, yPosition + 6, { align: "right" });
+
+    yPosition += 15;
+
+    const premioBase = parseFloat(cotacaoGerada.totalPremio * 0.84);
+    const custosAdmin = parseFloat(cotacaoGerada.totalPremio * 0.126);
+    const sobreTaxa = parseFloat(cotacaoGerada.totalPremio * 0.0145);
+    const imposto = parseFloat(cotacaoGerada.totalPremio * 0.0195);
+
+    const linhas = [
+      { desc: "Prémio Base do Seguro", valor: premioBase.toFixed(2) },
+      { desc: "Custos Administrativos (12,6%)", valor: custosAdmin.toFixed(2) },
+      { desc: "Sobre Taxa (1,45%)", valor: sobreTaxa.toFixed(2) },
+      { desc: "Imposto de Selo (1,95%)", valor: imposto.toFixed(2) },
+    ];
+
+    doc.setTextColor(0, 0, 0);
+    linhas.forEach((linha, index) => {
+      if (index % 2 === 0) {
+        doc.setFillColor(250, 250, 250);
+        doc.rect(margin, yPosition - 4, 170, 10, "F");
+      }
+      doc.text(linha.desc, margin + 2, yPosition);
+      doc.text(linha.valor, 160, yPosition, { align: "right" });
+      yPosition += 10;
+    });
+
+    yPosition += 5;
+    doc.setFillColor(0, 82, 155);
+    doc.rect(margin, yPosition, 170, 10, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.text("TOTAL DO PRÉMIO", margin + 2, yPosition + 7);
+    doc.text(
+      parseFloat(cotacaoGerada.totalPremio).toLocaleString("pt-MZ", {
+        minimumFractionDigits: 2,
+      }),
+      160,
+      yPosition + 7,
+      { align: "right" }
+    );
+    
+    yPosition += 12;
+    doc.setFontSize(10);
+    doc.setTextColor(40, 40, 40);
+    doc.text(
+      `Prémio Semestral: MT ${parseFloat(cotacaoGerada.totalPremio / 2).toLocaleString("pt-MZ", {
+        minimumFractionDigits: 2,
+      })}`,
+      margin,
+      yPosition
+    );
+    
+    // Verificar se deve mostrar prémio trimestral e mensal no PDF
+    const mostrarCamposEspeciaisPDF = cotacaoGerada.veiculos.some(veiculo => {
+      const capital = parseFloat(veiculo.capitalSeguro) || 0;
+      return capital > 12000;
+    });
+    
+    const mostrarMensalPDF = cotacaoGerada.debitoDireto && mostrarCamposEspeciaisPDF;
+    
+    if (mostrarCamposEspeciaisPDF) {
+      doc.text(
+        `Prémio Trimestral: MT ${parseFloat(cotacaoGerada.totalPremio / 4).toLocaleString("pt-MZ", {
+          minimumFractionDigits: 2,
+        })}`,
+        margin,
+        yPosition + 6
+      );
+      
+      if (mostrarMensalPDF) {
+        doc.text(
+          `Prémio Mensal: MT ${parseFloat(cotacaoGerada.totalPremio / 12).toLocaleString("pt-MZ", {
+            minimumFractionDigits: 2,
+          })}`,
+          margin,
+          yPosition + 12
+        );
+        yPosition += 12;
+      }
+      yPosition += 6;
+    }
+
+    cotacaoGerada.veiculos.forEach((veiculo, index) => {
+      yPosition += 20;
+      checkPageBreak(120);
+
+      doc.setFillColor(240, 240, 240);
+      doc.rect(margin, yPosition, 170, 8, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0, 82, 155);
+      doc.text(
+        `VIATURA ${index + 1} - ${veiculo.marca} ${veiculo.modelo}`,
+        margin + 2,
+        yPosition + 6
+      );
+
+      yPosition += 12;
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
+
+      const infoCol1 = [
+        `Marca: ${veiculo.marca}`,
+        `Modelo: ${veiculo.modelo}`,
+        `Matrícula: ${veiculo.matriculaCompleta || veiculo.matricula || "Por atribuir"}`,
+        `Ano: ${veiculo.ano || "N/A"}`,
+      ];
+
+      const infoCol2 = [
+        `Motor: ${veiculo.motor || "N/A"}`,
+        `Lotação: ${veiculo.lotacao || "N/A"}`,
+        `Chassi: ${veiculo.chassis || "N/A"}`,
+        `Capital Seguro: MT ${parseFloat(veiculo.capitalSeguro).toLocaleString(
+          "pt-MZ"
+        )}`,
+      ];
+
+      infoCol1.forEach((info, i) => {
+        doc.text(info, col1, yPosition);
+        if (infoCol2[i]) {
+          doc.text(infoCol2[i], col2, yPosition);
+        }
+        yPosition += lineHeight;
+      });
+
+      yPosition += 5;
+      doc.setFont("helvetica", "bold");
+      doc.text("DETALHES FINANCEIROS:", col1, yPosition);
+      yPosition += lineHeight;
+      doc.setFont("helvetica", "normal");
+      doc.text(
+        `Taxa Aplicada: ${veiculo.taxaAplicada || "0%"}`,
+        col1,
+        yPosition
+      );
+      doc.text(
+        `Prémio Anual: MT ${parseFloat(veiculo.premioAnnual).toLocaleString(
+          "pt-MZ",
+          { minimumFractionDigits: 2 }
+        )}`,
+        col2,
+        yPosition
+      );
+      doc.text(
+        `Prémio Semestral: MT ${parseFloat(veiculo.premioSemestral).toLocaleString(
+          "pt-MZ",
+          { minimumFractionDigits: 2 }
+        )}`,
+        col1,
+        yPosition + lineHeight
+      );
+      
+      // Mostrar prémio trimestral sempre quando capital > 12000
+      const capital = parseFloat(veiculo.capitalSeguro) || 0;
+      if (capital > 12000) {
+        doc.text(
+          `Prémio Trimestral: MT ${parseFloat(veiculo.premioTrimestral || (parseFloat(veiculo.premioAnnual) / 4)).toLocaleString(
+            "pt-MZ",
+            { minimumFractionDigits: 2 }
+          )}`,
+          col2,
+          yPosition + lineHeight
+        );
+        
+        // Mostrar prémio mensal só quando débito direto ativo
+        if (cotacaoGerada.debitoDireto) {
+          doc.text(
+            `Prémio Mensal: MT ${parseFloat(veiculo.premioMensal || (parseFloat(veiculo.premioAnnual) / 12)).toLocaleString(
+              "pt-MZ",
+              { minimumFractionDigits: 2 }
+            )}`,
+            col1,
+            yPosition + (lineHeight * 2)
+          );
+          yPosition += lineHeight * 3;
+        } else {
+          yPosition += lineHeight * 2;
+        }
+      } else {
+        yPosition += lineHeight;
+      }
+
+      yPosition += 10;
+      if (yPosition > pageHeight - 50) {
+        doc.addPage();
+        yPosition = margin;
+      }
+
+      doc.setFillColor(240, 240, 240);
+      doc.rect(margin, yPosition, 170, 8, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0, 82, 155);
+      doc.text("COBERTURAS INCLUÍDAS", margin + 2, yPosition + 6);
+
+      yPosition += 12;
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
+
+      const cobertura = veiculo.configCobertura;
+      if (cobertura) {
+        let coberturaCount = 0;
+        Object.entries(cobertura.coberturas).forEach(([key, value]) => {
+          if (value > 0 || value === "Cobertura Completa") {
+            const label = key
+              .replace(/([A-Z])/g, " $1")
+              .replace(/^./, (str) => str.toUpperCase())
+              .replace("Rc", "RC")
+              .replace("Dp", "DP");
+
+            if (yPosition > pageHeight - 15) {
+              doc.addPage();
+              yPosition = margin;
+            }
+
+            if (coberturaCount % 2 === 0) {
+              doc.text(`• ${label}:`, col1, yPosition);
+              doc.text(
+                value === "Cobertura Completa" ? value : `MT ${value.toLocaleString("pt-MZ")}`,
+                col1 + 80,
+                yPosition
+              );
+            } else {
+              doc.text(`• ${label}:`, col2, yPosition);
+              doc.text(
+                value === "Cobertura Completa" ? value : `MT ${value.toLocaleString("pt-MZ")}`,
+                col2 + 80,
+                yPosition
+              );
+              yPosition += lineHeight;
+            }
+            coberturaCount++;
+          }
+        });
+        if (coberturaCount % 2 !== 0) yPosition += lineHeight;
+      }
+    });
+
+    yPosition += 15;
+    checkPageBreak(80);
+
+    doc.setFillColor(240, 240, 240);
+    doc.rect(margin, yPosition, 170, 8, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 82, 155);
+    doc.text("CONDIÇÕES GERAIS", margin + 2, yPosition + 6);
+
+    yPosition += 12;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+
+    const condicoes = [
+      "• Esta cotação tem validade de 30 dias a partir da data de emissão",
+      "• O prémio é pago anualmente antecipadamente",
+      "• Os veículos devem estar em condições legais de circulação",
+      "• O condutor deve possuir carta de condução válida",
+      "• Vistória prévia obrigatória para veículos com mais de 5 anos",
+      "• Franquias aplicáveis conforme tipo de cobertura selecionado",
+      "• Cláusulas e condições sujeitas à apólice definitiva",
+    ];
+
+    condicoes.forEach((condicao) => {
+      if (yPosition > pageHeight - 15) {
+        doc.addPage();
+        yPosition = margin;
+      }
+      doc.text(condicao, margin, yPosition, { maxWidth: 170 });
+      yPosition += lineHeight * 1.3;
+    });
+
+    const ultimaPagina = doc.internal.getNumberOfPages();
+    doc.setPage(ultimaPagina);
+
+    yPosition = pageHeight - 40;
+    doc.setFillColor(0, 82, 155);
+    doc.rect(0, yPosition, 210, 40, "F");
+
+    doc.setFontSize(7);
+    doc.setTextColor(255, 255, 255);
+
+    doc.text("IMPERIAL SEGUROS MOÇAMBIQUE, S.A.", margin, yPosition + 8);
+    doc.text(
+      "Av. 25 de Setembro, 1462 • Maputo • Moçambique",
+      margin,
+      yPosition + 13
+    );
+    doc.text(
+      "Tel: +258 84 300 0000 • Email: info@imperialinsurance-mz.com",
+      margin,
+      yPosition + 18
+    );
+    doc.text(
+      "www.imperialinsurance-mz.com • NUIT: 123456789",
+      margin,
+      yPosition + 23
+    );
+
+    doc.setTextColor(255, 255, 255, 0.8);
+    doc.text(
+      `Documento gerado eletronicamente • ${new Date().toLocaleString(
+        "pt-MZ"
+      )} • Página ${ultimaPagina} de ${ultimaPagina}`,
+      105,
+      yPosition + 32,
+      { align: "center" }
+    );
+
+    return doc.output("blob");
+  };
 
   // FUNÇÃO PARA ENVIAR EMAIL (mantida do código original)
   const enviarEmailCotacao = async (cotacao) => {
@@ -1093,17 +1545,612 @@ function CriarCliente() {
     );
   };
 
-  // Funções de visualização/download – template único GeradorPDFPersonalizado
+  // Funções de visualização/download
   const gerarPDF = () => {
-    if (cotacaoGerada) gerarPDFPersonalizado(cotacaoGerada, "download");
+    const pdfBlob = gerarPDFBlob();
+    if (pdfBlob) {
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `cotacao-${cotacaoGerada.id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   const visualizarPDF = () => {
-    if (cotacaoGerada) gerarPDFPersonalizado(cotacaoGerada, "visualizar");
+    const pdfBlob = gerarPDFBlob();
+    if (pdfBlob) {
+      const url = URL.createObjectURL(pdfBlob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    }
   };
 
   const imprimirCotacao = () => {
-    if (cotacaoGerada) gerarPDFPersonalizado(cotacaoGerada, "imprimir");
+    const conteudo = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Cotacao ${cotacaoGerada.id}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+            
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            
+            body {
+              font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+              margin: 0;
+              padding: 20px;
+              color: #333;
+              background: #f8fafc;
+              line-height: 1.6;
+            }
+            
+            .container {
+              max-width: 800px;
+              margin: 0 auto;
+              background: white;
+              padding: 0;
+              border-radius: 12px;
+              box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+              overflow: hidden;
+            }
+            
+            .header {
+              background: linear-gradient(135deg, #00529b 0%, #003366 100%);
+              color: white;
+              padding: 30px 40px;
+              text-align: center;
+              position: relative;
+            }
+            
+            .header::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              height: 4px;
+              background: linear-gradient(90deg, #ffd700, #ff6b00);
+            }
+            
+            .logo-area {
+              width: 80px;
+              height: 80px;
+              background: white;
+              border-radius: 12px;
+              margin: 0 auto 20px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: #00529b;
+              font-weight: bold;
+              font-size: 12px;
+              border: 2px dashed #00529b;
+            }
+            
+            .header h1 {
+              margin: 0;
+              font-size: 28px;
+              font-weight: 700;
+              letter-spacing: -0.5px;
+            }
+            
+            .header h2 {
+              margin: 8px 0 0 0;
+              font-size: 16px;
+              font-weight: 400;
+              opacity: 0.9;
+            }
+            
+            .document-info {
+              background: #e3f2fd;
+              padding: 15px 40px;
+              border-bottom: 1px solid #bbdefb;
+              font-size: 12px;
+              color: #00529b;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+            
+            .section {
+              padding: 25px 40px;
+              border-bottom: 1px solid #e2e8f0;
+            }
+            
+            .section:last-child {
+              border-bottom: none;
+            }
+            
+            .section-title {
+              color: #00529b;
+              font-size: 16px;
+              font-weight: 600;
+              margin-bottom: 20px;
+              padding-bottom: 8px;
+              border-bottom: 2px solid #00529b;
+              display: flex;
+              align-items: center;
+            }
+            
+            .section-title::before {
+              content: '▶';
+              margin-right: 8px;
+              font-size: 12px;
+            }
+            
+            .info-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 15px;
+              margin-bottom: 15px;
+            }
+            
+            .info-item {
+              display: flex;
+              flex-direction: column;
+            }
+            
+            .info-label {
+              font-size: 12px;
+              color: #64748b;
+              font-weight: 500;
+              margin-bottom: 4px;
+            }
+            
+            .info-value {
+              font-size: 14px;
+              color: #1e293b;
+              font-weight: 500;
+            }
+            
+            .table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 20px 0;
+              background: white;
+              border-radius: 8px;
+              overflow: hidden;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            }
+            
+            .table th {
+              background: #00529b;
+              color: white;
+              padding: 12px 15px;
+              text-align: left;
+              font-weight: 600;
+              font-size: 12px;
+            }
+            
+            .table td {
+              padding: 12px 15px;
+              border-bottom: 1px solid #e2e8f0;
+              font-size: 13px;
+            }
+            
+            .table tr:nth-child(even) {
+              background: #f8fafc;
+            }
+            
+            .table tr:hover {
+              background: #f1f5f9;
+            }
+            
+            .total-row {
+              background: #00529b !important;
+              color: white;
+              font-weight: 600;
+              font-size: 14px;
+            }
+            
+            .vehicle-card {
+              background: white;
+              padding: 20px;
+              margin: 15px 0;
+              border-radius: 8px;
+              border-left: 4px solid #00529b;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+              border: 1px solid #e2e8f0;
+            }
+            
+            .vehicle-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 15px;
+              padding-bottom: 10px;
+              border-bottom: 1px solid #e2e8f0;
+            }
+            
+            .vehicle-title {
+              font-size: 16px;
+              font-weight: 600;
+              color: #00529b;
+            }
+            
+            .vehicle-type {
+              background: #e3f2fd;
+              color: #00529b;
+              padding: 4px 8px;
+              border-radius: 4px;
+              font-size: 11px;
+              font-weight: 500;
+            }
+            
+            .coverage-list {
+              list-style: none;
+              padding: 0;
+              margin: 15px 0 0 0;
+            }
+            
+            .coverage-list li {
+              padding: 8px 0;
+              border-bottom: 1px solid #f1f5f9;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              font-size: 13px;
+            }
+            
+            .coverage-list li:before {
+              content: "✓";
+              color: #10b981;
+              font-weight: bold;
+              margin-right: 10px;
+            }
+            
+            .coverage-value {
+              color: #00529b;
+              font-weight: 600;
+              font-size: 12px;
+            }
+            
+            .footer {
+              background: #1e293b;
+              color: white;
+              padding: 25px 40px;
+              text-align: center;
+              font-size: 11px;
+              line-height: 1.5;
+            }
+            
+            .footer p {
+              margin: 4px 0;
+              opacity: 0.8;
+            }
+            
+            .conditions {
+              background: #fff3cd;
+              border: 1px solid #ffeaa7;
+              border-radius: 6px;
+              padding: 15px;
+              margin: 20px 0;
+              font-size: 12px;
+            }
+            
+            .conditions h4 {
+              color: #856404;
+              margin-bottom: 10px;
+              font-size: 13px;
+            }
+            
+            .conditions ul {
+              padding-left: 20px;
+              margin: 0;
+            }
+            
+            .conditions li {
+              margin-bottom: 5px;
+              color: #856404;
+            }
+            
+            @media print {
+              body {
+                background: white;
+                padding: 0;
+              }
+              
+              .container {
+                box-shadow: none;
+                border-radius: 0;
+              }
+              
+              .no-print {
+                display: none;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo-area">LOGO</div>
+              <h1>IMPERIAL SEGUROS</h1>
+              <h2>COTAÇÃO DE SEGURO AUTOMÓVEL</h2>
+            </div>
+            
+            <div class="document-info">
+              <div><strong>Nº:</strong> ${cotacaoGerada.id}</div>
+              <div><strong>Emissão:</strong> ${new Date().toLocaleDateString(
+                "pt-MZ"
+              )}</div>
+              <div><strong>Validade:</strong> 30 dias</div>
+            </div>
+            
+            <div class="section">
+              <div class="section-title">INFORMAÇÕES DO SEGURADO</div>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-label">NOME COMPLETO</span>
+                  <span class="info-value">${
+                    cotacaoGerada.cliente.tituloContato || ""
+                  } ${cotacaoGerada.cliente.primeiroNome} ${
+      cotacaoGerada.cliente.sobrenome
+    }</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">EMAIL</span>
+                  <span class="info-value">${cotacaoGerada.cliente.email}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">DOCUMENTO</span>
+                  <span class="info-value">${
+                    cotacaoGerada.cliente.numeroDocumento
+                  }</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">TELEFONE</span>
+                  <span class="info-value">${
+                    cotacaoGerada.cliente.telefone
+                  }</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">TIPO DE CLIENTE</span>
+                  <span class="info-value">${
+                    cotacaoGerada.cliente.tipo === "Particular"
+                      ? "Cliente Particular"
+                      : "Cliente Empresarial"
+                  }</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">COMPOSIÇÃO DO PRÉMIO</div>
+              <table class="table">
+                <tr>
+                  <th>DESCRIÇÃO</th>
+                  <th style="text-align: right">VALOR (MT)</th>
+                </tr>
+                <tr>
+                  <td>Prémio Base do Seguro</td>
+                  <td style="text-align: right">${parseFloat(
+                    cotacaoGerada.totalPremio * 0.84
+                  ).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td>Custos Administrativos (12,6%)</td>
+                  <td style="text-align: right">${parseFloat(
+                    cotacaoGerada.totalPremio * 0.126
+                  ).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td>Sobre Taxa (1,45%)</td>
+                  <td style="text-align: right">${parseFloat(
+                    cotacaoGerada.totalPremio * 0.0145
+                  ).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td>Imposto de Selo (1,95%)</td>
+                  <td style="text-align: right">${parseFloat(
+                    cotacaoGerada.totalPremio * 0.0195
+                  ).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td>Prémio Semestral</td>
+                  <td style="text-align: right">${parseFloat(
+                    cotacaoGerada.totalPremio / 2
+                  ).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })}</td>
+                </tr>
+                ${
+                  cotacaoGerada.veiculos.some(veiculo => {
+                    const capital = parseFloat(veiculo.capitalSeguro) || 0;
+                    return capital > 12000;
+                  })
+                    ? `<tr>
+                        <td>Prémio Trimestral</td>
+                        <td style="text-align: right">${parseFloat(
+                          cotacaoGerada.totalPremio / 4
+                        ).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })}</td>
+                      </tr>`
+                    : ""
+                }
+                ${
+                  cotacaoGerada.debitoDireto && cotacaoGerada.veiculos.some(veiculo => {
+                    const capital = parseFloat(veiculo.capitalSeguro) || 0;
+                    return capital > 12000;
+                  })
+                    ? `<tr>
+                        <td>Prémio Mensal</td>
+                        <td style="text-align: right">${parseFloat(
+                          cotacaoGerada.totalPremio / 12
+                        ).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })}</td>
+                      </tr>`
+                    : ""
+                }
+                <tr class="total-row">
+                  <td>TOTAL DO PRÉMIO</td>
+                  <td style="text-align: right">${parseFloat(
+                    cotacaoGerada.totalPremio
+                  ).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })}</td>
+                </tr>
+              </table>
+            </div>
+
+            <div class="section">
+              <div class="section-title">VEÍCULOS SEGURADOS</div>
+              ${cotacaoGerada.veiculos
+                .map(
+                  (veiculo, index) => `
+                <div class="vehicle-card">
+                  <div class="vehicle-header">
+                    <div class="vehicle-title">Viatura ${index + 1}: ${
+                    veiculo.marca
+                  } ${veiculo.modelo}</div>
+                    <div class="vehicle-type">${veiculo.tipoCobertura}</div>
+                  </div>
+                  <div class="info-grid">
+                    <div class="info-item">
+                      <span class="info-label">MARCA</span>
+                      <span class="info-value">${veiculo.marca}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">MODELO</span>
+                      <span class="info-value">${veiculo.modelo}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">MATRÍCULA</span>
+                      <span class="info-value">${
+                        veiculo.matriculaCompleta || veiculo.matricula || "Por atribuir"
+                      }</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">CLASSIFICAÇÃO</span>
+                      <span class="info-value">${veiculo.classificacao}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">ANO</span>
+                      <span class="info-value">${veiculo.ano || "N/A"}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">CAPITAL SEGURO</span>
+                      <span class="info-value">MT ${parseFloat(
+                        veiculo.capitalSeguro
+                      ).toLocaleString("pt-MZ")}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">TAXA APLICADA</span>
+                      <span class="info-value">${veiculo.taxaAplicada || "0%"}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">PRÉMIO ANUAL</span>
+                      <span class="info-value">MT ${parseFloat(
+                        veiculo.premioAnnual
+                      ).toLocaleString("pt-MZ", {
+                        minimumFractionDigits: 2,
+                      })}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">PRÉMIO SEMESTRAL</span>
+                      <span class="info-value">MT ${parseFloat(
+                        veiculo.premioSemestral
+                      ).toLocaleString("pt-MZ", {
+                        minimumFractionDigits: 2,
+                      })}</span>
+                    </div>
+                    ${
+                      parseFloat(veiculo.capitalSeguro) > 12000
+                        ? `<div class="info-item">
+                            <span class="info-label">PRÉMIO TRIMESTRAL</span>
+                            <span class="info-value">MT ${parseFloat(
+                              veiculo.premioTrimestral || (parseFloat(veiculo.premioAnnual) / 4)
+                            ).toLocaleString("pt-MZ", {
+                              minimumFractionDigits: 2,
+                            })}</span>
+                          </div>`
+                        : ""
+                    }
+                    ${
+                      cotacaoGerada.debitoDireto && parseFloat(veiculo.capitalSeguro) > 12000
+                        ? `<div class="info-item">
+                            <span class="info-label">PRÉMIO MENSAL</span>
+                            <span class="info-value">MT ${parseFloat(
+                              veiculo.premioMensal || (parseFloat(veiculo.premioAnnual) / 12)
+                            ).toLocaleString("pt-MZ", {
+                              minimumFractionDigits: 2,
+                            })}</span>
+                          </div>`
+                        : ""
+                    }
+                  </div>
+                  
+                  <div style="margin-top: 15px;">
+                    <strong style="color: #00529b; font-size: 13px;">COBERTURAS INCLUÍDAS:</strong>
+                    <ul class="coverage-list">
+                      ${
+                        veiculo.configCobertura
+                          ? Object.entries(veiculo.configCobertura.coberturas)
+                              .map(([key, value]) =>
+                                value > 0 || value === "Cobertura Completa"
+                                  ? `<li>
+                          <span>${key
+                            .replace(/([A-Z])/g, " $1")
+                            .replace(/^./, (str) => str.toUpperCase())
+                            .replace("Rc", "RC")
+                            .replace("Dp", "DP")}</span>
+                          <span class="coverage-value">${
+                            value === "Cobertura Completa" 
+                              ? value 
+                              : `MT ${value.toLocaleString("pt-MZ")}`
+                          }</span>
+                        </li>`
+                                  : ""
+                              )
+                              .join("")
+                          : ""
+                      }
+                    </ul>
+                  </div>
+                </div>
+              `
+                )
+                .join("")}
+            </div>
+
+            <div class="section">
+              <div class="section-title">CONDIÇÕES GERAIS</div>
+              <div class="conditions">
+                <ul>
+                  <li>Esta cotação tem validade de 30 dias a partir da data de emissão</li>
+                  <li>O prémio é pago anualmente antecipadamente</li>
+                  <li>Os veículos devem estar em condições legais de circulação</li>
+                  <li>O condutor deve possuir carta de condução válida</li>
+                  <li>Vistória prévia obrigatória para veículos com mais de 5 anos</li>
+                  <li>Franquias aplicáveis conforme tipo de cobertura selecionado</li>
+                  <li>Cláusulas e condições sujeitas à apólice definitiva</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p><strong>IMPERIAL SEGUROS MOÇAMBIQUE, S.A.</strong></p>
+              <p>Av. 25 de Setembro, 1462 • Maputo • Moçambique</p>
+              <p>Tel: +258 84 300 0000 • Email: info@imperialinsurance-mz.com • www.imperialinsurance-mz.com</p>
+              <p style="margin-top: 10px; opacity: 0.6;">Documento gerado eletronicamente em ${new Date().toLocaleString(
+                "pt-MZ"
+              )}</p>
+            </div>
+          </div>
+          
+          <div class="no-print" style="text-align: center; margin-top: 20px; padding: 20px;">
+            <button onclick="window.print()" style="background: #00529b; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+              🖨️ Imprimir Cotação
+            </button>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const janela = window.open("", "_blank");
+    janela.document.write(conteudo);
+    janela.document.close();
   };
 
   return (

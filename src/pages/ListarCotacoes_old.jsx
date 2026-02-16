@@ -853,8 +853,8 @@ function ListarCotacoes() {
         status: cotacaoCompleta.status || cotacao.status
       };
       
-      // Usar o novo gerador de PDF personalizado (com logo e timbrado em base64)
-      const sucesso = await gerarPDFPersonalizado(cotacaoFormatada, acao);
+      // Usar o novo gerador de PDF personalizado
+      const sucesso = gerarPDFPersonalizado(cotacaoFormatada, acao);
       
       if (sucesso) {
         setTimeout(() => {
