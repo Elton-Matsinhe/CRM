@@ -1,12 +1,15 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 
-const API_BASE_URL = "http://localhost:5000/api";
+// Usar variável de ambiente ou fallback para localhost
+const API_BASE_URL ="https://9592-102-222-88-49.ngrok-free.app/api";
 
 // Criar instância do axios com configurações padrão
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    // Header necessário para evitar warning page do ngrok
+    'ngrok-skip-browser-warning': 'true'
   }
 });
 
@@ -17,6 +20,8 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Garantir que o header do ngrok está sempre presente
+    config.headers['ngrok-skip-browser-warning'] = 'true';
     return config;
   },
   (error) => {
@@ -28,6 +33,25 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Log detalhado de erros para debug
+    if (error.response) {
+      console.error('❌ [API] Erro na resposta:', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        url: error.config?.url,
+        method: error.config?.method,
+        data: error.response.data
+      });
+    } else if (error.request) {
+      console.error('❌ [API] Erro na requisição (sem resposta):', {
+        url: error.config?.url,
+        method: error.config?.method,
+        message: error.message
+      });
+    } else {
+      console.error('❌ [API] Erro ao configurar requisição:', error.message);
+    }
+
     if (error.response?.status === 401) {
       // Token inválido ou expirado
       localStorage.removeItem("authToken");

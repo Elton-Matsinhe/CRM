@@ -7,13 +7,20 @@ import {
   ChevronLeft, ChevronsLeft, ChevronsRight, Loader2, Trash2
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { cotacaoService } from '../services/api';
+import VisualizacaoClienteDocumentos from '../components/VisualizacaoClienteDocumentos';
 
 function GestaoCotacoes() {
   const { themeConfig, language } = useTheme();
+  const { usuario } = useAuth();
+  const userRole = usuario?.role || 'agente';
+  const isAdminOuSubscritor = userRole === 'admin' || userRole === 'subscritor';
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedCotacao, setSelectedCotacao] = useState(null);
+  const [mostrarDadosCliente, setMostrarDadosCliente] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [cotacoes, setCotacoes] = useState([]);
@@ -645,6 +652,18 @@ function GestaoCotacoes() {
                           >
                             <Eye className="h-4 w-4" />
                           </button>
+                          {isAdminOuSubscritor && (
+                            <button 
+                              onClick={() => {
+                                setSelectedCotacao(cotacao);
+                                setMostrarDadosCliente(true);
+                              }}
+                              className="p-2 text-green-600 hover:bg-green-100 rounded-lg transition-colors duration-200"
+                              title="Ver Dados do Cliente e Documentos"
+                            >
+                              <User className="h-4 w-4" />
+                            </button>
+                          )}
                           <button 
                             onClick={() => handleEliminar(cotacao)}
                             className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors duration-200"
@@ -747,8 +766,19 @@ function GestaoCotacoes() {
         </div>
       </div>
 
+      {/* Modal de Dados do Cliente e Documentos */}
+      {mostrarDadosCliente && selectedCotacao && (
+        <VisualizacaoClienteDocumentos
+          cotacaoId={selectedCotacao.id || selectedCotacao.idNumerico}
+          clienteId={selectedCotacao.cliente?.id}
+          onClose={() => {
+            setMostrarDadosCliente(false);
+          }}
+        />
+      )}
+
       {/* Modal de Detalhes */}
-      {selectedCotacao && (
+      {selectedCotacao && !mostrarDadosCliente && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 animate-fadeIn">
           <div className="rounded-xl p-6 w-full max-w-md bg-white border border-gray-200 shadow-2xl animate-scaleIn">
             <div className="flex items-center justify-between mb-4">

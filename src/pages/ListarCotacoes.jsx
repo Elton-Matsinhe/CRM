@@ -13,11 +13,18 @@ import {
   ChevronRight,
   FileText,
   Loader2,
+  User,
 } from "lucide-react";
 import CotacoesLayout from "../components/CotacoesLayout";
 import { cotacaoService } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
+import VisualizacaoClienteDocumentos from "../components/VisualizacaoClienteDocumentos";
 
 function ListarCotacoes() {
+  const { usuario } = useAuth();
+  const userRole = usuario?.role || 'agente';
+  const isAdminOuSubscritor = userRole === 'admin' || userRole === 'subscritor';
+  
   const brand = {
     primary: [22, 101, 52],
     primaryHex: "#166534",
@@ -30,6 +37,7 @@ function ListarCotacoes() {
   const [cotacoes, setCotacoes] = useState([]);
   const [cotacaoSelecionada, setCotacaoSelecionada] = useState(null);
   const [mostrarOpcoesPartilha, setMostrarOpcoesPartilha] = useState(false);
+  const [mostrarDadosCliente, setMostrarDadosCliente] = useState(false);
   const [processandoEmail, setProcessandoEmail] = useState(false);
   const [gerandoPDF, setGerandoPDF] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -1181,6 +1189,23 @@ function ListarCotacoes() {
                               Partilhar
                             </span>
                           </button>
+                          
+                          {/* Botão DADOS DO CLIENTE (apenas admin/subscritor) */}
+                          {isAdminOuSubscritor && (
+                            <button
+                              className="p-2 text-green-600 hover:bg-green-50 hover:text-green-700 rounded-lg transition-all duration-300 group/tooltip relative hover:scale-110"
+                              title="Ver Dados do Cliente e Documentos"
+                              onClick={() => {
+                                setCotacaoSelecionada(cotacao);
+                                setMostrarDadosCliente(true);
+                              }}
+                            >
+                              <User className="h-4 w-4" />
+                              <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap">
+                                Dados Cliente
+                              </span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1258,6 +1283,18 @@ function ListarCotacoes() {
           </div>
           )}
         </div>
+
+        {/* Modal de Dados do Cliente e Documentos */}
+        {mostrarDadosCliente && cotacaoSelecionada && (
+          <VisualizacaoClienteDocumentos
+            cotacaoId={cotacaoSelecionada.id}
+            clienteId={cotacaoSelecionada.cliente?.id}
+            onClose={() => {
+              setMostrarDadosCliente(false);
+              setCotacaoSelecionada(null);
+            }}
+          />
+        )}
 
         {/* Modal de Partilha */}
         {mostrarOpcoesPartilha && cotacaoSelecionada && (

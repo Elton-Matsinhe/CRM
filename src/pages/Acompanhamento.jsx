@@ -9,6 +9,7 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { cotacaoService, followUpService, usuarioService } from '../services/api';
+import VisualizacaoClienteDocumentos from '../components/VisualizacaoClienteDocumentos';
 
 // Dados fictícios removidos - agora vem do backend
 
@@ -173,6 +174,7 @@ function Acompanhamento() {
   const [enviarTodosSubscritores, setEnviarTodosSubscritores] = useState(false);
   const [loadingFinalizar, setLoadingFinalizar] = useState(false);
   const [tipoContato, setTipoContato] = useState('telefone'); // Para seleção de tipo de contato
+  const [mostrarDadosCliente, setMostrarDadosCliente] = useState(false);
   
   // Paginação - 3 cotações por página
   const [currentPage, setCurrentPage] = useState(1);
@@ -2215,6 +2217,19 @@ Sistema de Gestão de Cotações
                         <span>{isAgente ? "Acompanhamento" : "Ver Acompanhamento"}</span>
                       </button>
                     )}
+                    {isAdminOuSubscritor && (
+                      <button
+                        onClick={() => {
+                          setCotacaoSelecionada(cotacao);
+                          setMostrarDadosCliente(true);
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+                        title="Ver Dados do Cliente e Documentos"
+                      >
+                        <User className="h-4 w-4" />
+                        <span>Dados Cliente</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -2326,6 +2341,17 @@ Sistema de Gestão de Cotações
               </div>
             </div>
           </div>
+        )}
+
+        {/* Modal de Dados do Cliente e Documentos */}
+        {mostrarDadosCliente && cotacaoSelecionada && (
+          <VisualizacaoClienteDocumentos
+            cotacaoId={cotacaoSelecionada.id || cotacaoSelecionada.idNumerico}
+            clienteId={cotacaoSelecionada.cliente?.id}
+            onClose={() => {
+              setMostrarDadosCliente(false);
+            }}
+          />
         )}
       </div>
     </div>

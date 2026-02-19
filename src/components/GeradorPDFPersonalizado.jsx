@@ -1,7 +1,7 @@
 // src/components/GeradorPDFPersonalizado.jsx
-import React from 'react';
-import logoSrc from '../assets/logo.png';
-import timbradoSrc from '../assets/timbrado.png';
+import React from "react";
+import logoSrc from "../assets/logo.png";
+import timbradoSrc from "../assets/timbrado.png";
 
 /**
  * Carrega uma imagem por URL e devolve como Data URL (base64) para o HTML ser autocontido (visualização/download).
@@ -9,20 +9,20 @@ import timbradoSrc from '../assets/timbrado.png';
  * @returns {Promise<string>} data:image/...;base64,... ou ''
  */
 async function fetchImageAsDataUrl(url) {
-  if (!url || typeof url !== 'string') return '';
+  if (!url || typeof url !== "string") return "";
   try {
-    const res = await fetch(url, { mode: 'cors' });
-    if (!res.ok) return '';
+    const res = await fetch(url, { mode: "cors" });
+    if (!res.ok) return "";
     const blob = await res.blob();
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result || '');
-      reader.onerror = () => resolve('');
+      reader.onloadend = () => resolve(reader.result || "");
+      reader.onerror = () => resolve("");
       reader.readAsDataURL(blob);
     });
   } catch (e) {
-    console.warn('Erro ao carregar imagem para PDF:', url, e?.message);
-    return '';
+    console.warn("Erro ao carregar imagem para PDF:", url, e?.message);
+    return "";
   }
 }
 
@@ -30,10 +30,28 @@ async function fetchImageAsDataUrl(url) {
  * Obtém as URLs do logo e do timbrado a partir dos imports (Vite).
  */
 function getLogoAndTimbradoPaths(origin) {
-  const logoPath = typeof logoSrc === 'string' ? logoSrc : (logoSrc && typeof logoSrc === 'object' && logoSrc.default) ? logoSrc.default : '';
-  const timbradoPath = typeof timbradoSrc === 'string' ? timbradoSrc : (timbradoSrc && typeof timbradoSrc === 'object' && timbradoSrc.default) ? timbradoSrc.default : '';
-  const fullLogoUrl = logoPath ? (String(logoPath).startsWith('http') ? logoPath : (origin || '') + logoPath) : '';
-  const fullTimbradoUrl = timbradoPath ? (String(timbradoPath).startsWith('http') ? timbradoPath : (origin || '') + timbradoPath) : '';
+  const logoPath =
+    typeof logoSrc === "string"
+      ? logoSrc
+      : logoSrc && typeof logoSrc === "object" && logoSrc.default
+        ? logoSrc.default
+        : "";
+  const timbradoPath =
+    typeof timbradoSrc === "string"
+      ? timbradoSrc
+      : timbradoSrc && typeof timbradoSrc === "object" && timbradoSrc.default
+        ? timbradoSrc.default
+        : "";
+  const fullLogoUrl = logoPath
+    ? String(logoPath).startsWith("http")
+      ? logoPath
+      : (origin || "") + logoPath
+    : "";
+  const fullTimbradoUrl = timbradoPath
+    ? String(timbradoPath).startsWith("http")
+      ? timbradoPath
+      : (origin || "") + timbradoPath
+    : "";
   return { fullLogoUrl, fullTimbradoUrl };
 }
 
@@ -44,12 +62,19 @@ function getLogoAndTimbradoPaths(origin) {
  * @param {string} logoUrl - URL do logo (opcional)
  * @param {string} timbradoUrl - URL do papel timbrado (opcional)
  */
-export const gerarHTMLCotacaoPersonalizado = (cotacao, origin = '', logoUrl = '', timbradoUrl = '') => {
-  if (!cotacao || typeof cotacao !== 'object') {
-    throw new Error('Dados da cotação inválidos');
+export const gerarHTMLCotacaoPersonalizado = (
+  cotacao,
+  origin = "",
+  logoUrl = "",
+  timbradoUrl = "",
+) => {
+  if (!cotacao || typeof cotacao !== "object") {
+    throw new Error("Dados da cotação inválidos");
   }
   const totalPremio = Number(cotacao.totalPremio) || 0;
-  const dataInicio = new Date(cotacao.dataCriacao || cotacao.dataInicio || Date.now());
+  const dataInicio = new Date(
+    cotacao.dataCriacao || cotacao.dataInicio || Date.now(),
+  );
   const dataFim = new Date(dataInicio);
   dataFim.setFullYear(dataFim.getFullYear() + 1);
   const dataValidadeFim = new Date(dataInicio);
@@ -61,56 +86,141 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao, origin = '', logoUrl = ''
   const impostoSelo = totalPremio * 0.02;
 
   const c = cotacao.cliente || {};
-  const tipoCliente = c.tipo || 'Particular';
-  const isEmpresarial = tipoCliente === 'Empresarial';
+  const tipoCliente = c.tipo || "Particular";
+  const isEmpresarial = tipoCliente === "Empresarial";
 
-  const logoPath = typeof logoSrc === 'string' ? logoSrc : (logoSrc && typeof logoSrc === 'object' && logoSrc.default) ? logoSrc.default : '';
-  const timbradoPath = typeof timbradoSrc === 'string' ? timbradoSrc : (timbradoSrc && typeof timbradoSrc === 'object' && timbradoSrc.default) ? timbradoSrc.default : '';
-  const resolvedLogoUrl = logoUrl || (logoPath ? (String(logoPath).startsWith('http') ? logoPath : (origin || '') + logoPath) : '');
-  const resolvedTimbradoUrl = timbradoUrl || (timbradoPath ? (String(timbradoPath).startsWith('http') ? timbradoPath : (origin || '') + timbradoPath) : '');
+  const logoPath =
+    typeof logoSrc === "string"
+      ? logoSrc
+      : logoSrc && typeof logoSrc === "object" && logoSrc.default
+        ? logoSrc.default
+        : "";
+  const timbradoPath =
+    typeof timbradoSrc === "string"
+      ? timbradoSrc
+      : timbradoSrc && typeof timbradoSrc === "object" && timbradoSrc.default
+        ? timbradoSrc.default
+        : "";
+  const resolvedLogoUrl =
+    logoUrl ||
+    (logoPath
+      ? String(logoPath).startsWith("http")
+        ? logoPath
+        : (origin || "") + logoPath
+      : "");
+  const resolvedTimbradoUrl =
+    timbradoUrl ||
+    (timbradoPath
+      ? String(timbradoPath).startsWith("http")
+        ? timbradoPath
+        : (origin || "") + timbradoPath
+      : "");
 
   const bancos = [
-    { nome: "ACCESS BANK", contaMZN: "3805960110", nibMZN: "0066000603805 96011071", contaUSD: "3805960211", nibUSD: "0013000603805 96021136", contaZAR: "3805960313", nibZAR: "0013000603805 96031321" },
-    { nome: "BCI", contaMZN: "1430858651000 1", nibMZN: "0008000043085 86510195", contaUSD: "1430858651000 2", nibUSD: "0008000043085 86510292", contaZAR: "1430858651000 3", nibZAR: "0008000043085 86510389" },
-    { nome: "Ecobank", contaMZN: "5575000017081", nibMZN: "0023001557500 01708191", contaUSD: "", nibUSD: "", contaZAR: "", nibZAR: "" },
-    { nome: "MILLENNIUM BIM", contaMZN: "330446409", nibMZN: "0001000000330 44640957", contaUSD: "330503930", nibUSD: "0001000000330 50393057", contaZAR: "330449610", nibZAR: "0001000000330 44961057" },
-    { nome: "MOZABANCO", contaMZN: "820478810001", nibMZN: "0034000008204 78810165", contaUSD: "820478815001", nibUSD: "0034000008204 78815112", contaZAR: "820478815209", nibZAR: "0034000008204 78815209" },
-    { nome: "MPESA", contaMZN: "905000", nibMZN: "905000", contaUSD: "905000", nibUSD: "905000", contaZAR: "905000", nibZAR: "905000" },
-    { nome: "STANDARD BANK", contaMZN: "1256457681001", nibMZN: "0003012506457 68100167", contaUSD: "1256457681017", nibUSD: "0003012506457 68101719", contaZAR: "1256457681028", nibZAR: "0003012506457 68102883" }
+    {
+      nome: "ACCESS BANK",
+      contaMZN: "3805960110",
+      nibMZN: "0066000603805 96011071",
+      contaUSD: "3805960211",
+      nibUSD: "0013000603805 96021136",
+      contaZAR: "3805960313",
+      nibZAR: "0013000603805 96031321",
+    },
+    {
+      nome: "BCI",
+      contaMZN: "1430858651000 1",
+      nibMZN: "0008000043085 86510195",
+      contaUSD: "1430858651000 2",
+      nibUSD: "0008000043085 86510292",
+      contaZAR: "1430858651000 3",
+      nibZAR: "0008000043085 86510389",
+    },
+    {
+      nome: "Ecobank",
+      contaMZN: "5575000017081",
+      nibMZN: "0023001557500 01708191",
+      contaUSD: "",
+      nibUSD: "",
+      contaZAR: "",
+      nibZAR: "",
+    },
+    {
+      nome: "MILLENNIUM BIM",
+      contaMZN: "330446409",
+      nibMZN: "0001000000330 44640957",
+      contaUSD: "330503930",
+      nibUSD: "0001000000330 50393057",
+      contaZAR: "330449610",
+      nibZAR: "0001000000330 44961057",
+    },
+    {
+      nome: "MOZABANCO",
+      contaMZN: "820478810001",
+      nibMZN: "0034000008204 78810165",
+      contaUSD: "820478815001",
+      nibUSD: "0034000008204 78815112",
+      contaZAR: "820478815209",
+      nibZAR: "0034000008204 78815209",
+    },
+    {
+      nome: "MPESA",
+      contaMZN: "905000",
+      nibMZN: "905000",
+      contaUSD: "905000",
+      nibUSD: "905000",
+      contaZAR: "905000",
+      nibZAR: "905000",
+    },
+    {
+      nome: "STANDARD BANK",
+      contaMZN: "1256457681001",
+      nibMZN: "0003012506457 68100167",
+      contaUSD: "1256457681017",
+      nibUSD: "0003012506457 68101719",
+      contaZAR: "1256457681028",
+      nibZAR: "0003012506457 68102883",
+    },
   ];
 
   const veiculosList = Array.isArray(cotacao.veiculos) ? cotacao.veiculos : [];
   const primeiroVeiculo = veiculosList[0] || {};
 
-  const fmt = (val, def = '–') => {
+  const fmt = (val, def = "–") => {
     if (val == null) return def;
-    const s = typeof val === 'string' ? val : String(val);
-    return s.trim() !== '' ? s.trim() : def;
+    const s = typeof val === "string" ? val : String(val);
+    return s.trim() !== "" ? s.trim() : def;
   };
   const fmtMoeda = (n) => {
     const num = Number(n);
-    if (Number.isNaN(num)) return '0,00';
-    return num.toLocaleString('pt-MZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (Number.isNaN(num)) return "0,00";
+    return num.toLocaleString("pt-MZ", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   };
   const fmtData = (d) => {
-    if (d == null) return '–';
+    if (d == null) return "–";
     try {
       const date = new Date(d);
-      return Number.isNaN(date.getTime()) ? '–' : date.toLocaleDateString('pt-MZ');
-    } catch (_) { return '–'; }
+      return Number.isNaN(date.getTime())
+        ? "–"
+        : date.toLocaleDateString("pt-MZ");
+    } catch (_) {
+      return "–";
+    }
   };
 
   const debitoDiretoAtivo = Boolean(cotacao.debitoDireto);
 
   const headerComLogo = (tituloSecao) => `
     <div class="header-pdf">
-      ${resolvedLogoUrl ? `<img src="${resolvedLogoUrl}" alt="" class="logo-img" />` : ''}
-      ${tituloSecao ? `<div class="titulo-cotacao">${tituloSecao}</div>` : ''}
+      ${resolvedLogoUrl ? `<img src="${resolvedLogoUrl}" alt="" class="logo-img" />` : ""}
+      ${tituloSecao ? `<div class="titulo-cotacao">${tituloSecao}</div>` : ""}
     </div>`;
 
   const headerPagina1 = `
     <div class="header-pdf header-pagina1">
-      ${resolvedLogoUrl ? `<img src="${resolvedLogoUrl}" alt="" class="logo-img" />` : ''}
+      ${resolvedLogoUrl ? `<img src="${resolvedLogoUrl}" alt="" class="logo-img" />` : ""}
       <div class="empresa"></div>
       <div class="titulo-doc">Cotação de Seguro</div>
       <div class="titulo-cotacao">Documento Oficial Nº ${cotacao.id}</div>
@@ -154,9 +264,9 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao, origin = '', logoUrl = ''
 
   const tabelaUmVeiculo = (v, idx) => `
     <table class="tabela-box tabela-veiculo">
-      <thead><tr><th colspan="2">Dados do Veículo ${veiculosList.length > 1 ? idx + 1 : ''}</th></tr></thead>
+      <thead><tr><th colspan="2">Dados do Veículo ${veiculosList.length > 1 ? idx + 1 : ""}</th></tr></thead>
       <tbody>
-        <tr><td width="35%"><strong>Matrícula</strong></td><td>${fmt(v.matriculaCompleta || v.matricula, 'Por atribuir')}</td></tr>
+        <tr><td width="35%"><strong>Matrícula</strong></td><td>${fmt(v.matriculaCompleta || v.matricula, "Por atribuir")}</td></tr>
         <tr><td><strong>Marca</strong></td><td>${fmt(v.marca)}</td></tr>
         <tr><td><strong>Modelo</strong></td><td>${fmt(v.modelo)}</td></tr>
         <tr><td><strong>Ano</strong></td><td>${fmt(v.ano)}</td></tr>
@@ -169,13 +279,15 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao, origin = '', logoUrl = ''
       </tbody>
     </table>`;
 
-  const tabelaVeiculosHtml = veiculosList.length > 0
-    ? veiculosList.map((v, idx) => tabelaUmVeiculo(v, idx)).join('')
-    : tabelaUmVeiculo(primeiroVeiculo, 0);
+  const tabelaVeiculosHtml =
+    veiculosList.length > 0
+      ? veiculosList.map((v, idx) => tabelaUmVeiculo(v, idx)).join("")
+      : tabelaUmVeiculo(primeiroVeiculo, 0);
 
   const linhaPremioUmVeiculo = (v, idx) => {
-    const dd = debitoDiretoAtivo ? ' + 15% (Débito Direto)' : '';
-    const taxa = fmt(v.taxaAplicada) !== '–' ? fmt(v.taxaAplicada) + '%' + dd : '–';
+    const dd = debitoDiretoAtivo ? " + 15% (Débito Direto)" : "";
+    const taxa =
+      fmt(v.taxaAplicada) !== "–" ? fmt(v.taxaAplicada) + "%" + dd : "–";
     return `
     <tr><td colspan="2" class="subheader-row">Veículo ${idx + 1} ${fmt(v.marca)} ${fmt(v.modelo)}</td></tr>
     <tr><td width="40%"><strong>Capital Seguro (MT)</strong></td><td class="text-right">MT ${fmtMoeda(v.capitalSeguro)}</td></tr>
@@ -185,12 +297,13 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao, origin = '', logoUrl = ''
     <tr><td><strong>Prémio Trimestral (MT)</strong></td><td class="text-right">MT ${fmtMoeda(v.premioTrimestral)}</td></tr>
     <tr><td><strong>Prémio Mensal (MT)</strong></td><td class="text-right">MT ${fmtMoeda(v.premioMensal)}</td></tr>
     <tr><td><strong>Prémio Mínimo (MT)</strong></td><td class="text-right">MT ${fmtMoeda(v.premioMinimo)}</td></tr>
-    <tr><td><strong>Débito Direto</strong></td><td class="text-right">${debitoDiretoAtivo ? 'Sim' : 'Não'}</td></tr>`;
+    <tr><td><strong>Débito Direto</strong></td><td class="text-right">${debitoDiretoAtivo ? "Sim" : "Não"}</td></tr>`;
   };
 
-  const linhasTabelaPremioVeiculo = veiculosList.length > 0
-    ? veiculosList.map((v, idx) => linhaPremioUmVeiculo(v, idx)).join('')
-    : linhaPremioUmVeiculo(primeiroVeiculo, 0);
+  const linhasTabelaPremioVeiculo =
+    veiculosList.length > 0
+      ? veiculosList.map((v, idx) => linhaPremioUmVeiculo(v, idx)).join("")
+      : linhaPremioUmVeiculo(primeiroVeiculo, 0);
 
   const tabelaPremiosDetalhadaHtml = `
     <table class="tabela-box tabela-premios-detalhe">
@@ -424,7 +537,7 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao, origin = '', logoUrl = ''
           <tr><td><strong>Data efectiva</strong></td><td>${fmtData(dataInicio)}</td></tr>
           <tr><td><strong>Data de vencimento</strong></td><td>${fmtData(dataFim)} (inclusas)</td></tr>
           <tr><td><strong>Âmbito territorial</strong></td><td>Moçambique</td></tr>
-          <tr><td><strong>Actividade</strong></td><td>${isEmpresarial ? 'Empresarial' : 'Particular'}</td></tr>
+          <tr><td><strong>Actividade</strong></td><td>${isEmpresarial ? "Empresarial" : "Particular"}</td></tr>
           <tr><td><strong>Agência / Agente</strong></td><td>MAPUTO / DIRECT - MAPUTO</td></tr>
         </tbody>
       </table>
@@ -454,7 +567,7 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao, origin = '', logoUrl = ''
   <!-- PÁGINA 2 - Prémios e Pagamento -->
   <div class="page">
     <div class="page-content">
-      ${headerComLogo('Tabela de Prémios')}
+      ${headerComLogo("Tabela de Prémios")}
 
       <table class="tabela-box mb-15">
         <tbody>
@@ -488,16 +601,20 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao, origin = '', logoUrl = ''
           </tr>
         </thead>
         <tbody>
-          ${bancos.map(b => `
+          ${bancos
+            .map(
+              (b) => `
           <tr>
             <td>${b.nome}</td>
-            <td>${b.contaMZN || ''}</td>
-            <td>${b.nibMZN || ''}</td>
-            <td>${b.contaUSD || ''}</td>
-            <td>${b.nibUSD || ''}</td>
-            <td>${b.contaZAR || ''}</td>
-            <td>${b.nibZAR || ''}</td>
-          </tr>`).join('')}
+            <td>${b.contaMZN || ""}</td>
+            <td>${b.nibMZN || ""}</td>
+            <td>${b.contaUSD || ""}</td>
+            <td>${b.nibUSD || ""}</td>
+            <td>${b.contaZAR || ""}</td>
+            <td>${b.nibZAR || ""}</td>
+          </tr>`,
+            )
+            .join("")}
         </tbody>
       </table>
     </div>
@@ -508,7 +625,7 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao, origin = '', logoUrl = ''
   <!-- PÁGINA 3 - Veículo(s) -->
   <div class="page">
     <div class="page-content">
-      ${headerComLogo('Seção de Automóveis – Dados do Veículo')}
+      ${headerComLogo("Seção de Automóveis – Dados do Veículo")}
 
       ${tabelaVeiculosHtml}
 
@@ -539,7 +656,7 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao, origin = '', logoUrl = ''
   <!-- PÁGINA 4 - Condições especiais / Garantias -->
   <div class="page">
     <div class="page-content">
-      ${headerComLogo('Condições Especiais / Garantias')}
+      ${headerComLogo("Condições Especiais / Garantias")}
 
       <div class="section-title">Condições especiais / Garantias / Extensões / Exclusões / Termos e condições</div>
 
@@ -568,7 +685,7 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao, origin = '', logoUrl = ''
   <!-- PÁGINA 5 - Exclusões gerais -->
   <div class="page">
     <div class="page-content">
-      ${headerComLogo('Exclusões Gerais e Cláusulas Finais')}
+      ${headerComLogo("Exclusões Gerais e Cláusulas Finais")}
 
       <div class="section-title">Exclusões gerais</div>
       <div class="exclusoes">
@@ -623,52 +740,57 @@ export const gerarHTMLCotacaoPersonalizado = (cotacao, origin = '', logoUrl = ''
  * @param {string} acao - 'download' | 'visualizar' | 'imprimir'
  * @returns {Promise<boolean>}
  */
-export const gerarPDFPersonalizado = async (cotacao, acao = 'download') => {
-  if (!cotacao || typeof cotacao !== 'object') {
-    alert('Nenhuma cotação seleccionada.');
+export const gerarPDFPersonalizado = async (cotacao, acao = "download") => {
+  if (!cotacao || typeof cotacao !== "object") {
+    alert("Nenhuma cotação seleccionada.");
     return false;
   }
   try {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
     const { fullLogoUrl, fullTimbradoUrl } = getLogoAndTimbradoPaths(origin);
 
     // Carregar logo e timbrado como base64 para o HTML ser autocontido (igual ao PDF por email)
     const [logoDataUrl, timbradoDataUrl] = await Promise.all([
       fetchImageAsDataUrl(fullLogoUrl),
-      fetchImageAsDataUrl(fullTimbradoUrl)
+      fetchImageAsDataUrl(fullTimbradoUrl),
     ]);
     const resolvedLogo = logoDataUrl || fullLogoUrl;
     const resolvedTimbrado = timbradoDataUrl || fullTimbradoUrl;
 
-    const htmlContent = gerarHTMLCotacaoPersonalizado(cotacao, origin, resolvedLogo, resolvedTimbrado);
+    const htmlContent = gerarHTMLCotacaoPersonalizado(
+      cotacao,
+      origin,
+      resolvedLogo,
+      resolvedTimbrado,
+    );
 
-    if (!htmlContent || typeof htmlContent !== 'string') {
-      throw new Error('Conteúdo do documento vazio');
+    if (!htmlContent || typeof htmlContent !== "string") {
+      throw new Error("Conteúdo do documento vazio");
     }
 
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const id = cotacao.id || 'cotacao';
+    const id = cotacao.id || "cotacao";
 
-    if (acao === 'download') {
-      const a = document.createElement('a');
+    if (acao === "download") {
+      const a = document.createElement("a");
       a.href = url;
       a.download = `cotacao-${id}.html`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       setTimeout(() => {
-        const win = window.open(url, '_blank');
+        const win = window.open(url, "_blank");
         if (win) {
           win.onload = () => setTimeout(() => win.print(), 500);
         }
       }, 500);
-    } else if (acao === 'visualizar') {
-      window.open(url, '_blank');
-    } else if (acao === 'imprimir') {
-      const win = window.open(url, '_blank');
+    } else if (acao === "visualizar") {
+      window.open(url, "_blank");
+    } else if (acao === "imprimir") {
+      const win = window.open(url, "_blank");
       if (!win) {
-        alert('❌ Por favor, permita pop-ups para imprimir o documento.');
+        alert("❌ Por favor, permita pop-ups para imprimir o documento.");
         return false;
       }
       if (win) {
@@ -679,9 +801,12 @@ export const gerarPDFPersonalizado = async (cotacao, acao = 'download') => {
     setTimeout(() => URL.revokeObjectURL(url), 15000);
     return true;
   } catch (error) {
-    console.error('Erro ao gerar documento:', error);
+    console.error("Erro ao gerar documento:", error);
     const msg = error?.message || String(error);
-    alert('Erro ao gerar documento. Por favor, tente novamente.\n' + (msg ? '\nDetalhe: ' + msg : ''));
+    alert(
+      "Erro ao gerar documento. Por favor, tente novamente.\n" +
+        (msg ? "\nDetalhe: " + msg : ""),
+    );
     return false;
   }
 };
