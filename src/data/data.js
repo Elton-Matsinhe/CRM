@@ -8,6 +8,7 @@ import {
   Shield,
   Eye,
   PieChart,
+  UserCog,
   Building2,
   AlertTriangle,
   CreditCard,
@@ -143,6 +144,16 @@ export const menuItems = [
     icon: PieChart,
     path: "/crm/relatorios",
     type: "single",
-    color: "from-amber-500 to-orange-500"
+    color: "from-amber-500 to-orange-500",
+    adminOnly: true
+  },
+  {
+    id: 8,
+    label: "Utilizadores",
+    icon: UserCog,
+    path: "/admin/usuarios",
+    type: "single",
+    color: "from-violet-500 to-purple-500",
+    adminOnly: true
   }
 ];

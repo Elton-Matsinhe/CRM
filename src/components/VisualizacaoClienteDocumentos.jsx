@@ -1,26 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import {
   User, Building, Phone, Mail, MapPin, FileText, Download,
-  Eye, X, File, Image as ImageIcon, FileCheck, Calendar,
-  Hash, Globe, CreditCard, Loader2
+  Eye, X, File, FileCheck, Calendar, Hash, Globe, Loader2
 } from 'lucide-react';
-import { cotacaoService } from '../services/api';
+import { cotacaoService, arquivoService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
-/**
- * Componente para visualização de dados do cliente e documentos
- * Disponível apenas para administradores e subscritores
- */
 function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
   const { usuario } = useAuth();
   const userRole = usuario?.role || 'agente';
   const [cliente, setCliente] = useState(null);
+  const [cotacao, setCotacao] = useState(null);
   const [documentos, setDocumentos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [baixandoDoc, setBaixandoDoc] = useState(null);
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [carregandoPreview, setCarregandoPreview] = useState(false);
 
-  // Verificar se o usuário tem permissão
   const temPermissao = userRole === 'admin' || userRole === 'subscritor';
 
   useEffect(() => {
@@ -29,43 +26,72 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
     }
   }, [cotacaoId, clienteId, temPermissao]);
 
+  useEffect(() => {
+    return () => {
+      if (previewUrl) window.URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const montarDocumentos = (cotacaoData) => {
+    const docs = [];
+    let docId = 1;
+
+    if (cotacaoData.documentos?.bi) {
+      docs.push({
+        id: docId++,
+        tipo: 'BI',
+        nome: 'Bilhete de Identidade',
+        path: cotacaoData.documentos.bi,
+        arquivo: cotacaoData.documentos.bi.split('/').pop()
+      });
+    }
+
+    if (cotacaoData.documentos?.livrete) {
+      docs.push({
+        id: docId++,
+        tipo: 'Livrete',
+        nome: 'Livrete do Veículo',
+        path: cotacaoData.documentos.livrete,
+        arquivo: cotacaoData.documentos.livrete.split('/').pop()
+      });
+    }
+
+    if (cotacaoData.documentos?.encerramento) {
+      docs.push({
+        id: docId++,
+        tipo: 'Encerramento',
+        nome: 'Comprovativo de Encerramento',
+        path: cotacaoData.documentos.encerramento,
+        arquivo: cotacaoData.documentos.encerramento.split('/').pop()
+      });
+    }
+
+    (cotacaoData.documentos?.acompanhamento || []).forEach((doc) => {
+      docs.push({
+        id: docId++,
+        tipo: 'Acompanhamento',
+        nome: `Comprovativo - Semana ${doc.semana}`,
+        path: doc.path,
+        arquivo: doc.nome || doc.path.split('/').pop(),
+        dataUpload: doc.data
+      });
+    });
+
+    return docs;
+  };
+
   const carregarDados = async () => {
     try {
       setLoading(true);
-      
-      // Buscar dados da cotação se tiver cotacaoId
+
       if (cotacaoId) {
         const result = await cotacaoService.buscarPorId(cotacaoId);
         if (result.success && result.data) {
-          const cotacao = result.data;
-          setCliente(cotacao.cliente || {});
-          
-          // Simular documentos (em produção, viria do backend)
-          const docs = [];
-          if (cotacao.cliente?.tipo === 'Particular') {
-            docs.push({
-              id: 1,
-              tipo: 'BI',
-              nome: 'Bilhete de Identidade',
-              arquivo: cotacao.documentos?.bi || 'bi_cliente.pdf',
-              dataUpload: new Date().toISOString()
-            });
-          }
-          if (cotacao.documentos?.livrete) {
-            docs.push({
-              id: 2,
-              tipo: 'Livrete',
-              nome: 'Livrete do Veículo',
-              arquivo: cotacao.documentos.livrete,
-              dataUpload: new Date().toISOString()
-            });
-          }
-          setDocumentos(docs);
+          const cotacaoData = result.data;
+          setCotacao(cotacaoData);
+          setCliente(cotacaoData.cliente || {});
+          setDocumentos(montarDocumentos(cotacaoData));
         }
-      } else if (clienteId) {
-        // Buscar dados do cliente diretamente
-        // TODO: Implementar endpoint para buscar cliente por ID
-        console.log('Buscar cliente por ID:', clienteId);
       }
     } catch (error) {
       console.error('Erro ao carregar dados do cliente:', error);
@@ -78,22 +104,10 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
   const baixarDocumento = async (documento) => {
     try {
       setBaixandoDoc(documento.id);
-      
-      // Simular download (em produção, viria do backend)
-      const link = document.createElement('a');
-      link.href = `#`; // URL do documento no backend
-      link.download = documento.arquivo;
-      link.click();
-      
-      // Em produção, fazer requisição ao backend:
-      // const response = await fetch(`/api/documentos/${documento.id}/download`);
-      // const blob = await response.blob();
-      // const url = window.URL.createObjectURL(blob);
-      // link.href = url;
-      // link.click();
-      // window.URL.revokeObjectURL(url);
-      
-      alert(`✅ Download iniciado: ${documento.arquivo}`);
+      const result = await arquivoService.baixar(documento.path, documento.arquivo);
+      if (!result.success) {
+        alert(`❌ ${result.message}`);
+      }
     } catch (error) {
       console.error('Erro ao baixar documento:', error);
       alert('❌ Erro ao baixar documento');
@@ -102,9 +116,30 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
     }
   };
 
-  const visualizarDocumento = (documento) => {
+  const visualizarDocumento = async (documento) => {
     setPreviewDoc(documento);
+    setCarregandoPreview(true);
+    if (previewUrl) {
+      window.URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+    const result = await arquivoService.obterUrlPreview(documento.path);
+    setCarregandoPreview(false);
+    if (result.success) {
+      setPreviewUrl(result.url);
+    } else {
+      alert(`❌ ${result.message}`);
+    }
   };
+
+  const fecharPreview = () => {
+    if (previewUrl) window.URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setPreviewDoc(null);
+  };
+
+  const isImagem = (nome) => /\.(jpg|jpeg|png|gif|webp)$/i.test(nome || '');
+  const isPdf = (nome) => /\.pdf$/i.test(nome || '');
 
   if (!temPermissao) {
     return null;
@@ -124,31 +159,26 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-gray-200 shadow-2xl">
-        {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white p-6 rounded-t-xl flex items-center justify-between z-10">
           <div>
             <h2 className="text-2xl font-bold mb-1">Dados do Cliente e Documentos</h2>
             <p className="text-emerald-100 text-sm">
-              {cliente?.tipo === 'Empresarial' ? 'Cliente Empresarial' : 'Cliente Particular'}
+              {cotacao?.numero_cotacao ? `Cotação: ${cotacao.numero_cotacao}` : ''}
+              {cliente?.tipo === 'Empresarial' ? ' · Cliente Empresarial' : ' · Cliente Particular'}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-emerald-800 rounded-lg transition-colors duration-200"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-emerald-800 rounded-lg transition-colors duration-200">
             <X className="h-6 w-6" />
           </button>
         </div>
 
-        {/* Conteúdo */}
         <div className="p-6 space-y-6">
-          {/* Dados do Cliente */}
           <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
               <User className="h-5 w-5 mr-2 text-emerald-600" />
               Informações do Cliente
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {cliente?.tipo === 'Empresarial' ? (
                 <>
@@ -165,6 +195,15 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
                       Número de Referência Fiscal
                     </label>
                     <p className="text-gray-900 font-medium">{cliente.numero_referencia_fiscal || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-600 flex items-center mb-1">
+                      <User className="h-4 w-4 mr-1" />
+                      Contacto
+                    </label>
+                    <p className="text-gray-900 font-medium">
+                      {cliente.titulo_contato || ''} {cliente.primeiro_nome || ''} {cliente.sobrenome || ''}
+                    </p>
                   </div>
                 </>
               ) : (
@@ -191,7 +230,9 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
                       Data de Nascimento
                     </label>
                     <p className="text-gray-900 font-medium">
-                      {cliente?.data_nascimento ? new Date(cliente.data_nascimento).toLocaleDateString('pt-MZ') : 'N/A'}
+                      {cliente?.data_nascimento
+                        ? new Date(cliente.data_nascimento).toLocaleDateString('pt-MZ')
+                        : 'N/A'}
                     </p>
                   </div>
                   <div>
@@ -203,7 +244,7 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
                   </div>
                 </>
               )}
-              
+
               <div>
                 <label className="text-sm font-semibold text-gray-600 flex items-center mb-1">
                   <Mail className="h-4 w-4 mr-1" />
@@ -211,7 +252,7 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
                 </label>
                 <p className="text-gray-900 font-medium">{cliente?.email || 'N/A'}</p>
               </div>
-              
+
               <div>
                 <label className="text-sm font-semibold text-gray-600 flex items-center mb-1">
                   <Phone className="h-4 w-4 mr-1" />
@@ -219,7 +260,7 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
                 </label>
                 <p className="text-gray-900 font-medium">{cliente?.telefone || 'N/A'}</p>
               </div>
-              
+
               <div className="md:col-span-2">
                 <label className="text-sm font-semibold text-gray-600 flex items-center mb-1">
                   <MapPin className="h-4 w-4 mr-1" />
@@ -230,13 +271,30 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
             </div>
           </div>
 
-          {/* Documentos */}
+          {cotacao?.veiculos?.length > 0 && (
+            <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <FileText className="h-5 w-5 mr-2 text-emerald-600" />
+                Veículos ({cotacao.veiculos.length})
+              </h3>
+              <div className="space-y-2">
+                {cotacao.veiculos.map((v, i) => (
+                  <div key={i} className="bg-white rounded-lg p-3 border border-gray-200 text-sm text-gray-700">
+                    {v.marca} {v.modelo}
+                    {v.matricula ? ` · ${v.matricula}` : ''}
+                    {v.premio_anual ? ` · ${parseFloat(v.premio_anual).toLocaleString('pt-MZ')} MZN/ano` : ''}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
               <FileText className="h-5 w-5 mr-2 text-emerald-600" />
-              Documentos
+              Documentos Anexados
             </h3>
-            
+
             {documentos.length > 0 ? (
               <div className="space-y-3">
                 {documentos.map((doc) => (
@@ -246,21 +304,19 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
                   >
                     <div className="flex items-center space-x-3">
                       <div className="p-2 bg-emerald-100 rounded-lg">
-                        {doc.tipo === 'BI' || doc.tipo === 'Livrete' ? (
-                          <FileCheck className="h-5 w-5 text-emerald-600" />
-                        ) : (
-                          <File className="h-5 w-5 text-emerald-600" />
-                        )}
+                        <FileCheck className="h-5 w-5 text-emerald-600" />
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">{doc.nome}</p>
                         <p className="text-sm text-gray-600">{doc.arquivo}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Upload: {new Date(doc.dataUpload).toLocaleDateString('pt-MZ')}
-                        </p>
+                        {doc.dataUpload && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Data: {new Date(doc.dataUpload).toLocaleDateString('pt-MZ')}
+                          </p>
+                        )}
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => visualizarDocumento(doc)}
@@ -294,7 +350,6 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="sticky bottom-0 bg-gray-50 p-4 border-t border-gray-200 rounded-b-xl flex justify-end">
           <button
             onClick={onClose}
@@ -305,25 +360,33 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
         </div>
       </div>
 
-      {/* Modal de Preview do Documento */}
       {previewDoc && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="bg-emerald-600 text-white p-4 flex items-center justify-between">
               <h3 className="text-xl font-bold">{previewDoc.nome}</h3>
-              <button
-                onClick={() => setPreviewDoc(null)}
-                className="p-2 hover:bg-emerald-700 rounded-lg transition-colors"
-              >
+              <button onClick={fecharPreview} className="p-2 hover:bg-emerald-700 rounded-lg transition-colors">
                 <X className="h-6 w-6" />
               </button>
             </div>
-            <div className="p-4 bg-gray-100 min-h-[400px] flex items-center justify-center">
-              <div className="text-center text-gray-500">
-                <ImageIcon className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                <p>Preview do documento: {previewDoc.arquivo}</p>
-                <p className="text-sm mt-2">Em produção, aqui seria exibido o documento</p>
-              </div>
+            <div className="flex-1 bg-gray-100 min-h-[400px] flex items-center justify-center overflow-auto p-4">
+              {carregandoPreview ? (
+                <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
+              ) : previewUrl ? (
+                isImagem(previewDoc.arquivo) ? (
+                  <img src={previewUrl} alt={previewDoc.nome} className="max-w-full max-h-[70vh] object-contain" />
+                ) : isPdf(previewDoc.arquivo) ? (
+                  <iframe src={previewUrl} title={previewDoc.nome} className="w-full h-[70vh] border-0" />
+                ) : (
+                  <div className="text-center text-gray-500">
+                    <File className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                    <p>Pré-visualização não disponível para este tipo de ficheiro.</p>
+                    <p className="text-sm mt-2">Utilize o botão Baixar.</p>
+                  </div>
+                )
+              ) : (
+                <p className="text-gray-500">Não foi possível carregar a pré-visualização.</p>
+              )}
             </div>
             <div className="bg-gray-50 p-4 flex justify-end space-x-2">
               <button
@@ -334,7 +397,7 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
                 Baixar
               </button>
               <button
-                onClick={() => setPreviewDoc(null)}
+                onClick={fecharPreview}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
               >
                 Fechar
@@ -348,4 +411,3 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
 }
 
 export default VisualizacaoClienteDocumentos;
-

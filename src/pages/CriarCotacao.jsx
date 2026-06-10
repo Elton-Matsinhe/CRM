@@ -30,8 +30,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { gerarPDFPersonalizado } from "../components/GeradorPDFPersonalizado";
-import emailjs from "@emailjs/browser";
-import { cotacaoService } from "../services/api";
+import { cotacaoService, arquivoService } from "../services/api";
 
 function CriarCliente() {
   const [tipoCliente, setTipoCliente] = useState("Particular");
@@ -87,13 +86,6 @@ function CriarCliente() {
     nomeEmpresa: "",
     numeroReferenciaFiscal: "",
   });
-
-  // Configuração do EmailJS
-  const EMAILJS_CONFIG = {
-    SERVICE_ID: "service_i20ww7m",
-    TEMPLATE_ID: "template_nv37m8h",
-    PUBLIC_KEY: "fDnSvK3wOFUgLLuVK",
-  };
 
   // Configurações das coberturas baseadas na tabela fornecida
   const configCoberturas = {
@@ -746,78 +738,6 @@ function CriarCliente() {
   };
 
 
-  // FUNÇÃO PARA ENVIAR EMAIL (mantida do código original)
-  const enviarEmailCotacao = async (cotacao) => {
-    try {
-      setEnviandoEmail(true);
-
-      if (!cotacao.cliente.email) {
-        alert("❌ É necessário ter um email do cliente para enviar a cotação.");
-        setEnviandoEmail(false);
-        return;
-      }
-
-      const templateParams = {
-        to_email: cotacao.cliente.email,
-        to_name: `${cotacao.cliente.primeiroNome} ${cotacao.cliente.sobrenome}`,
-        from_name: "Imperial Seguros",
-        cotacao_id: cotacao.id,
-        cliente_nome: `${cotacao.cliente.primeiroNome} ${cotacao.cliente.sobrenome}`,
-        total_premio: formatarMoeda(cotacao.totalPremio),
-        num_veiculos: cotacao.veiculos.length,
-        tipo_cobertura: tipoCobertura,
-        data_emissao: new Date().toLocaleDateString("pt-MZ"),
-        validade: "30 dias",
-        veiculos_lista: cotacao.veiculos
-          .map(
-            (veiculo, index) =>
-              `• ${veiculo.marca} ${veiculo.modelo} - ${formatarMoeda(veiculo.premioAnnual)}`
-          )
-          .join("\\n"),
-        contacto_empresa: "comercial@imperialinsurance-mz.com",
-        telefone_empresa: "+258 84 300 0000",
-      };
-
-      console.log("Enviando email para:", cotacao.cliente.email);
-
-      const result = await emailjs.send(
-        EMAILJS_CONFIG.SERVICE_ID,
-        EMAILJS_CONFIG.TEMPLATE_ID,
-        templateParams,
-        EMAILJS_CONFIG.PUBLIC_KEY
-      );
-
-      console.log(
-        "Email enviado com sucesso para:",
-        cotacao.cliente.email,
-        result
-      );
-      alert(
-        `✅ Cotação ${cotacao.id} enviada por email para ${cotacao.cliente.email} com sucesso!`
-      );
-      setMostrarOpcoesPartilha(false);
-    } catch (error) {
-      console.error("Erro detalhado ao enviar email:", error);
-
-      if (
-        error.text?.includes("Invalid login") ||
-        error.text?.includes("Service not found") ||
-        error.text?.includes("Public Key")
-      ) {
-        console.log("EmailJS não configurado, simulando envio...");
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        alert(
-          `✅ Cotação ${cotacao.id} enviada por email para ${cotacao.cliente.email} com sucesso! (Simulado)`
-        );
-        setMostrarOpcoesPartilha(false);
-      } else {
-        alert("❌ Erro ao enviar email. Por favor, tente novamente.");
-      }
-    } finally {
-      setEnviandoEmail(false);
-    }
-  };
-
   // Função para gerar ID único da cotação
   const gerarIdCotacao = () => {
     const timestamp = new Date().getTime();
@@ -890,9 +810,26 @@ function CriarCliente() {
       const result = await cotacaoService.criar(cotacaoData);
 
       if (result.success) {
+        const cotacaoId = result.data.id;
+
+        // Upload dos documentos do cliente
+        const docsUpdate = {};
+        if (tipoCliente === "Particular" && docBI) {
+          const uploadBI = await arquivoService.upload(docBI, 'cotacoes');
+          if (uploadBI.success) docsUpdate.doc_bi_path = uploadBI.data.path;
+        }
+        if (docLivrete) {
+          const uploadLivrete = await arquivoService.upload(docLivrete, 'cotacoes');
+          if (uploadLivrete.success) docsUpdate.doc_livrete_path = uploadLivrete.data.path;
+        }
+        if (Object.keys(docsUpdate).length > 0) {
+          await cotacaoService.atualizarDocumentos(cotacaoId, docsUpdate);
+        }
+
         // Formatar cotação para exibição
         const novaCotacao = {
           id: result.data.numero_cotacao || result.data.id,
+          idBackend: cotacaoId,
           numero_cotacao: result.data.numero_cotacao || result.data.id,
           dataCriacao: result.data.data_criacao || new Date().toISOString(),
           cliente: {
@@ -900,8 +837,8 @@ function CriarCliente() {
             ...formData,
           },
           documentos: {
-            bi: tipoCliente === "Particular" ? docBI?.name : null,
-            livrete: docLivrete?.name
+            bi: docsUpdate.doc_bi_path || (tipoCliente === "Particular" ? docBI?.name : null),
+            livrete: docsUpdate.doc_livrete_path || docLivrete?.name
           },
           veiculos: veiculos.map((v) => ({
             ...v,
@@ -937,7 +874,7 @@ function CriarCliente() {
     }
   };
 
-  // Função para enviar cotação por email
+  // Função para enviar cotação por email (via backend, igual à Lista de Cotações)
   const enviarEmail = async () => {
     if (!cotacaoGerada) return;
 
@@ -946,12 +883,33 @@ function CriarCliente() {
       return;
     }
 
+    const cotacaoId = cotacaoGerada.idBackend;
+    if (!cotacaoId) {
+      alert("❌ ID da cotação não encontrado. Tente recarregar a página.");
+      return;
+    }
+
     const confirmarEnvio = window.confirm(
-      `Deseja enviar a cotação ${cotacaoGerada.id} para o email ${cotacaoGerada.cliente.email}?`
+      `Deseja enviar a cotação ${cotacaoGerada.numero_cotacao || cotacaoGerada.id} para o email ${cotacaoGerada.cliente.email}?`
     );
 
-    if (confirmarEnvio) {
-      await enviarEmailCotacao(cotacaoGerada);
+    if (!confirmarEnvio) return;
+
+    try {
+      setEnviandoEmail(true);
+      const result = await cotacaoService.enviarEmail(cotacaoId);
+
+      if (result && result.success) {
+        alert(`✅ Email enviado com sucesso para ${cotacaoGerada.cliente.email}!`);
+        setMostrarOpcoesPartilha(false);
+      } else {
+        alert(`❌ Erro ao enviar email: ${result?.message || result?.error || 'Erro desconhecido'}`);
+      }
+    } catch (error) {
+      console.error("Erro ao enviar email:", error);
+      alert(`❌ Erro ao enviar email: ${error.response?.data?.message || error.message || 'Erro desconhecido'}`);
+    } finally {
+      setEnviandoEmail(false);
     }
   };
 

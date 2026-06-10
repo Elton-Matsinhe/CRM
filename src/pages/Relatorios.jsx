@@ -33,9 +33,9 @@ function Relatorios() {
 
   const carregarAgentes = async () => {
     try {
-      const usuarios = await usuarioService.findAll();
-      if (usuarios && usuarios.length > 0) {
-        setAgentes(usuarios.filter(u => u.role === 'agente'));
+      const result = await usuarioService.findAll();
+      if (result.success && result.data?.length > 0) {
+        setAgentes(result.data.filter(u => u.role === 'agente'));
       }
     } catch (error) {
       console.error('Erro ao carregar agentes:', error);

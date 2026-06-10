@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import { cotacaoService, followUpService, usuarioService } from '../services/api';
+import { cotacaoService, followUpService, usuarioService, arquivoService } from '../services/api';
 import VisualizacaoClienteDocumentos from '../components/VisualizacaoClienteDocumentos';
 
 // Dados fictícios removidos - agora vem do backend
@@ -635,11 +635,18 @@ function Acompanhamento() {
       const temImpassesMarcados = Object.entries(semanasAtual.impasses)
         .some(([key, value]) => key !== 'outrosTexto' && value === true);
 
-      // Preparar dados do follow-up para salvar no backend
-      // Se houver arquivo, usar o nome do arquivo (por enquanto, até implementar upload real)
-      const comprovativoPath = uploadedFile 
-        ? uploadedFile.nome || (typeof uploadedFile === 'string' ? uploadedFile : null)
-        : null;
+      // Upload do comprovativo para o servidor
+      let comprovativoPath = null;
+      if (uploadedFile?.arquivo) {
+        const uploadResult = await arquivoService.upload(uploadedFile.arquivo, 'followups');
+        if (!uploadResult.success) {
+          alert(`❌ Erro ao enviar documento: ${uploadResult.message}`);
+          return;
+        }
+        comprovativoPath = uploadResult.data.path;
+      } else if (uploadedFile?.nome) {
+        comprovativoPath = uploadedFile.nome;
+      }
 
       const followUpData = {
         cotacao_id: cotacaoId,
@@ -917,10 +924,9 @@ Sistema de Gestão de Cotações
 
   const carregarSubscritores = async () => {
     try {
-      const result = await usuarioService.findAll();
+      const result = await usuarioService.listarSubscritores();
       if (result.success && result.data) {
-        const subscritoresAtivos = result.data.filter(u => u.role === 'subscritor' && u.ativo);
-        setSubscritores(subscritoresAtivos);
+        setSubscritores(result.data);
       }
     } catch (error) {
       console.error("Erro ao carregar subscritores:", error);
@@ -946,10 +952,19 @@ Sistema de Gestão de Cotações
       setLoadingFinalizar(true);
       const cotacaoId = cotacaoSelecionada.idNumerico || cotacaoSelecionada.id;
 
-      // Preparar comprovativo (nome do arquivo)
-      const comprovativoPath = uploadedComprovativo 
-        ? (uploadedComprovativo.nome || (typeof uploadedComprovativo === 'string' ? uploadedComprovativo : 'comprovativo_aceitacao.pdf'))
-        : null;
+      // Upload do comprovativo de aceitação
+      let comprovativoPath = null;
+      if (uploadedComprovativo?.arquivo) {
+        const uploadResult = await arquivoService.upload(uploadedComprovativo.arquivo, 'followups');
+        if (!uploadResult.success) {
+          alert(`❌ Erro ao enviar comprovativo: ${uploadResult.message}`);
+          setLoadingFinalizar(false);
+          return;
+        }
+        comprovativoPath = uploadResult.data.path;
+      } else if (uploadedComprovativo?.nome) {
+        comprovativoPath = uploadedComprovativo.nome;
+      }
 
       const dadosFinalizacao = {
         enviar_todos: enviarTodosSubscritores,
@@ -1168,6 +1183,22 @@ Sistema de Gestão de Cotações
 
   const removeUploadedComprovativo = () => {
     setUploadedComprovativo(null);
+  };
+
+  const baixarComprovativo = async (path, nome) => {
+    const result = await arquivoService.baixar(path, nome);
+    if (!result.success) {
+      alert(`❌ ${result.message}`);
+    }
+  };
+
+  const visualizarComprovativo = async (path, nome) => {
+    const result = await arquivoService.obterUrlPreview(path);
+    if (result.success) {
+      window.open(result.url, '_blank');
+    } else {
+      alert(`❌ ${result.message}`);
+    }
   };
 
   const filteredCotacoes = cotacoes.filter(cotacao => {
@@ -1721,13 +1752,32 @@ Sistema de Gestão de Cotações
                           <div className="flex items-center space-x-2">
                             <FileText className="h-4 w-4 text-gray-600" />
                             <span className="text-sm font-medium text-gray-700">
-                              {cotacaoSelecionada.acompanhamentoSemanas[semanaAtual].comprovativo}
+                              {cotacaoSelecionada.acompanhamentoSemanas[semanaAtual].comprovativo.split('/').pop()}
                             </span>
                           </div>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => visualizarComprovativo(
+                                cotacaoSelecionada.acompanhamentoSemanas[semanaAtual].comprovativo,
+                                cotacaoSelecionada.acompanhamentoSemanas[semanaAtual].comprovativo.split('/').pop()
+                              )}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Visualizar"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => baixarComprovativo(
+                                cotacaoSelecionada.acompanhamentoSemanas[semanaAtual].comprovativo,
+                                cotacaoSelecionada.acompanhamentoSemanas[semanaAtual].comprovativo.split('/').pop()
+                              )}
+                              className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                              title="Baixar"
+                            >
+                              <Download className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">
-                          📌 Nota: O arquivo foi registrado pelo agente. Para acessar o documento completo, entre em contato com o agente responsável.
-                        </p>
                       </div>
                     </div>
                   ) : (
@@ -2125,9 +2175,6 @@ Sistema de Gestão de Cotações
               </div>
             ) : (
               currentItems.map((cotacao) => {
-            const progressoCompleto = cotacao.progresso.filter(p => p.status === 'concluida').length;
-            const totalEtapas = cotacao.progresso.length;
-            const progressoPercent = Math.round((progressoCompleto / totalEtapas) * 100);
             const semanasCompletas = cotacao.acompanhamentoSemanas?.filter(s => s.status === 'concluida').length || 0;
             const currentForm = formState[cotacao.id]
               ? { ...buildDefaultForm(cotacao), ...formState[cotacao.id] }
@@ -2233,23 +2280,6 @@ Sistema de Gestão de Cotações
                   </div>
                 </div>
 
-                {/* Barra de Progresso Principal */}
-                <div className="mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-emerald-700 font-medium">{cotacao.estagio}</span>
-                    <span className="text-sm text-gray-600">{progressoPercent}%</span>
-                  </div>
-                  <div className="h-2 rounded-full overflow-hidden bg-gray-200">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${progressoPercent}%`,
-                        background: `linear-gradient(90deg, ${themeConfig.primaryLight || '#4ade80'}, ${themeConfig.primaryDark || '#22c55e'})`
-                      }}
-                    ></div>
-                  </div>
-                </div>
-
               </div>
             );
           })
@@ -2346,7 +2376,7 @@ Sistema de Gestão de Cotações
         {/* Modal de Dados do Cliente e Documentos */}
         {mostrarDadosCliente && cotacaoSelecionada && (
           <VisualizacaoClienteDocumentos
-            cotacaoId={cotacaoSelecionada.id || cotacaoSelecionada.idNumerico}
+            cotacaoId={cotacaoSelecionada.idNumerico || cotacaoSelecionada.id}
             clienteId={cotacaoSelecionada.cliente?.id}
             onClose={() => {
               setMostrarDadosCliente(false);

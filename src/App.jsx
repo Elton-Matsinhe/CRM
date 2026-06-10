@@ -28,6 +28,7 @@ import ListarCotacoes from "./pages/ListarCotacoes";
 import GestaoCotacoes from "./pages/GestaoCotacoes";
 import Acompanhamento from "./pages/Acompanhamento";
 import Relatorios from "./pages/Relatorios";
+import GestaoUsuarios from "./pages/GestaoUsuarios";
 import DepartamentoPlaceholder from "./pages/DepartamentoPlaceholder";
 import Login from "./pages/Login";
 import { useTheme } from "./contexts/ThemeContext";
@@ -506,6 +507,11 @@ function App() {
                 <Route path="/crm/relatorios" element={
                   <ProtectedRoute>
                     <Relatorios />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/usuarios" element={
+                  <ProtectedRoute>
+                    <GestaoUsuarios />
                   </ProtectedRoute>
                 } />
                 <Route path="/departamentos/:departamento" element={

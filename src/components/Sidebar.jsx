@@ -10,6 +10,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { menuItems } from "../data/data";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
+import { useAuth } from "../contexts/AuthContext";
 import { estatisticasService, cotacaoService } from "../services/api";
 
 // Importando o logo diretamente
@@ -17,6 +18,7 @@ import logo from "../assets/logo.png";
 
 function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
   const { theme } = useTheme();
+  const { usuario } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [openSubmenus, setOpenSubmenus] = useState({});
   const [hoveredItem, setHoveredItem] = useState(null);
@@ -303,7 +305,9 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
 
       {/* Navegação com Scroll - Design Limpo */}
       <nav className={`flex-1 overflow-y-auto mt-2 ${isCollapsed ? 'px-2' : 'px-3'} space-y-1 custom-scrollbar relative z-10 py-4`}>
-        {menuItemsComBadges.map((item, index) => {
+        {menuItemsComBadges
+          .filter((item) => !item.adminOnly || usuario?.role === 'admin')
+          .map((item, index) => {
           const isActive = activeTab === item.path;
           const hasSubmenu = item.type === "submenu";
           const isOpen = isSubmenuOpen(item.id);

@@ -1,7 +1,7 @@
 ﻿import axios from 'axios';
 
 // 🔁 ALTERAÇÃO: URL do backend em produção
-const API_BASE_URL = "https://api.portal-imp.com/api/";
+const API_BASE_URL = "http://localhost:3000/api/";
 
 // Criar instância do axios com configurações padrão
 const api = axios.create({
@@ -102,10 +102,78 @@ export const usuarioService = {
   findAll: async () => {
     try {
       const response = await api.get('/auth/users');
-      return response.data.data || [];
+      return { success: true, data: response.data.data || [] };
     } catch (error) {
       console.error("Erro ao buscar usuários:", error);
-      return [];
+      return {
+        success: false,
+        data: [],
+        message: error.response?.data?.message || "Erro ao buscar usuários"
+      };
+    }
+  },
+  listarSubscritores: async () => {
+    try {
+      const response = await api.get('/auth/users/subscritores');
+      return { success: true, data: response.data.data || [] };
+    } catch (error) {
+      console.error("Erro ao buscar subscritores:", error);
+      return { success: false, data: [], message: error.response?.data?.message || 'Erro ao buscar subscritores' };
+    }
+  },
+  buscarPorId: async (id) => {
+    try {
+      const response = await api.get(`/auth/users/${id}`);
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || "Erro ao buscar utilizador"
+      };
+    }
+  },
+  criar: async (dados) => {
+    try {
+      const response = await api.post('/auth/users', dados);
+      return { success: true, data: response.data.data, message: response.data.message };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || "Erro ao criar utilizador"
+      };
+    }
+  },
+  atualizar: async (id, dados) => {
+    try {
+      const response = await api.put(`/auth/users/${id}`, dados);
+      return { success: true, data: response.data.data, message: response.data.message };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || "Erro ao atualizar utilizador"
+      };
+    }
+  },
+  atualizarSenha: async (id, senha) => {
+    try {
+      const response = await api.put(`/auth/users/${id}/senha`, { senha });
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || "Erro ao atualizar senha"
+      };
+    }
+  },
+  excluir: async (id) => {
+    try {
+      const response = await api.delete(`/auth/users/${id}`);
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || "Erro ao eliminar utilizador"
+      };
     }
   }
 };
@@ -200,6 +268,18 @@ export const cotacaoService = {
       };
     }
   },
+  atualizarDocumentos: async (id, documentos) => {
+    try {
+      const response = await api.put(`/cotacoes/${id}`, documentos);
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error("Erro ao atualizar documentos:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Erro ao atualizar documentos"
+      };
+    }
+  },
   excluir: async (id) => {
     try {
       await api.delete(`/cotacoes/${id}`);
@@ -221,6 +301,66 @@ export const cotacaoService = {
       return {
         success: false,
         message: error.response?.data?.message || "Erro ao finalizar cotação"
+      };
+    }
+  }
+};
+
+// ============================================
+// SERVIÇO DE ARQUIVOS
+// ============================================
+export const arquivoService = {
+  upload: async (file, categoria = 'cotacoes') => {
+    try {
+      const formData = new FormData();
+      formData.append('arquivo', file);
+      const response = await api.post(`/arquivos/upload/${categoria}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Erro ao fazer upload:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'Erro ao fazer upload'
+      };
+    }
+  },
+  baixar: async (relativePath, nomeArquivo) => {
+    try {
+      const response = await api.get('/arquivos/download', {
+        params: { path: relativePath },
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', nomeArquivo || relativePath.split('/').pop());
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao baixar arquivo:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Erro ao baixar arquivo'
+      };
+    }
+  },
+  obterUrlPreview: async (relativePath) => {
+    try {
+      const response = await api.get('/arquivos/download', {
+        params: { path: relativePath, preview: true },
+        responseType: 'blob'
+      });
+      return { success: true, url: window.URL.createObjectURL(response.data) };
+    } catch (error) {
+      console.error('Erro ao visualizar arquivo:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Erro ao visualizar arquivo'
       };
     }
   }
@@ -478,6 +618,7 @@ export default {
   followUpService,
   estatisticasService,
   relatorioService,
+  arquivoService,
   apiRequest,
   api
 };
