@@ -1,15 +1,14 @@
 ﻿import axios from 'axios';
 
-// Usar variável de ambiente ou fallback para localhost
-const API_BASE_URL ="https://9592-102-222-88-49.ngrok-free.app/api";
+// 🔁 ALTERAÇÃO: URL do backend em produção
+const API_BASE_URL = "https://api.portal-imp.com/api/";
 
 // Criar instância do axios com configurações padrão
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    // Header necessário para evitar warning page do ngrok
-    'ngrok-skip-browser-warning': 'true'
+    'ngrok-skip-browser-warning': 'true'   // útil mesmo em produção
   }
 });
 
@@ -20,20 +19,16 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    // Garantir que o header do ngrok está sempre presente
     config.headers['ngrok-skip-browser-warning'] = 'true';
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Interceptor para tratar erros de resposta
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Log detalhado de erros para debug
     if (error.response) {
       console.error('❌ [API] Erro na resposta:', {
         status: error.response.status,
@@ -53,7 +48,6 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 401) {
-      // Token inválido ou expirado
       localStorage.removeItem("authToken");
       localStorage.removeItem("token");
       localStorage.removeItem("user");
@@ -71,10 +65,7 @@ export const usuarioService = {
   login: async (email, senha) => {
     try {
       const response = await api.post('/auth/login', { email, senha });
-      return {
-        success: true,
-        data: response.data.data
-      };
+      return { success: true, data: response.data.data };
     } catch (error) {
       console.error("Erro no login:", error);
       return {
@@ -83,7 +74,6 @@ export const usuarioService = {
       };
     }
   },
-
   logout: async () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("token");
@@ -91,23 +81,15 @@ export const usuarioService = {
     localStorage.removeItem("usuario");
     return { success: true };
   },
-
   validateToken: async (token) => {
     try {
       const response = await api.get('/auth/verify');
-      return {
-        valid: true,
-        user: response.data.data.user
-      };
+      return { valid: true, user: response.data.data.user };
     } catch (error) {
       return { valid: false, error: error.message };
     }
   },
-
-  verificarToken: async (token) => {
-    return usuarioService.validateToken(token);
-  },
-
+  verificarToken: async (token) => usuarioService.validateToken(token),
   getUserInfo: async () => {
     try {
       const response = await api.get('/auth/me');
@@ -117,7 +99,6 @@ export const usuarioService = {
       return null;
     }
   },
-
   findAll: async () => {
     try {
       const response = await api.get('/auth/users');
@@ -133,21 +114,12 @@ export const usuarioService = {
 // SERVIÇO DE COTAÇÕES
 // ============================================
 export const cotacaoService = {
-  /**
-   * Enviar cotação por email com PDF em anexo
-   */
   enviarEmail: async (id) => {
     try {
       console.log('📧 Enviando email para cotação:', id);
       const response = await api.post(`/cotacoes/${id}/enviar-email`);
       console.log('✅ Resposta do servidor:', response.data);
-      
-      // Retornar o objeto de resposta diretamente
-      if (response.data && response.data.success !== undefined) {
-        return response.data;
-      }
-      
-      // Se a estrutura for diferente, adaptar
+      if (response.data && response.data.success !== undefined) return response.data;
       return {
         success: true,
         message: response.data.message || 'Email enviado com sucesso',
@@ -155,7 +127,6 @@ export const cotacaoService = {
       };
     } catch (error) {
       console.error('❌ Erro ao enviar email:', error);
-      // Retornar erro formatado
       return {
         success: false,
         message: error.response?.data?.message || error.message || 'Erro ao enviar email',
@@ -170,18 +141,14 @@ export const cotacaoService = {
       if (filters.limit) params.append('limit', filters.limit);
       if (filters.status) params.append('status', filters.status);
       if (filters.search) params.append('search', filters.search);
-
       const url = `/cotacoes?${params.toString()}`;
       console.log('🌐 [API] Requisição GET:', url);
-      
       const response = await api.get(url);
-      
       console.log('📥 [API] Resposta recebida:', {
         success: response.data.success,
         dataLength: response.data.data?.length || 0,
         pagination: response.data.pagination
       });
-      
       return {
         success: true,
         data: response.data.data || [],
@@ -197,14 +164,10 @@ export const cotacaoService = {
       };
     }
   },
-
   buscarPorId: async (id) => {
     try {
       const response = await api.get(`/cotacoes/${id}`);
-      return {
-        success: true,
-        data: response.data.data
-      };
+      return { success: true, data: response.data.data };
     } catch (error) {
       console.error("Erro ao buscar cotação:", error);
       return {
@@ -213,14 +176,10 @@ export const cotacaoService = {
       };
     }
   },
-
   criar: async (cotacaoData) => {
     try {
       const response = await api.post('/cotacoes', cotacaoData);
-      return {
-        success: true,
-        data: response.data.data
-      };
+      return { success: true, data: response.data.data };
     } catch (error) {
       console.error("Erro ao criar cotação:", error);
       return {
@@ -229,14 +188,10 @@ export const cotacaoService = {
       };
     }
   },
-
   editar: async (id, cotacaoData) => {
     try {
       const response = await api.put(`/cotacoes/${id}`, cotacaoData);
-      return {
-        success: true,
-        data: response.data.data
-      };
+      return { success: true, data: response.data.data };
     } catch (error) {
       console.error("Erro ao editar cotação:", error);
       return {
@@ -245,7 +200,6 @@ export const cotacaoService = {
       };
     }
   },
-
   excluir: async (id) => {
     try {
       await api.delete(`/cotacoes/${id}`);
@@ -258,15 +212,10 @@ export const cotacaoService = {
       };
     }
   },
-
   finalizar: async (id, dados) => {
     try {
       const response = await api.post(`/cotacoes/${id}/finalizar`, dados);
-      return {
-        success: true,
-        data: response.data.data,
-        envios: response.data.envios
-      };
+      return { success: true, data: response.data.data, envios: response.data.envios };
     } catch (error) {
       console.error("Erro ao finalizar cotação:", error);
       return {
@@ -278,7 +227,7 @@ export const cotacaoService = {
 };
 
 // ============================================
-// SERVIÇO DE FOLLOW-UPS
+// SERVIÇO DE FOLLOW-UPS (mantido igual)
 // ============================================
 export const followUpService = {
   listar: async (filters = {}) => {
@@ -288,7 +237,6 @@ export const followUpService = {
       if (filters.page) params.append('page', filters.page);
       if (filters.limit) params.append('limit', filters.limit);
       if (filters.status) params.append('status', filters.status);
-
       const response = await api.get(`/followups?${params.toString()}`);
       return {
         success: true,
@@ -305,14 +253,10 @@ export const followUpService = {
       };
     }
   },
-
   buscarPorId: async (id) => {
     try {
       const response = await api.get(`/followups/${id}`);
-      return {
-        success: true,
-        data: response.data.data
-      };
+      return { success: true, data: response.data.data };
     } catch (error) {
       console.error("Erro ao buscar follow-up:", error);
       return {
@@ -321,14 +265,10 @@ export const followUpService = {
       };
     }
   },
-
   criar: async (followUpData) => {
     try {
       const response = await api.post('/followups', followUpData);
-      return {
-        success: true,
-        data: response.data.data
-      };
+      return { success: true, data: response.data.data };
     } catch (error) {
       console.error("Erro ao criar follow-up:", error);
       return {
@@ -337,14 +277,10 @@ export const followUpService = {
       };
     }
   },
-
   editar: async (id, followUpData) => {
     try {
       const response = await api.put(`/followups/${id}`, followUpData);
-      return {
-        success: true,
-        data: response.data.data
-      };
+      return { success: true, data: response.data.data };
     } catch (error) {
       console.error("Erro ao editar follow-up:", error);
       return {
@@ -353,7 +289,6 @@ export const followUpService = {
       };
     }
   },
-
   excluir: async (id) => {
     try {
       await api.delete(`/followups/${id}`);
@@ -369,93 +304,45 @@ export const followUpService = {
 };
 
 // ============================================
-// SERVIÇO DE ESTATÍSTICAS E MÉTRICAS
+// SERVIÇO DE ESTATÍSTICAS (mantido igual)
 // ============================================
 export const estatisticasService = {
   buscarMetricas: async () => {
     try {
-      // Buscar todas as cotações para calcular métricas
       const result = await cotacaoService.listar({ limit: 10000 });
-      
       if (result.success && result.data) {
         const cotacoes = result.data;
         const totalQuotes = cotacoes.length;
         const pendingApproval = cotacoes.filter(c => c.status === 'pendente' || c.status === 'ativa').length;
         const policiesIssued = cotacoes.filter(c => c.status === 'aprovada').length;
         const activeAgents = new Set(cotacoes.map(c => c.agente_id).filter(Boolean)).size;
-        const conversionRate = totalQuotes > 0 
-          ? ((policiesIssued / totalQuotes) * 100).toFixed(0) + '%'
-          : '0%';
-        
-        // Calcular receita total
+        const conversionRate = totalQuotes > 0 ? ((policiesIssued / totalQuotes) * 100).toFixed(0) + '%' : '0%';
         const revenue = cotacoes.reduce((sum, c) => sum + (parseFloat(c.total_premio) || 0), 0);
-        const revenueFormatted = revenue >= 1000000 
-          ? `MT ${(revenue / 1000000).toFixed(1)}M`
-          : `MT ${(revenue / 1000).toFixed(0)}K`;
-
-        return {
-          success: true,
-          data: {
-            totalQuotes,
-            pendingApproval,
-            policiesIssued,
-            activeAgents,
-            conversionRate,
-            revenue: revenueFormatted
-          }
-        };
+        const revenueFormatted = revenue >= 1000000 ? `MT ${(revenue / 1000000).toFixed(1)}M` : `MT ${(revenue / 1000).toFixed(0)}K`;
+        return { success: true, data: { totalQuotes, pendingApproval, policiesIssued, activeAgents, conversionRate, revenue: revenueFormatted } };
       }
-      
       return {
         success: false,
-        data: {
-          totalQuotes: 0,
-          pendingApproval: 0,
-          policiesIssued: 0,
-          activeAgents: 0,
-          conversionRate: '0%',
-          revenue: 'MT 0'
-        }
+        data: { totalQuotes: 0, pendingApproval: 0, policiesIssued: 0, activeAgents: 0, conversionRate: '0%', revenue: 'MT 0' }
       };
     } catch (error) {
       console.error("Erro ao buscar métricas:", error);
       return {
         success: false,
-        data: {
-          totalQuotes: 0,
-          pendingApproval: 0,
-          policiesIssued: 0,
-          activeAgents: 0,
-          conversionRate: '0%',
-          revenue: 'MT 0'
-        }
+        data: { totalQuotes: 0, pendingApproval: 0, policiesIssued: 0, activeAgents: 0, conversionRate: '0%', revenue: 'MT 0' }
       };
     }
   },
-
   buscarNotificacoes: async () => {
     try {
-      // Buscar cotações recentes e pendentes para notificações
       const result = await cotacaoService.listar({ limit: 50, status: 'ativa' });
-      
       if (result.success && result.data) {
         const cotacoes = result.data;
         const notifications = [];
-        
-        // Notificações de cotações aprovadas
         const aprovadas = cotacoes.filter(c => c.status === 'aprovada');
         if (aprovadas.length > 0) {
-          notifications.push({
-            id: 1,
-            text: `Nova cotação aprovada - Aguardando emissão de apólice`,
-            time: "2 min atrás",
-            unread: true,
-            type: "approval",
-            priority: "high"
-          });
+          notifications.push({ id: 1, text: `Nova cotação aprovada - Aguardando emissão de apólice`, time: "2 min atrás", unread: true, type: "approval", priority: "high" });
         }
-
-        // Notificações de cotações expirando
         const hoje = new Date();
         const expirando = cotacoes.filter(c => {
           if (!c.data_validade) return false;
@@ -463,7 +350,6 @@ export const estatisticasService = {
           const diffDays = Math.ceil((dataValidade - hoje) / (1000 * 60 * 60 * 24));
           return diffDays <= 2 && diffDays > 0;
         });
-        
         if (expirando.length > 0) {
           notifications.push({
             id: 2,
@@ -474,8 +360,6 @@ export const estatisticasService = {
             priority: "medium"
           });
         }
-
-        // Notificações de novas cotações hoje
         const hojeStr = hoje.toISOString().split('T')[0];
         const novasHoje = cotacoes.filter(c => c.data_criacao && c.data_criacao.startsWith(hojeStr));
         if (novasHoje.length > 0) {
@@ -488,36 +372,20 @@ export const estatisticasService = {
             priority: "low"
           });
         }
-
-        return {
-          success: true,
-          data: notifications
-        };
+        return { success: true, data: notifications };
       }
-      
-      return {
-        success: true,
-        data: []
-      };
+      return { success: true, data: [] };
     } catch (error) {
       console.error("Erro ao buscar notificações:", error);
-      return {
-        success: true,
-        data: []
-      };
+      return { success: true, data: [] };
     }
   },
-
   buscarMensagens: async () => {
     try {
-      // Buscar cotações com status específicos para mensagens
       const result = await cotacaoService.listar({ limit: 20 });
-      
       if (result.success && result.data) {
         const cotacoes = result.data;
         const messages = [];
-        
-        // Mensagens de apólices emitidas
         const apolices = cotacoes.filter(c => c.status === 'aprovada');
         if (apolices.length > 0) {
           messages.push({
@@ -529,38 +397,22 @@ export const estatisticasService = {
             priority: "high"
           });
         }
-
-        return {
-          success: true,
-          data: messages
-        };
+        return { success: true, data: messages };
       }
-      
-      return {
-        success: true,
-        data: []
-      };
+      return { success: true, data: [] };
     } catch (error) {
       console.error("Erro ao buscar mensagens:", error);
-      return {
-        success: true,
-        data: []
-      };
+      return { success: true, data: [] };
     }
   }
 };
 
 // ============================================
-// FUNÇÃO GENÉRICA PARA REQUISIÇÕES
+// FUNÇÃO GENÉRICA E SERVIÇO DE RELATÓRIOS (mantidos)
 // ============================================
 export const apiRequest = async (endpoint, method = "GET", data = null) => {
   try {
-    const config = {
-      method,
-      url: endpoint,
-      ...(data && { data })
-    };
-
+    const config = { method, url: endpoint, ...(data && { data }) };
     const response = await api(config);
     return response.data;
   } catch (error) {
@@ -569,13 +421,7 @@ export const apiRequest = async (endpoint, method = "GET", data = null) => {
   }
 };
 
-// ============================================
-// SERVIÇO DE RELATÓRIOS
-// ============================================
 export const relatorioService = {
-  /**
-   * Baixar relatório em PDF
-   */
   baixarPDF: async (filtros = {}) => {
     try {
       const params = new URLSearchParams();
@@ -585,12 +431,7 @@ export const relatorioService = {
       if (filtros.agente_id) params.append('agente_id', filtros.agente_id);
       if (filtros.data_inicio) params.append('data_inicio', filtros.data_inicio);
       if (filtros.data_fim) params.append('data_fim', filtros.data_fim);
-
-      const response = await api.get(`/relatorios/pdf?${params.toString()}`, {
-        responseType: 'blob'
-      });
-
-      // Criar link de download
+      const response = await api.get(`/relatorios/pdf?${params.toString()}`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -599,20 +440,12 @@ export const relatorioService = {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-
       return { success: true };
     } catch (error) {
       console.error('Erro ao baixar relatório PDF:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Erro ao baixar relatório PDF'
-      };
+      return { success: false, message: error.response?.data?.message || 'Erro ao baixar relatório PDF' };
     }
   },
-
-  /**
-   * Baixar relatório em Excel
-   */
   baixarExcel: async (filtros = {}) => {
     try {
       const params = new URLSearchParams();
@@ -622,12 +455,7 @@ export const relatorioService = {
       if (filtros.agente_id) params.append('agente_id', filtros.agente_id);
       if (filtros.data_inicio) params.append('data_inicio', filtros.data_inicio);
       if (filtros.data_fim) params.append('data_fim', filtros.data_fim);
-
-      const response = await api.get(`/relatorios/excel?${params.toString()}`, {
-        responseType: 'blob'
-      });
-
-      // Criar link de download
+      const response = await api.get(`/relatorios/excel?${params.toString()}`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -636,14 +464,10 @@ export const relatorioService = {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-
       return { success: true };
     } catch (error) {
       console.error('Erro ao baixar relatório Excel:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Erro ao baixar relatório Excel'
-      };
+      return { success: false, message: error.response?.data?.message || 'Erro ao baixar relatório Excel' };
     }
   }
 };
