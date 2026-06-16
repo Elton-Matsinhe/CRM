@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Users, UserPlus, Search, Edit, Key, Shield, User, Eye, Trash2,
-  X, Loader2, CheckCircle, XCircle, Mail, Building
+  X, Loader2, CheckCircle, XCircle, Mail, Building, MapPin
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usuarioService, balcaoService } from '../services/api';
@@ -12,6 +12,8 @@ const ROLES = [
   { value: 'agente', label: 'Agente', color: 'bg-blue-100 text-blue-800 border-blue-200' },
   { value: 'subscritor', label: 'Subscritor', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' }
 ];
+
+const exigeBalcao = (role) => role === 'admin' || role === 'agente';
 
 const formInicial = {
   nome: '',
@@ -36,8 +38,6 @@ function GestaoUsuarios() {
   const [formCriar, setFormCriar] = useState(formInicial);
   const [formEditar, setFormEditar] = useState({ nome: '', email: '', role: 'agente', departamento: '', ativo: true });
   const [balcoes, setBalcoes] = useState([]);
-  const [novoBalcaoCreate, setNovoBalcaoCreate] = useState('');
-  const [novoBalcaoEdit, setNovoBalcaoEdit] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
 
@@ -52,16 +52,21 @@ function GestaoUsuarios() {
     if (usuario?.role === 'admin') {
       carregarUsuarios();
     }
-    // buscar balcões
-    (async () => {
-      try {
-        const r = await balcaoService.listar();
-        if (r.success) setBalcoes(r.data);
-      } catch (e) {
-        console.error('Erro ao carregar balcões:', e);
-      }
-    })();
+    carregarBalcoes();
   }, [usuario]);
+
+  const carregarBalcoes = async () => {
+    try {
+      const r = await balcaoService.listar();
+      if (r.success && r.data?.length > 0) {
+        setBalcoes(r.data);
+      } else if (!r.success) {
+        console.error('Erro ao carregar balcões:', r.message);
+      }
+    } catch (e) {
+      console.error('Erro ao carregar balcões:', e);
+    }
+  };
 
   const carregarUsuarios = async () => {
     try {
@@ -85,15 +90,20 @@ function GestaoUsuarios() {
     const matchBusca =
       u.nome?.toLowerCase().includes(busca.toLowerCase()) ||
       u.email?.toLowerCase().includes(busca.toLowerCase()) ||
-      u.departamento?.toLowerCase().includes(busca.toLowerCase());
+      u.departamento?.toLowerCase().includes(busca.toLowerCase()) ||
+      u.balcao?.toLowerCase().includes(busca.toLowerCase());
     const matchRole = filtroRole === 'all' || u.role === filtroRole;
     return matchBusca && matchRole;
   });
 
   const handleCriar = async (e) => {
     e.preventDefault();
-    if (!formCriar.nome || !formCriar.email || !formCriar.senha || !formCriar.balcao) {
+    if (!formCriar.nome || !formCriar.email || !formCriar.senha) {
       alert('Preencha nome, email e senha.');
+      return;
+    }
+    if (exigeBalcao(formCriar.role) && !formCriar.balcao) {
+      alert('Selecione o balcão/agência (obrigatório para administradores e agentes).');
       return;
     }
     if (formCriar.senha.length < 6) {
@@ -117,43 +127,8 @@ function GestaoUsuarios() {
     }
   };
 
-  const adicionarBalcaoCreate = async () => {
-    if (!novoBalcaoCreate || !novoBalcaoCreate.trim()) return;
-    try {
-      const r = await balcaoService.criar(novoBalcaoCreate.trim());
-      if (r.success) {
-        const lista = await balcaoService.listar();
-        if (lista.success) setBalcoes(lista.data);
-        setFormCriar({ ...formCriar, balcao: r.data.nome });
-        setNovoBalcaoCreate('');
-        alert('Balcão adicionado');
-      } else {
-        alert(`❌ ${r.message}`);
-      }
-    } catch (error) {
-      console.error('Erro ao adicionar balcão:', error);
-    }
-  };
-
-  const adicionarBalcaoEdit = async () => {
-    if (!novoBalcaoEdit || !novoBalcaoEdit.trim()) return;
-    try {
-      const r = await balcaoService.criar(novoBalcaoEdit.trim());
-      if (r.success) {
-        const lista = await balcaoService.listar();
-        if (lista.success) setBalcoes(lista.data);
-        setFormEditar({ ...formEditar, balcao: r.data.nome });
-        setNovoBalcaoEdit('');
-        alert('Balcão adicionado');
-      } else {
-        alert(`❌ ${r.message}`);
-      }
-    } catch (error) {
-      console.error('Erro ao adicionar balcão:', error);
-    }
-  };
-
   const abrirEditar = (u) => {
+    carregarBalcoes();
     setFormEditar({
       nome: u.nome || '',
       email: u.email || '',
@@ -169,6 +144,10 @@ function GestaoUsuarios() {
     e.preventDefault();
     if (!formEditar.nome || !formEditar.email) {
       alert('Preencha nome e email.');
+      return;
+    }
+    if (exigeBalcao(formEditar.role) && !formEditar.balcao) {
+      alert('Selecione o balcão/agência (obrigatório para administradores e agentes).');
       return;
     }
 
@@ -269,7 +248,10 @@ function GestaoUsuarios() {
               </p>
             </div>
             <button
-              onClick={() => setModalCriar(true)}
+              onClick={() => {
+                carregarBalcoes();
+                setModalCriar(true);
+              }}
               className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium shadow-sm"
             >
               <UserPlus className="h-5 w-5" />
@@ -285,7 +267,7 @@ function GestaoUsuarios() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Pesquisar por nome, email ou departamento..."
+                placeholder="Pesquisar por nome, email, balcão ou departamento..."
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
@@ -323,6 +305,7 @@ function GestaoUsuarios() {
                   <tr>
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Utilizador</th>
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Perfil</th>
+                    <th className="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Balcão</th>
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Departamento</th>
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Estado</th>
                     <th className="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Criado em</th>
@@ -355,6 +338,16 @@ function GestaoUsuarios() {
                             {u.role === 'subscritor' && <Eye className="h-3 w-3" />}
                             {roleInfo.label}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {u.balcao ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200">
+                              <MapPin className="h-3 w-3" />
+                              {u.balcao}
+                            </span>
+                          ) : (
+                            <span className="text-red-500 text-xs font-medium">Não definido</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
                           {u.departamento ? (
@@ -487,27 +480,22 @@ function GestaoUsuarios() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Balcão *</label>
-                <div className="flex gap-2">
-                  <select
-                    value={formCriar.balcao}
-                    onChange={(e) => setFormCriar({ ...formCriar, balcao: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="">-- Selecionar balcão --</option>
-                    {balcoes.map((b) => (
-                      <option key={b.id} value={b.nome}>{b.nome}</option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    placeholder="Novo balcão"
-                    value={novoBalcaoCreate}
-                    onChange={(e) => setNovoBalcaoCreate(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg w-44"
-                  />
-                  <button type="button" onClick={adicionarBalcaoCreate} className="px-3 py-2 bg-emerald-600 text-white rounded-lg">Adicionar</button>
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Balcão {exigeBalcao(formCriar.role) ? '*' : ''}
+                </label>
+                <select
+                  value={formCriar.balcao}
+                  onChange={(e) => setFormCriar({ ...formCriar, balcao: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  required={exigeBalcao(formCriar.role)}
+                >
+                  <option value="">
+                    {balcoes.length === 0 ? 'A carregar balcões...' : '-- Selecionar balcão --'}
+                  </option>
+                  {balcoes.map((b) => (
+                    <option key={b.id} value={b.nome}>{b.nome}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
@@ -592,29 +580,22 @@ function GestaoUsuarios() {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Balcão</label>
-                <div className="flex gap-2">
-                  <select
-                    value={formEditar.balcao}
-                    onChange={(e) => setFormEditar({ ...formEditar, balcao: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                    disabled={modalEditar.id === usuario?.id}
-                  >
-                    <option value="">-- Selecionar balcão --</option>
-                    {balcoes.map((b) => (
-                      <option key={b.id} value={b.nome}>{b.nome}</option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    placeholder="Novo balcão"
-                    value={novoBalcaoEdit}
-                    onChange={(e) => setNovoBalcaoEdit(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg w-44"
-                    disabled={modalEditar.id === usuario?.id}
-                  />
-                  <button type="button" onClick={adicionarBalcaoEdit} className="px-3 py-2 bg-emerald-600 text-white rounded-lg" disabled={modalEditar.id === usuario?.id}>Adicionar</button>
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Balcão {exigeBalcao(formEditar.role) ? '*' : ''}
+                </label>
+                <select
+                  value={formEditar.balcao}
+                  onChange={(e) => setFormEditar({ ...formEditar, balcao: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  required={exigeBalcao(formEditar.role)}
+                >
+                  <option value="">
+                    {balcoes.length === 0 ? 'A carregar balcões...' : '-- Selecionar balcão --'}
+                  </option>
+                  {balcoes.map((b) => (
+                    <option key={b.id} value={b.nome}>{b.nome}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Departamento</label>

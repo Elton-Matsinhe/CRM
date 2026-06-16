@@ -1,5 +1,6 @@
 @import "tailwindcss";
-/* No seu arquivo CSS global */
+
+/* Scrollbar global */
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
@@ -16,4 +17,28 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
+}
+
+/* Tabelas responsivas — envolver com class="table-responsive" */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive table {
+  min-width: 640px;
+}
+
+/* Evitar overflow horizontal em formulários longos */
+.page-container {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Imagens e media fluidos */
+img, video {
+  max-width: 100%;
+  height: auto;
 }

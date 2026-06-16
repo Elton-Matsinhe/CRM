@@ -77,27 +77,14 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
   // Carregar badges dinamicamente
   const carregarBadgesDinamicos = async () => {
     try {
-      // Buscar todas as cotações para calcular badges
-      const result = await cotacaoService.listar({ limit: 10000 });
-      
+      const result = await cotacaoService.buscarStats();
       if (result.success && result.data) {
-        const cotacoes = result.data;
-        
-        // Calcular badges
-        const totalCotacoes = cotacoes.length;
-        const cotacoesAtivas = cotacoes.filter(c => c.status === 'ativa' || c.status === 'pendente').length;
-        
-        // Atualizar menu items com badges dinâmicos
-        const menuAtualizado = menuItems.map(item => {
-          if (item.id === 3) { // Gestão de Cotações
-            return { ...item, badge: totalCotacoes.toString() };
-          }
-          if (item.id === 5) { // Acompanhamento
-            return { ...item, badge: cotacoesAtivas.toString() };
-          }
+        const { total, ativas } = result.data;
+        const menuAtualizado = menuItems.map((item) => {
+          if (item.id === 3) return { ...item, badge: String(total) };
+          if (item.id === 5) return { ...item, badge: String(ativas) };
           return item;
         });
-        
         setMenuItemsComBadges(menuAtualizado);
       }
     } catch (error) {
@@ -158,44 +145,6 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
 
   const sidebarStyle = getSidebarStyle();
 
-  // Efeitos de partículas
-  const [particles, setParticles] = useState([]);
-  const particleCount = 20;
-
-  useEffect(() => {
-    const newParticles = [];
-    for (let i = 0; i < particleCount; i++) {
-      newParticles.push({
-        id: i,
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        size: Math.random() * 1.5 + 0.5,
-        speedX: (Math.random() - 0.5) * 0.3,
-        speedY: (Math.random() - 0.5) * 0.3,
-        opacity: Math.random() * 0.1 + 0.05,
-        color: theme === 'verde' ? 'rgba(16, 106, 55, 0.1)' : 
-               theme === 'vermelho' ? 'rgba(220, 38, 38, 0.1)' : 
-               'rgba(0, 0, 0, 0.1)'
-      });
-    }
-    setParticles(newParticles);
-  }, [theme]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setParticles(prev => prev.map(p => ({
-        ...p,
-        x: (p.x + p.speedX) % 100,
-        y: (p.y + p.speedY) % 100,
-        color: theme === 'verde' ? 'rgba(16, 106, 55, 0.1)' : 
-               theme === 'vermelho' ? 'rgba(220, 38, 38, 0.1)' : 
-               'rgba(0, 0, 0, 0.1)'
-      })));
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [theme]);
-
   return (
     <div
       className={`${
@@ -206,31 +155,10 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
         borderColor: sidebarStyle.borderColor
       }}
     >
-      {/* Efeitos de Background Animados - Partículas sutis */}
+      {/* Efeitos de Background — leves, sem animação contínua */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Partículas flutuantes */}
-        {particles.map(particle => (
-          <div
-            key={particle.id}
-            className="absolute rounded-full"
-            style={{
-              left: `${particle.x}%`,
-              top: `${particle.y}%`,
-              width: `${particle.size}px`,
-              height: `${particle.size}px`,
-              backgroundColor: particle.color,
-              opacity: particle.opacity,
-              filter: 'blur(1px)',
-            }}
-          />
-        ))}
-        
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#106a37]/5 rounded-full blur-3xl animate-pulse-slow"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#0a4f2e]/5 rounded-full blur-3xl animate-pulse-slower"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#106a37]/3 rounded-full blur-3xl animate-spin-slow"></div>
-        
-        {/* Efeitos de grade sutil */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(16,106,55,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(16,106,55,0.02)_1px,transparent_1px)] bg-[size:20px_20px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,black_70%,transparent_100%)]"></div>
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#106a37]/5 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#0a4f2e]/5 rounded-full blur-3xl"></div>
       </div>
 
       {/* Header do Sidebar - Design Limpo */}

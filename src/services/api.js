@@ -1,7 +1,7 @@
 ﻿import axios from 'axios';
 
-// 🔁 ALTERAÇÃO: URL do backend em produção
-const API_BASE_URL = "https://api.portal-imp.com/api/";
+// URL do backend — desenvolvimento: localhost | produção: portal-imp
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/';
 
 // Criar instância do axios com configurações padrão
 const api = axios.create({
@@ -185,10 +185,18 @@ export const balcaoService = {
   listar: async () => {
     try {
       const response = await api.get('/balcoes');
-      return { success: true, data: response.data.data || [] };
+      const data = response.data?.data || response.data || [];
+      if (Array.isArray(data) && data.length > 0) {
+        return { success: true, data };
+      }
+      return { success: true, data: Array.isArray(data) ? data : [] };
     } catch (error) {
       console.error('Erro ao buscar balcões:', error);
-      return { success: false, data: [], message: error.response?.data?.message || 'Erro ao buscar balcões' };
+      return {
+        success: false,
+        data: [],
+        message: error.response?.data?.message || error.message || 'Erro ao buscar balcões'
+      };
     }
   },
   criar: async (nome) => {
@@ -235,13 +243,7 @@ export const cotacaoService = {
       if (filters.status) params.append('status', filters.status);
       if (filters.search) params.append('search', filters.search);
       const url = `/cotacoes?${params.toString()}`;
-      console.log('🌐 [API] Requisição GET:', url);
       const response = await api.get(url);
-      console.log('📥 [API] Resposta recebida:', {
-        success: response.data.success,
-        dataLength: response.data.data?.length || 0,
-        pagination: response.data.pagination
-      });
       return {
         success: true,
         data: response.data.data || [],
@@ -255,6 +257,15 @@ export const cotacaoService = {
         pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
         message: error.response?.data?.message || "Erro ao buscar cotações"
       };
+    }
+  },
+  buscarStats: async () => {
+    try {
+      const response = await api.get('/cotacoes/stats');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas:', error);
+      return { success: false, data: null };
     }
   },
   buscarPorId: async (id) => {
@@ -474,72 +485,56 @@ export const followUpService = {
 export const estatisticasService = {
   buscarMetricas: async () => {
     try {
-      const result = await cotacaoService.listar({ limit: 10000 });
+      const result = await cotacaoService.buscarStats();
       if (result.success && result.data) {
-        const cotacoes = result.data;
-        const totalQuotes = cotacoes.length;
-        const pendingApproval = cotacoes.filter(c => c.status === 'pendente' || c.status === 'ativa').length;
-        const policiesIssued = cotacoes.filter(c => c.status === 'aprovada').length;
-        const activeAgents = new Set(cotacoes.map(c => c.agente_id).filter(Boolean)).size;
-        const conversionRate = totalQuotes > 0 ? ((policiesIssued / totalQuotes) * 100).toFixed(0) + '%' : '0%';
-        const revenue = cotacoes.reduce((sum, c) => sum + (parseFloat(c.total_premio) || 0), 0);
-        const revenueFormatted = revenue >= 1000000 ? `MT ${(revenue / 1000000).toFixed(1)}M` : `MT ${(revenue / 1000).toFixed(0)}K`;
-        return { success: true, data: { totalQuotes, pendingApproval, policiesIssued, activeAgents, conversionRate, revenue: revenueFormatted } };
+        const s = result.data;
+        const revenue = s.receita_total || 0;
+        const revenueFormatted = revenue >= 1000000
+          ? `MT ${(revenue / 1000000).toFixed(1)}M`
+          : `MT ${(revenue / 1000).toFixed(0)}K`;
+        return {
+          success: true,
+          data: {
+            totalQuotes: s.total || 0,
+            pendingApproval: s.ativas || 0,
+            policiesIssued: s.aprovadas || 0,
+            expiredQuotes: s.expiradas || 0,
+            activeAgents: s.agentes_ativos || 0,
+            conversionRate: `${s.taxa_conversao || 0}%`,
+            revenue: revenueFormatted,
+            recentes: s.recentes || []
+          }
+        };
       }
       return {
         success: false,
-        data: { totalQuotes: 0, pendingApproval: 0, policiesIssued: 0, activeAgents: 0, conversionRate: '0%', revenue: 'MT 0' }
+        data: { totalQuotes: 0, pendingApproval: 0, policiesIssued: 0, activeAgents: 0, conversionRate: '0%', revenue: 'MT 0', recentes: [] }
       };
     } catch (error) {
       console.error("Erro ao buscar métricas:", error);
       return {
         success: false,
-        data: { totalQuotes: 0, pendingApproval: 0, policiesIssued: 0, activeAgents: 0, conversionRate: '0%', revenue: 'MT 0' }
+        data: { totalQuotes: 0, pendingApproval: 0, policiesIssued: 0, activeAgents: 0, conversionRate: '0%', revenue: 'MT 0', recentes: [] }
       };
     }
   },
   buscarNotificacoes: async () => {
     try {
-      const result = await cotacaoService.listar({ limit: 50, status: 'ativa' });
-      if (result.success && result.data) {
-        const cotacoes = result.data;
-        const notifications = [];
-        const aprovadas = cotacoes.filter(c => c.status === 'aprovada');
-        if (aprovadas.length > 0) {
-          notifications.push({ id: 1, text: `Nova cotação aprovada - Aguardando emissão de apólice`, time: "2 min atrás", unread: true, type: "approval", priority: "high" });
-        }
-        const hoje = new Date();
-        const expirando = cotacoes.filter(c => {
-          if (!c.data_validade) return false;
-          const dataValidade = new Date(c.data_validade);
-          const diffDays = Math.ceil((dataValidade - hoje) / (1000 * 60 * 60 * 24));
-          return diffDays <= 2 && diffDays > 0;
-        });
-        if (expirando.length > 0) {
-          notifications.push({
-            id: 2,
-            text: `Cotação #${expirando[0].numero_cotacao} expira em ${Math.ceil((new Date(expirando[0].data_validade) - hoje) / (1000 * 60 * 60 * 24))} dias`,
-            time: "15 min atrás",
-            unread: true,
-            type: "expiry",
-            priority: "medium"
-          });
-        }
-        const hojeStr = hoje.toISOString().split('T')[0];
-        const novasHoje = cotacoes.filter(c => c.data_criacao && c.data_criacao.startsWith(hojeStr));
-        if (novasHoje.length > 0) {
-          notifications.push({
-            id: 3,
-            text: `${novasHoje.length} nova${novasHoje.length > 1 ? 's' : ''} cotação${novasHoje.length > 1 ? 'ções' : ''} criada${novasHoje.length > 1 ? 's' : ''} hoje`,
-            time: "1 hora atrás",
-            unread: false,
-            type: "achievement",
-            priority: "low"
-          });
-        }
-        return { success: true, data: notifications };
+      const result = await cotacaoService.buscarStats();
+      if (!result.success || !result.data) return { success: true, data: [] };
+
+      const s = result.data;
+      const notifications = [];
+      if (s.aprovadas > 0) {
+        notifications.push({ id: 1, text: 'Nova cotação aprovada - Aguardando emissão de apólice', time: '2 min atrás', unread: true, type: 'approval', priority: 'high' });
       }
-      return { success: true, data: [] };
+      if (s.ativas > 0) {
+        notifications.push({ id: 2, text: `${s.ativas} cotação(ões) em acompanhamento`, time: '15 min atrás', unread: true, type: 'expiry', priority: 'medium' });
+      }
+      if (s.total > 0) {
+        notifications.push({ id: 3, text: `${s.total} cotação(ões) no sistema`, time: '1 hora atrás', unread: false, type: 'achievement', priority: 'low' });
+      }
+      return { success: true, data: notifications };
     } catch (error) {
       console.error("Erro ao buscar notificações:", error);
       return { success: true, data: [] };

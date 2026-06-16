@@ -3,7 +3,6 @@ import { usuarioService } from "../services/api";
 
 export const AuthContext = createContext();
 
-// Hook para usar o contexto de autenticação
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -12,60 +11,60 @@ export const useAuth = () => {
   return context;
 };
 
+const lerUsuarioLocal = () => {
+  const usuarioSalvo = localStorage.getItem("user") || localStorage.getItem("usuario");
+  if (!usuarioSalvo) return null;
+  try {
+    return JSON.parse(usuarioSalvo);
+  } catch {
+    return null;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
-  const [usuario, setUsuario] = useState(null);
-  const [carregando, setCarregando] = useState(true);
+  const [usuario, setUsuario] = useState(() => lerUsuarioLocal());
+  const [carregando, setCarregando] = useState(() => {
+    const token = localStorage.getItem("authToken") || localStorage.getItem("token");
+    return !!(token && !lerUsuarioLocal());
+  });
   const [error, setError] = useState(null);
 
-  // Verificar autenticação ao carregar
   useEffect(() => {
-    const verificarAutenticacao = async () => {
-      try {
-        const token = localStorage.getItem("authToken") || localStorage.getItem("token");
-        const usuarioSalvo = localStorage.getItem("user") || localStorage.getItem("usuario");
-        
-        if (token && usuarioSalvo) {
-          try {
-            const result = await usuarioService.validateToken(token);
-            if (result.valid && result.user) {
-              setUsuario(result.user);
-            } else {
-              // Tentar buscar informações do usuário
-              const userInfo = await usuarioService.getUserInfo();
-              if (userInfo) {
-                setUsuario(userInfo);
-                localStorage.setItem("user", JSON.stringify(userInfo));
-                localStorage.setItem("usuario", JSON.stringify(userInfo));
-              } else {
-                // Limpar dados inválidos
-                localStorage.removeItem("authToken");
-                localStorage.removeItem("token");
-                localStorage.removeItem("user");
-                localStorage.removeItem("usuario");
-                setUsuario(null);
-              }
-            }
-          } catch (tokenError) {
-            console.error("Erro ao validar token:", tokenError);
-            // Limpar dados inválidos
-            localStorage.removeItem("authToken");
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
-            localStorage.removeItem("usuario");
-            setUsuario(null);
-          }
-        } else {
-          setUsuario(null);
-        }
-      } catch (error) {
-        console.error("Erro ao verificar autenticação:", error);
-        setUsuario(null);
-      } finally {
-        setCarregando(false);
-      }
-    };
+    const token = localStorage.getItem("authToken") || localStorage.getItem("token");
+    const usuarioLocal = lerUsuarioLocal();
 
-    verificarAutenticacao();
+    if (!token) {
+      setUsuario(null);
+      setCarregando(false);
+      return;
+    }
+
+    if (usuarioLocal) {
+      setUsuario(usuarioLocal);
+      setCarregando(false);
+    }
+
+    usuarioService.validateToken(token).then((result) => {
+      if (result.valid && result.user) {
+        setUsuario(result.user);
+        localStorage.setItem("user", JSON.stringify(result.user));
+        localStorage.setItem("usuario", JSON.stringify(result.user));
+      } else if (!usuarioLocal) {
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("usuario");
+        setUsuario(null);
+      }
+    }).catch(() => {
+      if (!usuarioLocal) {
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("token");
+        setUsuario(null);
+      }
+    }).finally(() => {
+      setCarregando(false);
+    });
   }, []);
 
   const login = async (email, senha) => {
@@ -75,13 +74,11 @@ export const AuthProvider = ({ children }) => {
       const result = await usuarioService.login(email, senha);
       
       if (result.success && result.data) {
-        // Salvar no localStorage
         localStorage.setItem("authToken", result.data.token);
         localStorage.setItem("token", result.data.token);
         localStorage.setItem("user", JSON.stringify(result.data.usuario));
         localStorage.setItem("usuario", JSON.stringify(result.data.usuario));
         
-        // Atualizar estado
         setUsuario(result.data.usuario);
         return { 
           success: true, 
@@ -105,7 +102,7 @@ export const AuthProvider = ({ children }) => {
   const logout = useCallback(async () => {
     try {
       await usuarioService.logout();
-      localStorage.clear(); // Limpar tudo
+      localStorage.clear();
       setUsuario(null);
       setError(null);
       return { success: true };

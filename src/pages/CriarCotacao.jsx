@@ -1065,11 +1065,11 @@ function CriarCliente() {
   };
 
   return (
-    <div className="min-h-screen bg-white p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="page-container min-h-screen bg-white p-3 sm:p-4 md:p-6">
+      <div className="max-w-7xl mx-auto w-full">
         {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-3">
+        <div className="mb-6 sm:mb-8 text-center">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
             {tipoCliente === "Particular"
               ? "Criar Nova Cotação"
               : "Criar Cotação Empresarial"}

@@ -29,20 +29,8 @@ import {
 import { AuthContext } from "../contexts/AuthContext";
 import logo from "../assets/logo.png";
 
-// Importar as imagens de fundo JPG manualmente
+// Uma imagem de fundo (evita carregar 13 imagens pesadas)
 import slide1 from "../assets/slide1.jpg";
-import slide2 from "../assets/slide2.jpg";
-import slide3 from "../assets/slide3.jpg";
-import slide4 from "../assets/slide4.jpg";
-import slide5 from "../assets/slide5.jpg";
-import slide6 from "../assets/slide6.jpg";
-import slide7 from "../assets/slide7.jpg";
-import slide8 from "../assets/slide8.jpg";
-import slide9 from "../assets/slide9.jpg";
-import slide10 from "../assets/slide10.jpg";
-import slide11 from "../assets/slide11.jpg";
-import slide12 from "../assets/slide12.jpg";
-import slide13 from "../assets/slide13.jpg";
 
 const Login = () => {
   const { login, isAuthenticated, carregando } = useContext(AuthContext);
@@ -53,110 +41,7 @@ const Login = () => {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
-  const [activeSlide, setActiveSlide] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
   const navigate = useNavigate();
-
-  // Array com todas as imagens importadas
-  const backgroundImages = [
-    slide1, slide2, slide3, slide4, slide5, slide6, slide7, 
-    slide8, slide9, slide10, slide11, slide12, slide13
-  ];
-
-  // Slides de fundo com imagens e frases personalizadas
-  const slides = [
-    {
-      id: 1,
-      image: backgroundImages[0] || "",
-      icon: <FiServer className="text-6xl opacity-20" />,
-      title: "Infraestrutura Avançada",
-      description: "Servidores de alta performance e resiliência"
-    },
-    {
-      id: 2,
-      image: backgroundImages[1] || "",
-      icon: <FiCpu className="text-6xl opacity-20" />,
-      title: "Processamento Inteligente",
-      description: "Alta velocidade de resposta e eficiência"
-    },
-    {
-      id: 3,
-      image: backgroundImages[2] || "",
-      icon: <FiDatabase className="text-6xl opacity-20" />,
-      title: "Gestão de Dados Segura",
-      description: "Proteção e organização de informações críticas"
-    },
-    {
-      id: 4,
-      image: backgroundImages[3] || "",
-      icon: <FiBarChart2 className="text-6xl opacity-20" />,
-      title: "Analytics em Tempo Real",
-      description: "Insights atualizados para decisões estratégicas"
-    },
-    {
-      id: 5,
-      image: backgroundImages[4] || "",
-      icon: <FiCloud className="text-6xl opacity-20" />,
-      title: "Cloud Computing",
-      description: "Escalabilidade e flexibilidade na nuvem"
-    },
-    {
-      id: 6,
-      image: backgroundImages[5] || "",
-      icon: <FiUsers className="text-6xl opacity-20" />,
-      title: "Colaboração Eficiente",
-      description: "Trabalho em equipe otimizado e integrado"
-    },
-    {
-      id: 7,
-      image: backgroundImages[6] || "",
-      icon: <FiActivity className="text-6xl opacity-20" />,
-      title: "Monitoramento Contínuo",
-      description: "Supervisão 24/7 de sistemas e processos"
-    },
-    {
-      id: 8,
-      image: backgroundImages[7] || "",
-      icon: <FiSecurity className="text-6xl opacity-20" />,
-      title: "Segurança de Ponta",
-      description: "Proteção multicamada contra ameaças"
-    },
-    {
-      id: 9,
-      image: backgroundImages[8] || "",
-      icon: <FiNetwork className="text-6xl opacity-20" />,
-      title: "Conectividade Global",
-      description: "Rede integrada para operações internacionais"
-    },
-    {
-      id: 10,
-      image: backgroundImages[9] || "",
-      icon: <FiTrendingUp className="text-6xl opacity-20" />,
-      title: "Performance Otimizada",
-      description: "Desempenho máximo em todas as operações"
-    },
-    {
-      id: 11,
-      image: backgroundImages[10] || "",
-      icon: <FiSettings className="text-6xl opacity-20" />,
-      title: "Automação Inteligente",
-      description: "Processos automatizados para eficiência"
-    },
-    {
-      id: 12,
-      image: backgroundImages[11] || "",
-      icon: <FiLayers className="text-6xl opacity-20" />,
-      title: "Arquitetura Modular",
-      description: "Sistemas flexíveis e adaptáveis"
-    },
-    {
-      id: 13,
-      image: backgroundImages[12] || "",
-      icon: <FiBell className="text-6xl opacity-20" />,
-      title: "Notificações Proativas",
-      description: "Alertas inteligentes para prevenção"
-    }
-  ];
 
   // Características do sistema
   const features = [
@@ -172,19 +57,6 @@ const Login = () => {
       navigate("/", { replace: true });
     }
   }, [isAuthenticated, carregando, navigate]);
-
-  // Controlar o slideshow automático
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsAnimating(true);
-      setTimeout(() => {
-        setActiveSlide((prev) => (prev + 1) % slides.length);
-        setIsAnimating(false);
-      }, 600);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [slides.length]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -210,9 +82,7 @@ const Login = () => {
       const resultado = await login(formData.email, formData.senha);
 
       if (resultado.success) {
-        setTimeout(() => {
-          navigate("/", { replace: true });
-        }, 300);
+        navigate("/", { replace: true });
       } else {
         setErro(resultado.error || "Email ou senha incorretos");
         setLoading(false);
@@ -240,95 +110,14 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-gray-900">
+    <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-gray-900">
       
-      {/* Slideshow de fundo com imagens */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        {slides.map((slide, index) => (
-          <div
-            key={slide.id}
-            className={`absolute inset-0 transition-all duration-1500 ease-in-out ${
-              index === activeSlide ? "opacity-100 z-10" : "opacity-0 z-0"
-            }`}
-            style={{
-              backgroundImage: slide.image ? `url(${slide.image})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              transform: `scale(${index === activeSlide ? 1.05 : 1})`,
-              filter: `blur(${index === activeSlide ? '0px' : '2px'})`,
-            }}
-          >
-            {/* Sobreposição preta para melhor contraste */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/50 to-black/40"></div>
-            
-            {/* Efeito de partículas finas sobre as imagens */}
-            <div className="absolute inset-0 opacity-30">
-              {[...Array(50)].map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute rounded-full bg-white/20 animate-particle-fine"
-                  style={{
-                    width: `${Math.random() * 4 + 1}px`,
-                    height: `${Math.random() * 4 + 1}px`,
-                    left: `${Math.random() * 100}%`,
-                    top: `${Math.random() * 100}%`,
-                    animationDelay: `${i * 0.1}s`,
-                    animationDuration: `${10 + Math.random() * 10}s`,
-                  }}
-                />
-              ))}
-            </div>
-
-            {/* Efeito de brilho sutil */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent 
-                          animate-shimmer-image"></div>
-
-            {/* Ícone central */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className={`transform transition-all duration-1000 delay-200 ${
-                index === activeSlide 
-                  ? "translate-y-0 opacity-100 scale-100" 
-                  : "translate-y-10 opacity-0 scale-90"
-              }`}>
-                {slide.icon}
-              </div>
-            </div>
-
-            {/* Texto das frases */}
-            <div className="absolute bottom-20 left-10 text-white/90">
-              <div className={`transform transition-all duration-1000 delay-500 ${
-                index === activeSlide 
-                  ? "translate-x-0 opacity-100" 
-                  : "-translate-x-10 opacity-0"
-              }`}>
-                <h3 className="text-2xl font-bold mb-2 text-white drop-shadow-lg">{slide.title}</h3>
-                <p className="text-base text-white/90 drop-shadow-md">{slide.description}</p>
-              </div>
-            </div>
-
-            {/* Efeito de vinheta */}
-            <div className="absolute inset-0 shadow-[inset_0_0_200px_rgba(0,0,0,0.8)]"></div>
-          </div>
-        ))}
-      </div>
-
-      {/* Efeito de partículas decorativas */}
-      <div className="absolute inset-0 z-10">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full bg-white/10 animate-float"
-            style={{
-              width: `${Math.random() * 100 + 20}px`,
-              height: `${Math.random() * 100 + 20}px`,
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${i * 0.5}s`,
-              animationDuration: `${15 + Math.random() * 10}s`,
-            }}
-          />
-        ))}
+      {/* Fundo estático — uma imagem em vez de slideshow com 13 camadas */}
+      <div
+        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${slide1})` }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/50 to-black/40" />
       </div>
 
       {/* TELA DE LOGIN PRINCIPAL */}
@@ -340,56 +129,22 @@ const Login = () => {
         {/* Card principal */}
         <div className="relative bg-white backdrop-blur-2xl rounded-3xl shadow-2xl overflow-hidden border border-gray-200">
           
-          {/* Header elegante com fundo branco */}
-          <div className="relative h-48 overflow-hidden bg-white">
-            
-            {/* Padrão geométrico sutil */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 left-0 w-32 h-32 -translate-x-16 -translate-y-16 bg-gray-200 rounded-full"></div>
-              <div className="absolute bottom-0 right-0 w-40 h-40 translate-x-20 translate-y-20 bg-gray-200 rounded-full"></div>
-            </div>
-            
-            {/* Logo e título centralizados */}
-            <div className="relative h-full flex flex-col items-center justify-center p-8 pt-18 -mt-12">
-              <div className="relative mb-4">
-                <div className="absolute -inset-6 bg-gray-100/50 rounded-full blur-xl"></div>
-                <img 
-                  src={logo} 
-                  alt="Imperial Insurance" 
-                  className="h-50 w-50 object-contain relative z-10 drop-shadow-lg"
-                />
-              </div>
-
-              <p className="text-[#106a37] text-lg font-semibold -mt-19 mb-6">
+          {/* Header — logo e subtítulo em coluna, sem sobreposição */}
+          <div className="relative bg-white px-6 py-8 sm:py-10 border-b border-gray-100">
+            <div className="flex flex-col items-center text-center gap-4">
+              <img
+                src={logo}
+                alt="Imperial Insurance"
+                className="h-20 sm:h-24 w-auto max-w-[260px] object-contain drop-shadow-md"
+              />
+              <p className="text-[#106a37] text-sm sm:text-base font-semibold leading-relaxed max-w-xs sm:max-w-sm">
                 Sistema de Gestão do Relacionamento com o Cliente
               </p>
-            </div>
-            
-            {/* Indicador de slides - Atualizado para 13 indicadores */}
-            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 px-4">
-              {slides.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    setIsAnimating(true);
-                    setTimeout(() => {
-                      setActiveSlide(index);
-                      setIsAnimating(false);
-                    }, 300);
-                  }}
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    index === activeSlide 
-                      ? 'w-8 bg-[#106a37]' 
-                      : 'w-2 bg-gray-300 hover:bg-[#106a37]/60'
-                  }`}
-                  aria-label={`Ir para slide ${index + 1}`}
-                />
-              ))}
             </div>
           </div>
 
           {/* Conteúdo do formulário */}
-          <div className="p-8">
+          <div className="p-5 sm:p-8">
             
             {/* Características do sistema */}
             <div className="grid grid-cols-2 gap-3 mb-8">

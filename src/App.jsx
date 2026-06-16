@@ -134,53 +134,32 @@ function App() {
   const carregarDadosDashboard = async () => {
     try {
       setLoadingDashboard(true);
-      const result = await cotacaoService.listar({ limit: 1000 });
+      const result = await cotacaoService.buscarStats();
       
       if (result.success && result.data) {
-        const cotacoes = result.data;
-        const totalQuotes = cotacoes.length;
-        const pendingApproval = cotacoes.filter(c => c.status === 'pendente' || c.status === 'ativa').length;
-        const policiesIssued = cotacoes.filter(c => c.status === 'aprovada').length;
-        const expiredQuotes = cotacoes.filter(c => c.status === 'expirada').length;
-        
-        // Calcular taxa de conversão
-        const conversionRate = totalQuotes > 0 
-          ? ((policiesIssued / totalQuotes) * 100).toFixed(0) + '%'
-          : '0%';
-
-        // Cotações recentes (últimas 5)
-        const recentQuotes = cotacoes
-          .sort((a, b) => new Date(b.data_criacao) - new Date(a.data_criacao))
-          .slice(0, 5)
-          .map(cotacao => ({
-            id: cotacao.numero_cotacao,
-            client: `${cotacao.primeiro_nome || ''} ${cotacao.sobrenome || ''}`.trim() || 'N/A',
-            value: `MT ${parseFloat(cotacao.total_premio || 0).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}`,
-            status: cotacao.status === 'aprovada' ? 'approved' : cotacao.status === 'expirada' ? 'expired' : 'pending',
-            date: new Date(cotacao.data_criacao).toLocaleDateString('pt-MZ')
-          }));
-
-        // Tipos de seguro (todos são automóvel por enquanto)
-        const policyTypes = [
-          { type: "Automóvel", count: totalQuotes, color: "#4ade80" }
-        ];
+        const s = result.data;
+        const recentQuotes = (s.recentes || []).map((cotacao) => ({
+          id: cotacao.numero_cotacao,
+          client: `${cotacao.primeiro_nome || ''} ${cotacao.sobrenome || ''}`.trim() || 'N/A',
+          value: `MT ${parseFloat(cotacao.total_premio || 0).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}`,
+          status: cotacao.status === 'aprovada' ? 'approved' : cotacao.status === 'expirada' ? 'expired' : 'pending',
+          date: new Date(cotacao.data_criacao).toLocaleDateString('pt-MZ')
+        }));
 
         setCrmData({
-          totalQuotes,
-          pendingApproval,
-          policiesIssued,
-          expiredQuotes,
-          activeAgents: 0, // Será implementado quando tivermos endpoint de agentes
-          conversionRate,
-          monthlyRevenue: "0",
+          totalQuotes: s.total || 0,
+          pendingApproval: s.ativas || 0,
+          policiesIssued: s.aprovadas || 0,
+          expiredQuotes: s.expiradas || 0,
+          activeAgents: s.agentes_ativos || 0,
+          conversionRate: `${s.taxa_conversao || 0}%`,
+          monthlyRevenue: s.receita_total >= 1000000
+            ? `MT ${(s.receita_total / 1000000).toFixed(1)}M`
+            : `MT ${(s.receita_total / 1000).toFixed(0)}K`,
           monthlyGrowth: 0,
-          performance: {
-            individual: [],
-            equipe: [],
-            provincia: []
-          },
+          performance: { individual: [], equipe: [], provincia: [] },
           recentQuotes,
-          policyTypes
+          policyTypes: [{ type: "Automóvel", count: s.total || 0, color: "#4ade80" }]
         });
       }
     } catch (error) {
@@ -296,7 +275,7 @@ function App() {
     }
 
     return (
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto w-full px-1 sm:px-0">
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-bold text-gray-800 mb-2">Dashboard Geral</h1>
           <p className="text-emerald-600 text-sm max-w-2xl mx-auto">
@@ -459,13 +438,13 @@ function App() {
             setActiveTab={() => {}}
           />
 
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col min-w-0 w-full">
             <Header
               sidebarOpen={sidebar}
               setSidebarOpen={setSidebarOpen}
             />
 
-            <main className="flex-1 p-6 overflow-auto">
+            <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden overflow-y-auto min-w-0">
               <Routes>
                 <Route path="/login" element={<Login />} />
                 
