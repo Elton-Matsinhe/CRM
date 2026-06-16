@@ -4,7 +4,7 @@ import {
   X, Loader2, CheckCircle, XCircle, Mail, Building
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { usuarioService } from '../services/api';
+import { usuarioService, balcaoService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
 const ROLES = [
@@ -18,7 +18,8 @@ const formInicial = {
   email: '',
   senha: '',
   role: 'agente',
-  departamento: ''
+  departamento: '',
+  balcao: ''
 };
 
 function GestaoUsuarios() {
@@ -34,6 +35,9 @@ function GestaoUsuarios() {
   const [modalSenha, setModalSenha] = useState(null);
   const [formCriar, setFormCriar] = useState(formInicial);
   const [formEditar, setFormEditar] = useState({ nome: '', email: '', role: 'agente', departamento: '', ativo: true });
+  const [balcoes, setBalcoes] = useState([]);
+  const [novoBalcaoCreate, setNovoBalcaoCreate] = useState('');
+  const [novoBalcaoEdit, setNovoBalcaoEdit] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
 
@@ -48,6 +52,15 @@ function GestaoUsuarios() {
     if (usuario?.role === 'admin') {
       carregarUsuarios();
     }
+    // buscar balcões
+    (async () => {
+      try {
+        const r = await balcaoService.listar();
+        if (r.success) setBalcoes(r.data);
+      } catch (e) {
+        console.error('Erro ao carregar balcões:', e);
+      }
+    })();
   }, [usuario]);
 
   const carregarUsuarios = async () => {
@@ -79,7 +92,7 @@ function GestaoUsuarios() {
 
   const handleCriar = async (e) => {
     e.preventDefault();
-    if (!formCriar.nome || !formCriar.email || !formCriar.senha) {
+    if (!formCriar.nome || !formCriar.email || !formCriar.senha || !formCriar.balcao) {
       alert('Preencha nome, email e senha.');
       return;
     }
@@ -104,12 +117,49 @@ function GestaoUsuarios() {
     }
   };
 
+  const adicionarBalcaoCreate = async () => {
+    if (!novoBalcaoCreate || !novoBalcaoCreate.trim()) return;
+    try {
+      const r = await balcaoService.criar(novoBalcaoCreate.trim());
+      if (r.success) {
+        const lista = await balcaoService.listar();
+        if (lista.success) setBalcoes(lista.data);
+        setFormCriar({ ...formCriar, balcao: r.data.nome });
+        setNovoBalcaoCreate('');
+        alert('Balcão adicionado');
+      } else {
+        alert(`❌ ${r.message}`);
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar balcão:', error);
+    }
+  };
+
+  const adicionarBalcaoEdit = async () => {
+    if (!novoBalcaoEdit || !novoBalcaoEdit.trim()) return;
+    try {
+      const r = await balcaoService.criar(novoBalcaoEdit.trim());
+      if (r.success) {
+        const lista = await balcaoService.listar();
+        if (lista.success) setBalcoes(lista.data);
+        setFormEditar({ ...formEditar, balcao: r.data.nome });
+        setNovoBalcaoEdit('');
+        alert('Balcão adicionado');
+      } else {
+        alert(`❌ ${r.message}`);
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar balcão:', error);
+    }
+  };
+
   const abrirEditar = (u) => {
     setFormEditar({
       nome: u.nome || '',
       email: u.email || '',
       role: u.role || 'agente',
       departamento: u.departamento || '',
+      balcao: u.balcao || '' ,
       ativo: u.ativo === 1 || u.ativo === true
     });
     setModalEditar(u);
@@ -437,6 +487,29 @@ function GestaoUsuarios() {
                 </select>
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Balcão *</label>
+                <div className="flex gap-2">
+                  <select
+                    value={formCriar.balcao}
+                    onChange={(e) => setFormCriar({ ...formCriar, balcao: e.target.value })}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="">-- Selecionar balcão --</option>
+                    {balcoes.map((b) => (
+                      <option key={b.id} value={b.nome}>{b.nome}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Novo balcão"
+                    value={novoBalcaoCreate}
+                    onChange={(e) => setNovoBalcaoCreate(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg w-44"
+                  />
+                  <button type="button" onClick={adicionarBalcaoCreate} className="px-3 py-2 bg-emerald-600 text-white rounded-lg">Adicionar</button>
+                </div>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
                 <input
                   type="text"
@@ -517,6 +590,31 @@ function GestaoUsuarios() {
                 {modalEditar.id === usuario?.id && (
                   <p className="text-xs text-gray-500 mt-1">Não pode alterar o seu próprio perfil</p>
                 )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Balcão</label>
+                <div className="flex gap-2">
+                  <select
+                    value={formEditar.balcao}
+                    onChange={(e) => setFormEditar({ ...formEditar, balcao: e.target.value })}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                    disabled={modalEditar.id === usuario?.id}
+                  >
+                    <option value="">-- Selecionar balcão --</option>
+                    {balcoes.map((b) => (
+                      <option key={b.id} value={b.nome}>{b.nome}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Novo balcão"
+                    value={novoBalcaoEdit}
+                    onChange={(e) => setNovoBalcaoEdit(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg w-44"
+                    disabled={modalEditar.id === usuario?.id}
+                  />
+                  <button type="button" onClick={adicionarBalcaoEdit} className="px-3 py-2 bg-emerald-600 text-white rounded-lg" disabled={modalEditar.id === usuario?.id}>Adicionar</button>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Departamento</label>

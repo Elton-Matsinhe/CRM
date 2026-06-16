@@ -1,7 +1,7 @@
 ﻿import axios from 'axios';
 
 // 🔁 ALTERAÇÃO: URL do backend em produção
-const API_BASE_URL = "http://localhost:3000/api/";
+const API_BASE_URL = "https://api.portal-imp.com/api/";
 
 // Criar instância do axios com configurações padrão
 const api = axios.create({
@@ -177,6 +177,31 @@ export const usuarioService = {
     }
   }
 };
+
+// ============================================
+// SERVIÇO DE BALCÕES
+// ============================================
+export const balcaoService = {
+  listar: async () => {
+    try {
+      const response = await api.get('/balcoes');
+      return { success: true, data: response.data.data || [] };
+    } catch (error) {
+      console.error('Erro ao buscar balcões:', error);
+      return { success: false, data: [], message: error.response?.data?.message || 'Erro ao buscar balcões' };
+    }
+  },
+  criar: async (nome) => {
+    try {
+      const response = await api.post('/balcoes', { nome });
+      return { success: true, data: response.data.data, message: response.data.message };
+    } catch (error) {
+      console.error('Erro ao criar balcão:', error);
+      return { success: false, message: error.response?.data?.message || 'Erro ao criar balcão' };
+    }
+  }
+};
+
 
 // ============================================
 // SERVIÇO DE COTAÇÕES
@@ -614,6 +639,7 @@ export const relatorioService = {
 
 export default {
   usuarioService,
+  balcaoService,
   cotacaoService,
   followUpService,
   estatisticasService,
