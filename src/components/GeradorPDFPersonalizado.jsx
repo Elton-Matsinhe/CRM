@@ -56,6 +56,23 @@ function getLogoAndTimbradoPaths(origin) {
 }
 
 /**
+ * Formata o campo "Agência / Agente" com base no agente que criou a cotação.
+ */
+function formatarAgenciaAgente(cotacao) {
+  if (!cotacao || typeof cotacao !== "object") return "MAPUTO / N/A";
+  const agencia = String(
+    cotacao.agenteBalcao || cotacao.agente_balcao || cotacao.balcao || "",
+  ).trim();
+  const agente = String(
+    cotacao.agenteNome || cotacao.agente_nome || cotacao.agente || "",
+  ).trim();
+  if (agencia && agente) return `${agencia} / ${agente}`;
+  if (agencia) return agencia;
+  if (agente) return agente;
+  return "MAPUTO / N/A";
+}
+
+/**
  * Gera HTML da cotação para PDF com template A4, logo Imperial, papel timbrado como marca de água.
  * @param {Object} cotacao - Dados da cotação (cliente, veiculos, totalPremio, etc.)
  * @param {string} origin - Origem da aplicação (ex: window.location.origin) para carregar logo e timbrado
@@ -211,6 +228,7 @@ export const gerarHTMLCotacaoPersonalizado = (
   };
 
   const debitoDiretoAtivo = Boolean(cotacao.debitoDireto);
+  const agenciaAgenteTexto = formatarAgenciaAgente(cotacao);
 
   const headerComLogo = (tituloSecao) => `
     <div class="header-pdf">
@@ -230,7 +248,7 @@ export const gerarHTMLCotacaoPersonalizado = (
   const rodapeHtml = `
     <div class="rodape">
       <div class="rodape-sede">Av. Kenneth Kaunda, N°806 (Sede) | Maputo - Moçambique</div>
-      <div class="rodape-contacto">+258 878055555 | Nuit: 400626091 | info@imperialinsurance-mz.com</div>
+      <div class="rodape-contacto">+258 21 610 110 | Nuit: 400626091 | info@imperialinsurance-mz.com</div>
       <div class="rodape-provincias">Matola: 86 988 4352 | Xai-Xai: 86 526 8473 | Maxixe: 876564719 | Manica: 879236595 | Tete: 87 735 1111 | Angónia: 870903788 | Zambézia: 868353277 | Nacala: 867452328 | Nampula: 866270729 | Niassa: 862251571 | Cabo Delgado: 871648028 / 878251111</div>
     </div>`;
 
@@ -538,7 +556,7 @@ export const gerarHTMLCotacaoPersonalizado = (
           <tr><td><strong>Data de vencimento</strong></td><td>${fmtData(dataFim)} (inclusas)</td></tr>
           <tr><td><strong>Âmbito territorial</strong></td><td>Moçambique</td></tr>
           <tr><td><strong>Actividade</strong></td><td>${isEmpresarial ? "Empresarial" : "Particular"}</td></tr>
-          <tr><td><strong>Agência / Agente</strong></td><td>MAPUTO / DIRECT - MAPUTO</td></tr>
+          <tr><td><strong>Agência / Agente</strong></td><td>${agenciaAgenteTexto}</td></tr>
         </tbody>
       </table>
 
@@ -724,7 +742,7 @@ export const gerarHTMLCotacaoPersonalizado = (
         <p>O prémio total é devido e pagável antes ou na data do início ou renovação. A Seguradora não é obrigada a aceitar prémio endereçado após essa data. É dever do cliente divulgar todos os factores materiais antes do início e durante a apólice. A não divulgação ou má interpretação pode tornar a apólice nula desde o início.</p>
       </div>
 
-      <div class="text-center mt-20" style="font-size: 9pt; color: #6b7280;">www.imperialseguros.co.mz</div>
+      <div class="text-center mt-20" style="font-size: 9pt; color: #6b7280;">www.imperialinsurance-mz.com</div>
     </div>
     ${rodapeHtml}
     <div class="pagina-numero">Página 5 de 5</div>

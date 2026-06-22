@@ -31,6 +31,12 @@ import {
 } from "lucide-react";
 import { gerarPDFPersonalizado } from "../components/GeradorPDFPersonalizado";
 import { cotacaoService, arquivoService } from "../services/api";
+import {
+  exigeCapitalSeguro,
+  calcularPremioVeiculo,
+  deveMostrarTrimestral,
+  deveMostrarMensal,
+} from "../utils/cotacaoCoberturas";
 
 function CriarCliente() {
   const [tipoCliente, setTipoCliente] = useState("Particular");
@@ -478,18 +484,6 @@ function CriarCliente() {
     { code: "CV", name: "Cabo Verde", flag: "🇨🇻" },
   ];
 
-  // Função para verificar se deve mostrar o campo trimestral (sempre que capital > 12000)
-  const deveMostrarTrimestral = (capital) => {
-    const capitalNum = parseFloat(capital) || 0;
-    return capitalNum > 12000;
-  };
-
-  // Função para verificar se deve mostrar o campo mensal (só quando débito direto ativo E capital > 12000)
-  const deveMostrarMensal = (capital, debitoDireto) => {
-    const capitalNum = parseFloat(capital) || 0;
-    return debitoDireto && capitalNum > 12000;
-  };
-
   // Função para selecionar o país da matrícula
   const selecionarPaisMatricula = (pais) => {
     setPaisMatricula(pais);
@@ -557,103 +551,30 @@ function CriarCliente() {
     );
   };
 
-  // Calcular prêmio baseado na configuração
-  const calcularPremio = () => {
-    const classificacaoConfig = getClassificacaoConfig();
-    const capital = parseFloat(veiculoAtual.capitalSeguro) || 0;
-    
-    if (!classificacaoConfig || capital === 0) {
-      return {
-        taxa: 0,
-        premioAnnual: "0.00",
-        premioSemestral: "0.00",
-        premioTrimestral: "0.00",
-        premioMensal: "0.00",
-        premioMinimo: classificacaoConfig?.premioMinimo || 0,
-        taxaAplicada: "0%"
-      };
-    }
-
-    let taxa = classificacaoConfig.taxa;
-    let taxaAplicada = taxa > 0 ? `${(taxa * 100).toFixed(2)}%` : "Taxa Fixa";
-    
-    // Calcular prêmio base
-    let premioCalculado = 0;
-    
-    if (taxa > 0) {
-      // Para coberturas com taxa, calcular baseado no capital seguro
-      premioCalculado = capital * taxa;
-    } else {
-      // Para coberturas sem taxa, usar prêmio mínimo fixo
-      premioCalculado = classificacaoConfig.premioMinimo;
-    }
-
-    // Aplicar prêmio mínimo se necessário
-    const premioMinimo = classificacaoConfig.premioMinimo || 0;
-    let premioFinal = Math.max(premioCalculado, premioMinimo);
-    let premioSemestral = (premioFinal / 2).toFixed(2);
-    
-    // Calcular prêmio trimestral sempre quando capital > 12000
-    let premioTrimestral = "0.00";
-    const capitalNum = parseFloat(veiculoAtual.capitalSeguro) || 0;
-    const mostrarTrimestral = capitalNum > 12000;
-    
-    if (mostrarTrimestral) {
-      premioTrimestral = (premioFinal / 4).toFixed(2);
-    }
-    
-    // Calcular prêmio mensal só quando débito direto ativo E capital > 12000
-    let premioMensal = "0.00";
-    const mostrarMensal = debitoDiretoAtivo && capitalNum > 12000;
-    
-    if (mostrarMensal) {
-      premioMensal = (premioFinal / 12).toFixed(2); // 12 meses no ano
-    }
-    
-    // Aplicar taxa de débito direto se ativo (multiplicar os prêmios por 15%)
-    if (debitoDiretoAtivo) {
-      premioFinal = premioFinal * 1.15;
-      premioSemestral = (premioFinal / 2).toFixed(2);
-      
-      if (mostrarTrimestral) {
-        premioTrimestral = (premioFinal / 4).toFixed(2);
-      }
-      
-      if (mostrarMensal) {
-        premioMensal = (premioFinal / 12).toFixed(2);
-      }
-      
-      // Manter a taxa aplicada original da classificação, mas indicar débito direto
-      taxaAplicada = `${(taxa * 100).toFixed(2)}% + 15% (Débito Direto)`;
-    }
-
-    return {
-      taxa: taxa,
-      premioAnnual: premioFinal.toFixed(2),
-      premioSemestral: premioSemestral,
-      premioTrimestral: premioTrimestral,
-      premioMensal: premioMensal,
-      premioMinimo: premioMinimo,
-      taxaAplicada: taxaAplicada
-    };
-  };
-
   // Atualizar cálculo do prêmio quando houver mudanças
   useEffect(() => {
-    if (veiculoAtual.capitalSeguro && tipoCobertura && classificacao) {
-      const resultado = calcularPremio();
-      
-      setVeiculoAtual((prev) => ({
-        ...prev,
-        taxa: resultado.taxa,
-        premioAnnual: resultado.premioAnnual,
-        premioSemestral: resultado.premioSemestral,
-        premioTrimestral: resultado.premioTrimestral,
-        premioMensal: resultado.premioMensal,
-        premioMinimo: resultado.premioMinimo,
-        taxaAplicada: resultado.taxaAplicada
-      }));
-    }
+    if (!tipoCobertura || !classificacao) return;
+
+    const precisaCapital = exigeCapitalSeguro(tipoCobertura);
+    if (precisaCapital && !veiculoAtual.capitalSeguro) return;
+
+    const resultado = calcularPremioVeiculo({
+      capitalSeguro: veiculoAtual.capitalSeguro,
+      tipoCobertura,
+      classificacao,
+      debitoDiretoAtivo,
+    });
+
+    setVeiculoAtual((prev) => ({
+      ...prev,
+      taxa: resultado.taxa,
+      premioAnnual: resultado.premioAnnual,
+      premioSemestral: resultado.premioSemestral,
+      premioTrimestral: resultado.premioTrimestral,
+      premioMensal: resultado.premioMensal,
+      premioMinimo: resultado.premioMinimo,
+      taxaAplicada: resultado.taxaAplicada,
+    }));
   }, [veiculoAtual.capitalSeguro, tipoCobertura, classificacao, debitoDiretoAtivo]);
 
   // Resetar classificação quando mudar o tipo de cobertura
@@ -661,6 +582,7 @@ function CriarCliente() {
     setClassificacao("");
     setVeiculoAtual(prev => ({
       ...prev,
+      capitalSeguro: exigeCapitalSeguro(tipoCobertura) ? prev.capitalSeguro : "",
       taxa: "",
       premioAnnual: "",
       premioSemestral: "",
@@ -795,7 +717,9 @@ function CriarCliente() {
           lotacao: v.lotacao || null,
           tipo_cobertura: tipoCobertura,
           classificacao: classificacao,
-          capital_seguro: parseFloat(v.capitalSeguro) || 0,
+          capital_seguro: exigeCapitalSeguro(tipoCobertura)
+            ? parseFloat(v.capitalSeguro) || 0
+            : null,
           taxa: parseFloat(v.taxaAplicada?.replace('%', '')) || 0,
           premio_anual: parseFloat(v.premioAnnual) || 0,
           premio_semestral: parseFloat(v.premioSemestral) || 0,
@@ -851,7 +775,9 @@ function CriarCliente() {
           status: "ativa",
           dataInicio: new Date().toISOString(),
           dataFim: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-          debitoDireto: debitoDiretoAtivo
+          debitoDireto: debitoDiretoAtivo,
+          agente_nome: result.data.agente_nome || '',
+          agente_balcao: result.data.agente_balcao || ''
         };
 
         setCotacaoGerada(novaCotacao);
@@ -941,25 +867,6 @@ function CriarCliente() {
       ...prev,
       [field]: value,
     }));
-    
-    // Se o campo for capitalSeguro, recalcular o prêmio
-    if (field === "capitalSeguro") {
-      if (value && tipoCobertura && classificacao) {
-        const resultado = calcularPremio();
-        const capital = parseFloat(value) || 0;
-        const mostrarTrimestral = capital > 12000;
-        const mostrarMensal = debitoDiretoAtivo && capital > 12000;
-        
-        setVeiculoAtual((prev) => ({
-          ...prev,
-          premioAnnual: resultado.premioAnnual,
-          premioSemestral: resultado.premioSemestral,
-          premioTrimestral: mostrarTrimestral ? resultado.premioTrimestral : "",
-          premioMensal: mostrarMensal ? resultado.premioMensal : "",
-          taxaAplicada: resultado.taxaAplicada
-        }));
-      }
-    }
   };
 
   const adicionarVeiculo = () => {
@@ -968,10 +875,14 @@ function CriarCliente() {
       !veiculoAtual.modelo ||
       !tipoCobertura ||
       !classificacao ||
-      !veiculoAtual.capitalSeguro ||
       !paisMatricula
     ) {
       alert("Preencha todos os campos obrigatórios do veículo!");
+      return;
+    }
+
+    if (exigeCapitalSeguro(tipoCobertura) && !veiculoAtual.capitalSeguro) {
+      alert("O Capital Seguro é obrigatório para Seguro Automóvel Todos os Riscos.");
       return;
     }
 
@@ -982,9 +893,18 @@ function CriarCliente() {
     }
 
     const classificacaoConfig = getClassificacaoConfig();
-    const capital = parseFloat(veiculoAtual.capitalSeguro) || 0;
-    const mostrarTrimestral = capital > 12000;
-    const mostrarMensal = debitoDiretoAtivo && capital > 12000;
+    const premioAnnualNum = parseFloat(veiculoAtual.premioAnnual) || 0;
+    const mostrarTrimestral = deveMostrarTrimestral(
+      veiculoAtual.capitalSeguro,
+      tipoCobertura,
+      premioAnnualNum,
+    );
+    const mostrarMensal = deveMostrarMensal(
+      veiculoAtual.capitalSeguro,
+      debitoDiretoAtivo,
+      tipoCobertura,
+      premioAnnualNum,
+    );
     
     // Garantir que os prêmios estão calculados corretamente
     let premioTrimestral = veiculoAtual.premioTrimestral;
@@ -1887,21 +1807,31 @@ function CriarCliente() {
 
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-800">
-                      Capital Seguro (MT) *
+                      Capital Seguro (MT)
+                      {exigeCapitalSeguro(tipoCobertura) ? " *" : " (opcional)"}
                     </label>
                     <div className="relative group">
                       <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-600 h-4 w-4" />
                       <input
                         type="number"
-                        required
+                        required={exigeCapitalSeguro(tipoCobertura)}
                         className="w-full pl-10 pr-4 py-3 rounded-lg text-gray-800 placeholder-gray-400 transition-all duration-300 focus:outline-none focus:scale-[1.02] focus:ring-2 focus:ring-blue-500 bg-white border border-gray-300"
-                        placeholder="Valor em MT"
+                        placeholder={
+                          exigeCapitalSeguro(tipoCobertura)
+                            ? "Valor em MT (obrigatório)"
+                            : "Não aplicável a este tipo de cobertura"
+                        }
                         value={veiculoAtual.capitalSeguro}
                         onChange={(e) =>
                           handleVeiculoChange("capitalSeguro", e.target.value)
                         }
                       />
                     </div>
+                    {!exigeCapitalSeguro(tipoCobertura) && tipoCobertura && (
+                      <p className="text-xs text-gray-500">
+                        Para este tipo de cobertura o prémio é fixo por classificação e não depende do capital seguro.
+                      </p>
+                    )}
                   </div>
 
                   {classificacao && (
@@ -1923,8 +1853,8 @@ function CriarCliente() {
 
                   {/* Quarta linha - Informações de cálculo */}
                   <div className="space-y-2 lg:col-span-3">
-                    <div className={`grid ${deveMostrarTrimestral(veiculoAtual.capitalSeguro) ? 
-                      (deveMostrarMensal(veiculoAtual.capitalSeguro, debitoDiretoAtivo) ? 'grid-cols-1 md:grid-cols-5' : 'grid-cols-1 md:grid-cols-4') 
+                    <div className={`grid ${deveMostrarTrimestral(veiculoAtual.capitalSeguro, tipoCobertura, veiculoAtual.premioAnnual) ? 
+                      (deveMostrarMensal(veiculoAtual.capitalSeguro, debitoDiretoAtivo, tipoCobertura, veiculoAtual.premioAnnual) ? 'grid-cols-1 md:grid-cols-5' : 'grid-cols-1 md:grid-cols-4') 
                       : 'grid-cols-1 md:grid-cols-3'} gap-4`}>
                       <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-800">
@@ -1964,7 +1894,7 @@ function CriarCliente() {
                         </div>
                       </div>
 
-                      {deveMostrarTrimestral(veiculoAtual.capitalSeguro) && (
+                      {deveMostrarTrimestral(veiculoAtual.capitalSeguro, tipoCobertura, veiculoAtual.premioAnnual) && (
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-gray-800">
                             Prémio Trimestral (MT)
@@ -1985,7 +1915,7 @@ function CriarCliente() {
                         </div>
                       )}
 
-                      {deveMostrarMensal(veiculoAtual.capitalSeguro, debitoDiretoAtivo) && (
+                      {deveMostrarMensal(veiculoAtual.capitalSeguro, debitoDiretoAtivo, tipoCobertura, veiculoAtual.premioAnnual) && (
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-gray-800">
                             Prémio Mensal (MT)
@@ -2028,7 +1958,7 @@ function CriarCliente() {
 
                     {/* Mensagens informativas sobre os campos */}
                     <div className="mt-2 space-y-1">
-                      {deveMostrarTrimestral(veiculoAtual.capitalSeguro) ? (
+                      {deveMostrarTrimestral(veiculoAtual.capitalSeguro, tipoCobertura, veiculoAtual.premioAnnual) ? (
                         <div className="text-sm text-green-600 bg-green-50 p-2 rounded">
                           ✓ Campo <strong>Prémio Trimestral</strong> visível porque o Capital Seguro é superior a 12.000 MT
                         </div>
@@ -2038,7 +1968,7 @@ function CriarCliente() {
                         </div>
                       ) : null}
                       
-                      {deveMostrarMensal(veiculoAtual.capitalSeguro, debitoDiretoAtivo) ? (
+                      {deveMostrarMensal(veiculoAtual.capitalSeguro, debitoDiretoAtivo, tipoCobertura, veiculoAtual.premioAnnual) ? (
                         <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
                           ✓ Campo <strong>Prémio Mensal</strong> visível porque Débito Direto está ativo E Capital Seguro é superior a 12.000 MT
                         </div>
@@ -2075,8 +2005,8 @@ function CriarCliente() {
                           </p>
                           <p className="text-gray-700 text-xs mt-1">
                             Os cálculos foram atualizados com a nova taxa
-                            {deveMostrarTrimestral(veiculoAtual.capitalSeguro) && " (incluindo Prémio Trimestral)"}
-                            {deveMostrarMensal(veiculoAtual.capitalSeguro, debitoDiretoAtivo) && " e Prémio Mensal"}
+                            {deveMostrarTrimestral(veiculoAtual.capitalSeguro, tipoCobertura, veiculoAtual.premioAnnual) && " (incluindo Prémio Trimestral)"}
+                            {deveMostrarMensal(veiculoAtual.capitalSeguro, debitoDiretoAtivo, tipoCobertura, veiculoAtual.premioAnnual) && " e Prémio Mensal"}
                           </p>
                         </div>
                       )}
@@ -2112,9 +2042,18 @@ function CriarCliente() {
 
                   <div className="space-y-3">
                     {veiculos.map((veiculo) => {
-                      const capital = parseFloat(veiculo.capitalSeguro) || 0;
-                      const mostrarTrimestral = capital > 12000;
-                      const mostrarMensal = debitoDiretoAtivo && capital > 12000;
+                      const premioAnnualNum = parseFloat(veiculo.premioAnnual) || 0;
+                      const mostrarTrimestral = deveMostrarTrimestral(
+                        veiculo.capitalSeguro,
+                        veiculo.tipoCobertura,
+                        premioAnnualNum,
+                      );
+                      const mostrarMensal = deveMostrarMensal(
+                        veiculo.capitalSeguro,
+                        debitoDiretoAtivo,
+                        veiculo.tipoCobertura,
+                        premioAnnualNum,
+                      );
                       
                       return (
                         <div

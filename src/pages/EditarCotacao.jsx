@@ -13,10 +13,35 @@ import {
   Loader2,
   FileText,
   ChevronRight,
+  User,
+  Building,
+  Globe,
+  Phone,
+  Mail,
+  Car,
+  Shield,
+  ChevronDown,
 } from "lucide-react";
 import CotacoesLayout from "../components/CotacoesLayout";
 import { gerarPDFPersonalizado } from "../components/GeradorPDFPersonalizado";
 import { cotacaoService } from "../services/api";
+import {
+  configCoberturas,
+  TIPOS_COBERTURA_OPCOES,
+  titulosContato,
+  paises,
+  formatosMatricula,
+  getClassificacoesDisponiveis,
+  calcularPremioVeiculo,
+  formatarMatriculaValor,
+  exigeCapitalSeguro,
+  normalizarClassificacao,
+  normalizarTipoCobertura,
+  criarVeiculoVazio,
+  mapearVeiculoDoBackend,
+  deveMostrarTrimestral,
+  deveMostrarMensal,
+} from "../utils/cotacaoCoberturas";
 
 function EditarCotacao() {
   const [cotacaoId, setCotacaoId] = useState("");
@@ -28,68 +53,40 @@ function EditarCotacao() {
   const [listaCotacoes, setListaCotacoes] = useState([]);
   const [loadingLista, setLoadingLista] = useState(true);
   const [filtroLista, setFiltroLista] = useState("");
+  const [matriculaDropdownId, setMatriculaDropdownId] = useState(null);
 
-  // Configurações das coberturas (mesmas do CriarCliente)
-  const configCoberturas = {
-    DP_NORMAL: {
-      nome: "DP NORMAL - Danos Próprios com Franquia",
-      taxas: {
-        Ligeiro: 0.035,
-        Pesado: 0.05,
-      },
-      coberturas: {
-        responsabilidadeCivil: 5000000,
-        morteInvalidez: 100000,
-        despesasMedicas: 20000,
-        despesasFuneral: 5000,
-        perdaChaves: 35000,
-        remocaoSalvados: 52500,
-      },
-    },
-    DP_SEM_FRANQUIA: {
-      nome: "DP SEM FRANQUIA - Danos Próprios sem Franquia",
-      taxas: {
-        Ligeiro: 0.035,
-        Pesado: 0.05,
-      },
-      coberturas: {
-        responsabilidadeCivil: 10000000,
-        morteInvalidez: 250000,
-        despesasMedicas: 85000,
-        despesasFuneral: 25000,
-        perdaChaves: 55000,
-        remocaoSalvados: 65000,
-      },
-    },
-    RC_NORMAL: {
-      nome: "RC NORMAL - Apenas Responsabilidade Civil",
-      taxas: {
-        Ligeiro: 0.045,
-        Pesado: 0.05,
-      },
-      coberturas: {
-        responsabilidadeCivil: 4000000,
-        morteInvalidez: 0,
-        despesasMedicas: 0,
-        despesasFuneral: 0,
-      },
-    },
-    RC_OCUPANTES: {
-      nome: "RC & OCUPANTES - RC + Cobertura para Ocupantes",
-      taxas: {
-        Ligeiro: 0.035,
-        Pesado: 0.05,
-      },
-      coberturas: {
-        responsabilidadeCivil: 4000000,
-        morteInvalidez: 100000,
-        despesasMedicas: 20000,
-        despesasFuneral: 5000,
-      },
-    },
+  const formatDateInput = (val) => {
+    if (!val) return '';
+    const str = String(val);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    const match = str.match(/^(\d{4}-\d{2}-\d{2})/);
+    return match ? match[1] : '';
   };
 
-  const mapearCotacaoParaForm = (cotacao) => ({
+  const mapearCotacaoParaForm = (cotacao) => {
+    const debitoDireto = Boolean(cotacao.debito_direto);
+
+    let veiculos = (cotacao.veiculos || []).map((v) =>
+      mapearVeiculoDoBackend(v, { debitoDiretoAtivo: debitoDireto }),
+    );
+
+    // Na criação, tipo/classificação são globais — propagar do 1.º veículo se algum estiver vazio
+    const referencia = veiculos.find((v) => v.tipoCobertura && v.classificacao);
+    if (referencia) {
+      veiculos = veiculos.map((v) => ({
+        ...v,
+        tipoCobertura: v.tipoCobertura || referencia.tipoCobertura,
+        classificacao:
+          v.classificacao ||
+          normalizarClassificacao(
+            v.tipoCobertura || referencia.tipoCobertura,
+            referencia.classificacao,
+            v.tipoViatura,
+          ),
+      }));
+    }
+
+    return {
     id: cotacao.id,
     numero_cotacao: cotacao.numero_cotacao,
     cliente_id: cotacao.cliente_id,
@@ -100,38 +97,52 @@ function EditarCotacao() {
       email: cotacao.cliente_email || cotacao.cliente?.email || '',
       telefone: cotacao.cliente_telefone || cotacao.cliente?.telefone || '',
       numeroDocumento: cotacao.cliente?.numero_documento || '',
-      dataNascimento: cotacao.cliente?.data_nascimento || '',
+      dataNascimento: formatDateInput(cotacao.cliente?.data_nascimento),
       nomeEmpresa: cotacao.cliente?.nome_empresa || '',
       numeroReferenciaFiscal: cotacao.cliente?.numero_referencia_fiscal || '',
       nacionalidade: cotacao.cliente?.nacionalidade || 'MZ',
       tituloContato: cotacao.cliente?.titulo_contato || ''
     },
-    veiculos: (cotacao.veiculos || []).map((veiculo) => ({
-      id: veiculo.id || Date.now() + Math.random(),
-      marca: veiculo.marca || '',
-      modelo: veiculo.modelo || '',
-      marcaModelo: veiculo.marca_modelo || `${veiculo.marca || ''} ${veiculo.modelo || ''}`.trim(),
-      matricula: veiculo.matricula || '',
-      matriculaCompleta: veiculo.matricula_completa || veiculo.matricula || '',
-      ano: veiculo.ano || '',
-      motor: veiculo.numero_motor || '',
-      chassis: veiculo.numero_chassi || '',
-      lotacao: veiculo.lotacao || '',
-      tipoViatura: veiculo.tipo_viatura || 'Ligeiro',
-      capitalSeguro: veiculo.capital_seguro || '',
-      taxa: veiculo.taxa || '',
-      premioAnnual: veiculo.premio_anual || '',
-      premioSemestral: veiculo.premio_semestral || '',
-      premioTrimestral: veiculo.premio_trimestral || '',
-      premioMensal: veiculo.premio_mensal || '',
-      tipoCobertura: veiculo.tipo_cobertura || 'DP_NORMAL',
-    })),
+    veiculos,
     totalPremio: parseFloat(cotacao.total_premio) || 0,
     status: cotacao.status || 'pendente',
     dataCriacao: cotacao.data_criacao || cotacao.created_at,
     dataValidade: cotacao.data_validade,
-    observacoes: cotacao.proxima_acao || ''
-  });
+    observacoes: cotacao.proxima_acao || '',
+    debitoDireto,
+    agente_nome: cotacao.agente_nome || '',
+    agente_balcao: cotacao.agente_balcao || ''
+  };
+  };
+
+  const recalcularVeiculos = (veiculos, debitoDireto = false) => {
+    const atualizados = veiculos.map((veiculo) => {
+      if (!veiculo.tipoCobertura || !veiculo.classificacao) return veiculo;
+
+      const precisaCapital = exigeCapitalSeguro(veiculo.tipoCobertura);
+      if (precisaCapital && !veiculo.capitalSeguro) return veiculo;
+
+      const calc = calcularPremioVeiculo({
+        capitalSeguro: precisaCapital ? veiculo.capitalSeguro : "",
+        tipoCobertura: veiculo.tipoCobertura,
+        classificacao: veiculo.classificacao,
+        debitoDiretoAtivo: debitoDireto,
+      });
+      return { ...veiculo, ...calc };
+    });
+    const totalPremio = atualizados.reduce(
+      (total, v) => total + (parseFloat(v.premioAnnual) || 0),
+      0,
+    );
+    return { veiculos: atualizados, totalPremio };
+  };
+
+  const atualizarCliente = (campo, valor) => {
+    setFormData((prev) => ({
+      ...prev,
+      cliente: { ...prev.cliente, [campo]: valor },
+    }));
+  };
 
   const carregarListaCotacoes = useCallback(async () => {
     try {
@@ -156,7 +167,9 @@ function EditarCotacao() {
     try {
       const result = await cotacaoService.buscarPorId(id);
       if (result.success && result.data) {
-        setFormData(mapearCotacaoParaForm(result.data));
+        const mapped = mapearCotacaoParaForm(result.data);
+        const { veiculos, totalPremio } = recalcularVeiculos(mapped.veiculos, mapped.debitoDireto);
+        setFormData({ ...mapped, veiculos, totalPremio });
         setCotacaoId(result.data.numero_cotacao || String(result.data.id));
       } else {
         alert(`❌ ${result.message || 'Cotação não encontrada!'}`);
@@ -212,7 +225,9 @@ function EditarCotacao() {
       }
 
       if (result.success && result.data) {
-        setFormData(mapearCotacaoParaForm(result.data));
+        const mapped = mapearCotacaoParaForm(result.data);
+        const { veiculos, totalPremio } = recalcularVeiculos(mapped.veiculos, mapped.debitoDireto);
+        setFormData({ ...mapped, veiculos, totalPremio });
       } else {
         alert(`❌ ${result.message || "Cotação não encontrada!"}`);
         setFormData(null);
@@ -226,33 +241,13 @@ function EditarCotacao() {
     }
   };
 
-  // Função para calcular prémio
-  const calcularPremio = (veiculo) => {
-    const config = configCoberturas[veiculo.tipoCobertura];
-    if (!config || !veiculo.tipoViatura || !veiculo.capitalSeguro) {
-      return "0.00";
-    }
-
-    const capital = parseFloat(veiculo.capitalSeguro) || 0;
-    const taxa = config.taxas[veiculo.tipoViatura] || 0;
-
-    if (capital === 0 || taxa === 0) return "0.00";
-
-    const premioCalculado = capital * taxa;
-    return premioCalculado.toFixed(2);
-  };
-
-  const recalcularVeiculos = (veiculos) => {
-    const atualizados = veiculos.map((veiculo) => ({
-      ...veiculo,
-      premioAnnual: calcularPremio(veiculo),
-      taxa: configCoberturas[veiculo.tipoCobertura]?.taxas[veiculo.tipoViatura] || 0,
-    }));
-    const totalPremio = atualizados.reduce(
-      (total, v) => total + (parseFloat(v.premioAnnual) || 0),
-      0
-    );
-    return { veiculos: atualizados, totalPremio };
+  // Função para calcular prémio (reutiliza lógica do formulário de criação)
+  const recalcularComDebitoDireto = (debitoDireto) => {
+    setFormData((prev) => {
+      if (!prev) return prev;
+      const { veiculos, totalPremio } = recalcularVeiculos(prev.veiculos, debitoDireto);
+      return { ...prev, debitoDireto, veiculos, totalPremio };
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -273,7 +268,7 @@ function EditarCotacao() {
           email: formData.cliente.email,
           telefone: formData.cliente.telefone,
           numero_documento: formData.cliente.numeroDocumento,
-          data_nascimento: formData.cliente.dataNascimento || null,
+          data_nascimento: formatDateInput(formData.cliente.dataNascimento) || null,
           nacionalidade: formData.cliente.nacionalidade,
           titulo_contato: formData.cliente.tituloContato || null,
           nome_empresa: formData.cliente.nomeEmpresa || null,
@@ -282,21 +277,25 @@ function EditarCotacao() {
         veiculos: formData.veiculos.map((v) => ({
           marca: v.marca || (v.marcaModelo && v.marcaModelo.split(' ')[0]),
           modelo: v.modelo || (v.marcaModelo && v.marcaModelo.split(' ').slice(1).join(' ')),
-          marca_modelo: v.marcaModelo,
+          marca_modelo: v.marcaModelo || `${v.marca || ''} ${v.modelo || ''}`.trim(),
           matricula: v.matricula,
           matricula_completa: v.matriculaCompleta || v.matricula,
+          pais_matricula: v.paisMatricula || null,
           ano: v.ano || null,
           motor: v.motor,
           chassis: v.chassis,
           lotacao: v.lotacao || null,
-          tipo_viatura: v.tipoViatura,
-          tipo_cobertura: v.tipoCobertura,
-          capital_seguro: parseFloat(v.capitalSeguro) || 0,
+          tipo_cobertura: v.tipoCobertura || null,
+          classificacao: v.classificacao || null,
+          capital_seguro: exigeCapitalSeguro(v.tipoCobertura)
+            ? parseFloat(v.capitalSeguro) || 0
+            : null,
           taxa: parseFloat(v.taxa) || 0,
           premio_anual: parseFloat(v.premioAnnual) || 0,
           premio_semestral: parseFloat(v.premioSemestral) || null,
           premio_trimestral: parseFloat(v.premioTrimestral) || null,
           premio_mensal: parseFloat(v.premioMensal) || null,
+          premio_minimo: parseFloat(v.premioMinimo) || null,
         })),
       };
 
@@ -320,44 +319,70 @@ function EditarCotacao() {
 
   // Funções para manipular veículos
   const adicionarVeiculo = () => {
-    const novoVeiculo = {
-      id: Date.now() + Math.random(),
-      marcaModelo: "",
-      matricula: "",
-      ano: "",
-      motor: "",
-      chassis: "",
-      lotacao: "",
-      tipoViatura: "Ligeiro",
-      capitalSeguro: "",
-      taxa: 0,
-      premioAnnual: "0.00",
-      tipoCobertura: "DP_NORMAL",
-    };
-
-    setFormData((prev) => {
-      const veiculos = [...prev.veiculos, novoVeiculo];
-      const { veiculos: v, totalPremio } = recalcularVeiculos(veiculos);
-      return { ...prev, veiculos: v, totalPremio };
-    });
+    setFormData((prev) => ({
+      ...prev,
+      veiculos: [...prev.veiculos, criarVeiculoVazio()],
+    }));
   };
 
   const removerVeiculo = (id) => {
     setFormData((prev) => {
       const veiculos = prev.veiculos.filter((v) => v.id !== id);
-      const { veiculos: v, totalPremio } = recalcularVeiculos(veiculos);
+      const { veiculos: v, totalPremio } = recalcularVeiculos(veiculos, prev.debitoDireto);
       return { ...prev, veiculos: v, totalPremio };
     });
   };
 
   const atualizarVeiculo = (id, campo, valor) => {
     setFormData((prev) => {
-      const veiculos = prev.veiculos.map((veiculo) =>
-        veiculo.id === id ? { ...veiculo, [campo]: valor } : veiculo
-      );
-      const { veiculos: v, totalPremio } = recalcularVeiculos(veiculos);
+      let veiculos = prev.veiculos.map((veiculo) => {
+        if (veiculo.id !== id) return veiculo;
+
+        let updated = { ...veiculo, [campo]: valor };
+
+        if (campo === "tipoCobertura") {
+          updated = {
+            ...updated,
+            classificacao: "",
+            capitalSeguro: exigeCapitalSeguro(valor) ? updated.capitalSeguro : "",
+            taxa: "",
+            taxaAplicada: "",
+            premioAnnual: "",
+            premioSemestral: "",
+            premioTrimestral: "",
+            premioMensal: "",
+            premioMinimo: "",
+          };
+        }
+
+        if (campo === "marca" || campo === "modelo") {
+          updated.marcaModelo = `${updated.marca || ""} ${updated.modelo || ""}`.trim();
+        }
+
+        if (campo === "paisMatricula") {
+          updated.matricula = "";
+          updated.matriculaCompleta = "";
+        }
+
+        if (campo === "matricula") {
+          const fmt = formatarMatriculaValor(valor, updated.paisMatricula);
+          updated.matricula = fmt;
+          updated.matriculaCompleta = updated.paisMatricula
+            ? `${updated.paisMatricula} — ${fmt}`
+            : fmt;
+        }
+
+        return updated;
+      });
+
+      const { veiculos: v, totalPremio } = recalcularVeiculos(veiculos, prev.debitoDireto);
       return { ...prev, veiculos: v, totalPremio };
     });
+  };
+
+  const selecionarPaisMatricula = (veiculoId, pais) => {
+    atualizarVeiculo(veiculoId, "paisMatricula", pais);
+    setMatriculaDropdownId(null);
   };
 
   // Template único: GeradorPDFPersonalizado
@@ -374,6 +399,8 @@ function EditarCotacao() {
       })),
       totalPremio: formData.totalPremio,
       debitoDireto: formData.debitoDireto,
+      agente_nome: formData.agente_nome,
+      agente_balcao: formData.agente_balcao,
     };
   };
 
@@ -599,128 +626,155 @@ function EditarCotacao() {
                 <h4 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">
                   Dados do Cliente
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <div className="flex gap-4 justify-center mb-6">
+                  <button
+                    type="button"
+                    onClick={() => atualizarCliente("tipo", "Particular")}
+                    className={`flex items-center gap-2 px-5 py-3 rounded-xl transition-all ${
+                      formData.cliente.tipo === "Particular"
+                        ? "bg-emerald-600 text-white shadow-lg"
+                        : "bg-gray-100 text-gray-700 hover:bg-emerald-50"
+                    }`}
+                  >
+                    <User className="h-5 w-5" />
+                    <span className="font-semibold">Particular</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => atualizarCliente("tipo", "Empresarial")}
+                    className={`flex items-center gap-2 px-5 py-3 rounded-xl transition-all ${
+                      formData.cliente.tipo === "Empresarial"
+                        ? "bg-emerald-600 text-white shadow-lg"
+                        : "bg-gray-100 text-gray-700 hover:bg-emerald-50"
+                    }`}
+                  >
+                    <Building className="h-5 w-5" />
+                    <span className="font-semibold">Empresarial</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-800 mb-2">
-                      Primeiro Nome *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-800 mb-2">Nacionalidade</label>
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 h-4 w-4" />
+                      <select
+                        className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-lg"
+                        value={formData.cliente.nacionalidade || "MZ"}
+                        onChange={(e) => atualizarCliente("nacionalidade", e.target.value)}
+                      >
+                        {paises.map((p) => (
+                          <option key={p.code} value={p.code}>{p.flag} {p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {formData.cliente.tipo === "Particular" && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-800 mb-2">Título de Contato</label>
+                      <select
+                        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg"
+                        value={formData.cliente.tituloContato || ""}
+                        onChange={(e) => atualizarCliente("tituloContato", e.target.value)}
+                      >
+                        <option value="">— Selecionar —</option>
+                        {titulosContato.map((t) => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-800 mb-2">Primeiro Nome *</label>
                     <input
                       type="text"
                       required
-                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all duration-300"
+                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg"
                       value={formData.cliente.primeiroNome}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          cliente: {
-                            ...formData.cliente,
-                            primeiroNome: e.target.value,
-                          },
-                        })
-                      }
+                      onChange={(e) => atualizarCliente("primeiroNome", e.target.value)}
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-800 mb-2">
-                      Sobrenome *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-800 mb-2">Sobrenome *</label>
                     <input
                       type="text"
                       required
-                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all duration-300"
+                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg"
                       value={formData.cliente.sobrenome}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          cliente: {
-                            ...formData.cliente,
-                            sobrenome: e.target.value,
-                          },
-                        })
-                      }
+                      onChange={(e) => atualizarCliente("sobrenome", e.target.value)}
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-800 mb-2">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all duration-300"
-                      value={formData.cliente.email}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          cliente: {
-                            ...formData.cliente,
-                            email: e.target.value,
-                          },
-                        })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-800 mb-2">
-                      Telefone *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-800 mb-2">Telefone *</label>
                     <input
                       type="tel"
                       required
-                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all duration-300"
+                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg"
                       value={formData.cliente.telefone}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          cliente: {
-                            ...formData.cliente,
-                            telefone: e.target.value,
-                          },
-                        })
-                      }
+                      onChange={(e) => atualizarCliente("telefone", e.target.value)}
+                      placeholder="+258"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-800 mb-2">
-                      Nº Documento *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-800 mb-2">Email *</label>
                     <input
-                      type="text"
+                      type="email"
                       required
-                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all duration-300"
-                      value={formData.cliente.numeroDocumento}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          cliente: {
-                            ...formData.cliente,
-                            numeroDocumento: e.target.value,
-                          },
-                        })
-                      }
+                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg"
+                      value={formData.cliente.email}
+                      onChange={(e) => atualizarCliente("email", e.target.value)}
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-800 mb-2">
-                      Tipo de Cliente
-                    </label>
-                    <select
-                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all duration-300"
-                      value={formData.cliente.tipo}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          cliente: {
-                            ...formData.cliente,
-                            tipo: e.target.value,
-                          },
-                        })
-                      }
-                    >
-                      <option value="Particular">Particular</option>
-                      <option value="Empresarial">Empresarial</option>
-                    </select>
-                  </div>
+
+                  {formData.cliente.tipo === "Particular" ? (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-800 mb-2">Nº Documento *</label>
+                        <input
+                          type="text"
+                          className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg"
+                          value={formData.cliente.numeroDocumento}
+                          onChange={(e) => atualizarCliente("numeroDocumento", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-800 mb-2">Data de Nascimento</label>
+                        <input
+                          type="date"
+                          className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg"
+                          value={formData.cliente.dataNascimento || ""}
+                          onChange={(e) => atualizarCliente("dataNascimento", e.target.value)}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-800 mb-2">Nome da Empresa</label>
+                        <input
+                          type="text"
+                          className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg"
+                          value={formData.cliente.nomeEmpresa || ""}
+                          onChange={(e) => atualizarCliente("nomeEmpresa", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-800 mb-2">Nº Referência Fiscal (NUIT)</label>
+                        <input
+                          type="text"
+                          className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg"
+                          value={formData.cliente.numeroReferenciaFiscal || ""}
+                          onChange={(e) => atualizarCliente("numeroReferenciaFiscal", e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -760,262 +814,306 @@ function EditarCotacao() {
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                        {/* Marca/Modelo */}
+                      {/* Tipo de Cobertura e Classificação */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-800 mb-2">
-                            Marca/Modelo *
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all duration-300"
-                            value={veiculo.marcaModelo}
-                            onChange={(e) =>
-                              atualizarVeiculo(
-                                veiculo.id,
-                                "marcaModelo",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Ex: Toyota Corolla"
-                          />
+                          <label className="block text-sm font-medium text-gray-800 mb-2">Tipo de Cobertura *</label>
+                          <div className="relative">
+                            <Shield className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600 h-4 w-4" />
+                            <select
+                              required
+                              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg"
+                              value={normalizarTipoCobertura(veiculo.tipoCobertura) || ""}
+                              onChange={(e) => atualizarVeiculo(veiculo.id, "tipoCobertura", e.target.value)}
+                            >
+                              <option value="">— Selecionar Cobertura —</option>
+                              {TIPOS_COBERTURA_OPCOES.map((tipo) => (
+                                <option key={tipo} value={tipo}>{tipo}</option>
+                              ))}
+                              {veiculo.tipoCobertura &&
+                                !TIPOS_COBERTURA_OPCOES.includes(veiculo.tipoCobertura) && (
+                                  <option value={veiculo.tipoCobertura}>{veiculo.tipoCobertura}</option>
+                                )}
+                            </select>
+                          </div>
                         </div>
 
-                        {/* Matrícula */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-800 mb-2">
-                            Matrícula
-                          </label>
-                          <input
-                            type="text"
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all duration-300"
-                            value={veiculo.matricula}
-                            onChange={(e) =>
-                              atualizarVeiculo(
-                                veiculo.id,
-                                "matricula",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Ex: AB-123-CD"
-                          />
-                        </div>
-
-                        {/* Ano */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-800 mb-2">
-                            Ano
-                          </label>
-                          <input
-                            type="number"
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all duration-300"
-                            value={veiculo.ano}
-                            onChange={(e) =>
-                              atualizarVeiculo(
-                                veiculo.id,
-                                "ano",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Ex: 2023"
-                          />
-                        </div>
-
-                        {/* Motor */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-800 mb-2">
-                            Motor
-                          </label>
-                          <input
-                            type="text"
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all duration-300"
-                            value={veiculo.motor}
-                            onChange={(e) =>
-                              atualizarVeiculo(
-                                veiculo.id,
-                                "motor",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Ex: 1.6L"
-                          />
-                        </div>
-
-                        {/* Chassis */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-800 mb-2">
-                            Chassis
-                          </label>
-                          <input
-                            type="text"
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all duration-300"
-                            value={veiculo.chassis}
-                            onChange={(e) =>
-                              atualizarVeiculo(
-                                veiculo.id,
-                                "chassis",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Número do chassis"
-                          />
-                        </div>
-
-                        {/* Lotação */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-800 mb-2">
-                            Lotação
-                          </label>
-                          <input
-                            type="number"
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all duration-300"
-                            value={veiculo.lotacao}
-                            onChange={(e) =>
-                              atualizarVeiculo(
-                                veiculo.id,
-                                "lotacao",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Nº de passageiros"
-                          />
-                        </div>
-
-                        {/* Tipo de Viatura */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-800 mb-2">
-                            Tipo de Viatura *
-                          </label>
-                          <select
-                            required
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all duration-300"
-                            value={veiculo.tipoViatura}
-                            onChange={(e) =>
-                              atualizarVeiculo(
-                                veiculo.id,
-                                "tipoViatura",
-                                e.target.value
-                              )
-                            }
-                          >
-                            <option value="Ligeiro">Ligeiro</option>
-                            <option value="Pesado">Pesado</option>
-                          </select>
-                        </div>
-
-                        {/* Tipo de Cobertura */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-800 mb-2">
-                            Tipo de Cobertura *
-                          </label>
-                          <select
-                            required
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all duration-300"
-                            value={veiculo.tipoCobertura}
-                            onChange={(e) =>
-                              atualizarVeiculo(
-                                veiculo.id,
-                                "tipoCobertura",
-                                e.target.value
-                              )
-                            }
-                          >
-                            <option value="DP_NORMAL">
-                              DP NORMAL - Danos Próprios com Franquia
-                            </option>
-                            <option value="DP_SEM_FRANQUIA">
-                              DP SEM FRANQUIA - Danos Próprios sem Franquia
-                            </option>
-                            <option value="RC_NORMAL">
-                              RC NORMAL - Apenas Responsabilidade Civil
-                            </option>
-                            <option value="RC_OCUPANTES">
-                              RC & OCUPANTES - RC + Cobertura para Ocupantes
-                            </option>
-                          </select>
-                        </div>
-
-                        {/* Capital Seguro */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-800 mb-2">
-                            Capital Seguro (MT) *
-                          </label>
-                          <input
-                            type="number"
-                            required
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all duration-300"
-                            value={veiculo.capitalSeguro}
-                            onChange={(e) =>
-                              atualizarVeiculo(
-                                veiculo.id,
-                                "capitalSeguro",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Valor em MT"
-                          />
-                        </div>
-
-                        {/* Taxa (readonly) */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-800 mb-2">
-                            Taxa Aplicada
-                          </label>
-                          <input
-                            type="text"
-                            readOnly
-                            className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded text-gray-800 font-semibold"
-                            value={
-                              veiculo.taxa
-                                ? `${(veiculo.taxa * 100).toFixed(1)}%`
-                                : "0%"
-                            }
-                          />
-                        </div>
-
-                        {/* Prémio Annual (readonly) */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-800 mb-2">
-                            Prémio Annual (MT)
-                          </label>
-                          <input
-                            type="text"
-                            readOnly
-                            className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded text-gray-800 font-semibold"
-                            value={
-                              veiculo.premioAnnual
-                                ? `MT ${parseFloat(
-                                    veiculo.premioAnnual
-                                  ).toLocaleString("pt-MZ", {
-                                    minimumFractionDigits: 2,
-                                  })}`
-                                : "MT 0.00"
-                            }
-                          />
-                        </div>
+                        {veiculo.tipoCobertura && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-800 mb-2">Classificação *</label>
+                            <div className="relative">
+                              <Shield className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600 h-4 w-4" />
+                              <select
+                                required
+                                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg"
+                                value={
+                                  normalizarClassificacao(
+                                    veiculo.tipoCobertura,
+                                    veiculo.classificacao,
+                                    veiculo.tipoViatura,
+                                  ) || ""
+                                }
+                                onChange={(e) => atualizarVeiculo(veiculo.id, "classificacao", e.target.value)}
+                              >
+                                <option value="">— Selecionar Classificação —</option>
+                                {getClassificacoesDisponiveis(veiculo.tipoCobertura).map((classe) => (
+                                  <option key={classe.nome} value={classe.nome}>{classe.nome}</option>
+                                ))}
+                                {veiculo.classificacao &&
+                                  !getClassificacoesDisponiveis(veiculo.tipoCobertura).some(
+                                    (c) => c.nome === veiculo.classificacao,
+                                  ) && (
+                                    <option value={veiculo.classificacao}>{veiculo.classificacao}</option>
+                                  )}
+                              </select>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Resumo da Cobertura */}
-                      {veiculo.tipoCobertura && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-800 mb-2">Marca *</label>
+                          <input
+                            type="text"
+                            required
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg"
+                            value={veiculo.marca || ""}
+                            onChange={(e) => atualizarVeiculo(veiculo.id, "marca", e.target.value)}
+                            placeholder="Ex: Toyota"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-800 mb-2">Modelo *</label>
+                          <input
+                            type="text"
+                            required
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg"
+                            value={veiculo.modelo || ""}
+                            onChange={(e) => atualizarVeiculo(veiculo.id, "modelo", e.target.value)}
+                            placeholder="Ex: Corolla"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-800 mb-2">Matrícula</label>
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setMatriculaDropdownId(
+                                  matriculaDropdownId === veiculo.id ? null : veiculo.id,
+                                )
+                              }
+                              className="w-full flex items-center justify-between px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"
+                            >
+                              <span className="truncate">
+                                {veiculo.paisMatricula
+                                  ? `${veiculo.paisMatricula} — ${formatosMatricula[veiculo.paisMatricula]?.exemplo || ""}`
+                                  : "Selecionar país da matrícula"}
+                              </span>
+                              <ChevronDown className="h-4 w-4 shrink-0" />
+                            </button>
+                            {matriculaDropdownId === veiculo.id && (
+                              <div className="absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                                {Object.keys(formatosMatricula).map((pais) => (
+                                  <button
+                                    key={pais}
+                                    type="button"
+                                    onClick={() => selecionarPaisMatricula(veiculo.id, pais)}
+                                    className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm border-b last:border-b-0"
+                                  >
+                                    {pais}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          {veiculo.paisMatricula && (
+                            <input
+                              type="text"
+                              className="w-full mt-2 px-3 py-2 bg-white border border-gray-300 rounded-lg"
+                              value={veiculo.matricula || ""}
+                              onChange={(e) => atualizarVeiculo(veiculo.id, "matricula", e.target.value)}
+                              onBlur={(e) =>
+                                atualizarVeiculo(
+                                  veiculo.id,
+                                  "matricula",
+                                  formatarMatriculaValor(e.target.value, veiculo.paisMatricula),
+                                )
+                              }
+                              placeholder={formatosMatricula[veiculo.paisMatricula]?.placeholder || ""}
+                            />
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-800 mb-2">Ano</label>
+                          <input
+                            type="number"
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg"
+                            value={veiculo.ano || ""}
+                            onChange={(e) => atualizarVeiculo(veiculo.id, "ano", e.target.value)}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-800 mb-2">Motor</label>
+                          <input
+                            type="text"
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg"
+                            value={veiculo.motor || ""}
+                            onChange={(e) => atualizarVeiculo(veiculo.id, "motor", e.target.value)}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-800 mb-2">Chassis</label>
+                          <input
+                            type="text"
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg"
+                            value={veiculo.chassis || ""}
+                            onChange={(e) => atualizarVeiculo(veiculo.id, "chassis", e.target.value)}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-800 mb-2">Lotação</label>
+                          <input
+                            type="number"
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg"
+                            value={veiculo.lotacao || ""}
+                            onChange={(e) => atualizarVeiculo(veiculo.id, "lotacao", e.target.value)}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-800 mb-2">
+                            Capital Seguro (MT)
+                            {exigeCapitalSeguro(veiculo.tipoCobertura) ? " *" : " (opcional)"}
+                          </label>
+                          <input
+                            type="number"
+                            required={exigeCapitalSeguro(veiculo.tipoCobertura)}
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg"
+                            value={veiculo.capitalSeguro || ""}
+                            onChange={(e) => atualizarVeiculo(veiculo.id, "capitalSeguro", e.target.value)}
+                            placeholder={
+                              exigeCapitalSeguro(veiculo.tipoCobertura)
+                                ? "Valor em MT (obrigatório)"
+                                : "Não aplicável a este tipo de cobertura"
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-800 mb-2">Taxa Aplicada</label>
+                          <input
+                            type="text"
+                            readOnly
+                            className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg font-semibold"
+                            value={veiculo.taxaAplicada || "0%"}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-800 mb-2">Prémio Anual (MT)</label>
+                          <input
+                            type="text"
+                            readOnly
+                            className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg font-semibold"
+                            value={
+                              veiculo.premioAnnual
+                                ? `MT ${parseFloat(veiculo.premioAnnual).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })}`
+                                : "MT 0,00"
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-800 mb-2">Prémio Semestral (MT)</label>
+                          <input
+                            type="text"
+                            readOnly
+                            className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg"
+                            value={
+                              veiculo.premioSemestral
+                                ? `MT ${parseFloat(veiculo.premioSemestral).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })}`
+                                : "MT 0,00"
+                            }
+                          />
+                        </div>
+
+                        {deveMostrarTrimestral(veiculo.capitalSeguro, veiculo.tipoCobertura, veiculo.premioAnnual) && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-800 mb-2">Prémio Trimestral (MT)</label>
+                            <input
+                              type="text"
+                              readOnly
+                              className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg"
+                              value={
+                                veiculo.premioTrimestral
+                                  ? `MT ${parseFloat(veiculo.premioTrimestral).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })}`
+                                  : "MT 0,00"
+                              }
+                            />
+                          </div>
+                        )}
+
+                        {deveMostrarMensal(veiculo.capitalSeguro, formData.debitoDireto, veiculo.tipoCobertura, veiculo.premioAnnual) && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-800 mb-2">Prémio Mensal (MT)</label>
+                            <input
+                              type="text"
+                              readOnly
+                              className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg"
+                              value={
+                                veiculo.premioMensal
+                                  ? `MT ${parseFloat(veiculo.premioMensal).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })}`
+                                  : "MT 0,00"
+                              }
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {veiculo.tipoCobertura && veiculo.classificacao && (
                         <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                          <div className="text-sm text-blue-800 font-semibold mb-2">
-                            {configCoberturas[veiculo.tipoCobertura]?.nome}
+                          <div className="text-sm text-blue-800 font-semibold mb-1">
+                            {configCoberturas[veiculo.tipoCobertura]?.nome || veiculo.tipoCobertura}
                           </div>
                           <div className="text-xs text-gray-600">
-                            Taxa {veiculo.tipoViatura}:{" "}
-                            {(
-                              configCoberturas[veiculo.tipoCobertura]?.taxas[
-                                veiculo.tipoViatura
-                              ] * 100
-                            ).toFixed(1)}
-                            %
+                            Classificação: {veiculo.classificacao}
                           </div>
+                          {veiculo.taxaAplicada && (
+                            <div className="text-xs text-gray-600 mt-1">
+                              Taxa: {veiculo.taxaAplicada}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Débito Direto */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(formData.debitoDireto)}
+                    onChange={(e) => recalcularComDebitoDireto(e.target.checked)}
+                    className="h-5 w-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div>
+                    <span className="font-semibold text-gray-800">Débito Direto (+15% no prémio)</span>
+                    <p className="text-sm text-gray-600">
+                      Ativa o cálculo do prémio mensal para capitais superiores a MT 12.000
+                    </p>
+                  </div>
+                </label>
               </div>
 
               {/* Total */}

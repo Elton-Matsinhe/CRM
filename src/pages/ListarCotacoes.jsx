@@ -96,7 +96,8 @@ function ListarCotacoes() {
           status: cotacao.status,
           dataCriacao: cotacao.data_criacao,
           dataValidade: cotacao.data_validade,
-          agente_nome: cotacao.agente_nome || ''
+          agente_nome: cotacao.agente_nome || '',
+          agente_balcao: cotacao.agente_balcao || ''
         }));
         
         setCotacoes(cotacoesFormatadas);
@@ -858,7 +859,9 @@ function ListarCotacoes() {
         totalPremio: parseFloat(cotacaoCompleta.total_premio || cotacao.totalPremio || 0),
         dataCriacao: cotacaoCompleta.data_criacao || cotacaoCompleta.created_at || cotacao.dataCriacao || new Date().toISOString(),
         dataValidade: cotacaoCompleta.data_validade || cotacao.dataValidade,
-        status: cotacaoCompleta.status || cotacao.status
+        status: cotacaoCompleta.status || cotacao.status,
+        agente_nome: cotacaoCompleta.agente_nome || cotacao.agente_nome || '',
+        agente_balcao: cotacaoCompleta.agente_balcao || cotacao.agente_balcao || ''
       };
       
       // Usar o novo gerador de PDF personalizado (com logo e timbrado em base64)

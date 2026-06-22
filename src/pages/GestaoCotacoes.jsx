@@ -342,7 +342,9 @@ function GestaoCotacoes() {
           totalPremio: parseFloat(cotacaoCompleta.total_premio || 0),
           dataCriacao: cotacaoCompleta.data_criacao || cotacaoCompleta.created_at || new Date().toISOString(),
           dataValidade: cotacaoCompleta.data_validade,
-          status: cotacaoCompleta.status
+          status: cotacaoCompleta.status,
+          agente_nome: cotacaoCompleta.agente_nome || '',
+          agente_balcao: cotacaoCompleta.agente_balcao || ''
         };
         
         // Importar e usar o gerador de PDF
