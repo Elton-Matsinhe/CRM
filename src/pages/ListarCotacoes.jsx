@@ -19,6 +19,7 @@ import CotacoesLayout from "../components/CotacoesLayout";
 import { cotacaoService } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import VisualizacaoClienteDocumentos from "../components/VisualizacaoClienteDocumentos";
+import { cotacaoPodePartilhar, getStatusAprovacaoLabel, STATUS_APROVACAO_CORES } from "../utils/statusAprovacao";
 
 function ListarCotacoes() {
   const { usuario } = useAuth();
@@ -94,6 +95,7 @@ function ListarCotacoes() {
           veiculos: cotacao.veiculos || [],
           totalPremio: parseFloat(cotacao.total_premio) || 0,
           status: cotacao.status,
+          status_aprovacao: cotacao.status_aprovacao || 'nao_requer',
           dataCriacao: cotacao.data_criacao,
           dataValidade: cotacao.data_validade,
           agente_nome: cotacao.agente_nome || '',
@@ -828,6 +830,10 @@ function ListarCotacoes() {
 
   // Função para buscar cotação completa e gerar PDF
   const buscarCotacaoCompletaEgerarPDF = async (cotacao, acao = 'download') => {
+    if (!cotacaoPodePartilhar(cotacao.status_aprovacao)) {
+      alert(`Não é possível gerar PDF: ${getStatusAprovacaoLabel(cotacao.status_aprovacao)}`);
+      return;
+    }
     try {
       setGerandoPDF(true);
       
@@ -899,6 +905,10 @@ function ListarCotacoes() {
   };
 
   const enviarEmail = async (cotacao) => {
+    if (!cotacaoPodePartilhar(cotacao.status_aprovacao)) {
+      alert(`Não é possível enviar email: ${getStatusAprovacaoLabel(cotacao.status_aprovacao)}`);
+      return;
+    }
     if (!cotacao.cliente?.email) {
       alert("❌ O cliente não tem email cadastrado.");
       return;
@@ -1138,15 +1148,28 @@ function ListarCotacoes() {
                         >
                           {getStatusText(cotacao.status)}
                         </span>
+                        {cotacao.status_aprovacao && cotacao.status_aprovacao !== 'nao_requer' && (
+                          <div className={`mt-1 inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_APROVACAO_CORES[cotacao.status_aprovacao] || ''}`}>
+                            {getStatusAprovacaoLabel(cotacao.status_aprovacao)}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 group-hover:pl-7 transition-all duration-300">
                         <div className="flex space-x-2">
-                          {/* Botão VISUALIZAR (abre PDF em nova aba) */}
+                          {/* Botão VISUALIZAR — apenas se aprovado ou sem necessidade */}
                           <button
-                            className="p-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-all duration-300 group/tooltip relative hover:scale-110"
-                            title="Visualizar Documento"
-                            onClick={() => visualizarCotacao(cotacao)}
-                            disabled={gerandoPDF}
+                            className={`p-2 rounded-lg transition-all duration-300 group/tooltip relative hover:scale-110 ${
+                              cotacaoPodePartilhar(cotacao.status_aprovacao)
+                                ? 'text-blue-600 hover:bg-blue-50 hover:text-blue-700'
+                                : 'text-gray-300 cursor-not-allowed'
+                            }`}
+                            title={
+                              cotacaoPodePartilhar(cotacao.status_aprovacao)
+                                ? 'Visualizar Documento'
+                                : getStatusAprovacaoLabel(cotacao.status_aprovacao)
+                            }
+                            onClick={() => cotacaoPodePartilhar(cotacao.status_aprovacao) && visualizarCotacao(cotacao)}
+                            disabled={gerandoPDF || !cotacaoPodePartilhar(cotacao.status_aprovacao)}
                           >
                             <Eye className="h-4 w-4" />
                             <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap">
@@ -1154,12 +1177,20 @@ function ListarCotacoes() {
                             </span>
                           </button>
                           
-                          {/* Botão BAIXAR (download direto) */}
+                          {/* Botão BAIXAR */}
                           <button
-                            className="p-2 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition-all duration-300 group/tooltip relative hover:scale-110"
-                            title="Baixar Documento"
-                            onClick={() => baixarCotacao(cotacao)}
-                            disabled={gerandoPDF}
+                            className={`p-2 rounded-lg transition-all duration-300 group/tooltip relative hover:scale-110 ${
+                              cotacaoPodePartilhar(cotacao.status_aprovacao)
+                                ? 'text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700'
+                                : 'text-gray-300 cursor-not-allowed'
+                            }`}
+                            title={
+                              cotacaoPodePartilhar(cotacao.status_aprovacao)
+                                ? 'Baixar Documento'
+                                : getStatusAprovacaoLabel(cotacao.status_aprovacao)
+                            }
+                            onClick={() => cotacaoPodePartilhar(cotacao.status_aprovacao) && baixarCotacao(cotacao)}
+                            disabled={gerandoPDF || !cotacaoPodePartilhar(cotacao.status_aprovacao)}
                           >
                             <Download className="h-4 w-4" />
                             <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap">
@@ -1169,10 +1200,18 @@ function ListarCotacoes() {
                           
                           {/* Botão IMPRIMIR */}
                           <button
-                            className="p-2 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700 rounded-lg transition-all duration-300 group/tooltip relative hover:scale-110"
-                            title="Imprimir"
-                            onClick={() => imprimirCotacao(cotacao)}
-                            disabled={gerandoPDF}
+                            className={`p-2 rounded-lg transition-all duration-300 group/tooltip relative hover:scale-110 ${
+                              cotacaoPodePartilhar(cotacao.status_aprovacao)
+                                ? 'text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700'
+                                : 'text-gray-300 cursor-not-allowed'
+                            }`}
+                            title={
+                              cotacaoPodePartilhar(cotacao.status_aprovacao)
+                                ? 'Imprimir'
+                                : getStatusAprovacaoLabel(cotacao.status_aprovacao)
+                            }
+                            onClick={() => cotacaoPodePartilhar(cotacao.status_aprovacao) && imprimirCotacao(cotacao)}
+                            disabled={gerandoPDF || !cotacaoPodePartilhar(cotacao.status_aprovacao)}
                           >
                             <Printer className="h-4 w-4" />
                             <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap">
@@ -1334,9 +1373,14 @@ function ListarCotacoes() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
+                  {!cotacaoPodePartilhar(cotacaoSelecionada.status_aprovacao) && (
+                    <div className="col-span-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                      {getStatusAprovacaoLabel(cotacaoSelecionada.status_aprovacao)} — PDF e e-mail indisponíveis até aprovação.
+                    </div>
+                  )}
                   <button
                     onClick={() => baixarCotacao(cotacaoSelecionada)}
-                    disabled={gerandoPDF}
+                    disabled={gerandoPDF || !cotacaoPodePartilhar(cotacaoSelecionada.status_aprovacao)}
                     className="p-4 rounded-lg border-2 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white transition-all duration-300 flex flex-col items-center justify-center gap-2 disabled:opacity-50 hover:scale-105"
                   >
                     {gerandoPDF ? (
@@ -1355,7 +1399,7 @@ function ListarCotacoes() {
                       setMostrarOpcoesPartilha(false);
                       visualizarCotacao(cotacaoSelecionada);
                     }}
-                    disabled={gerandoPDF}
+                    disabled={gerandoPDF || !cotacaoPodePartilhar(cotacaoSelecionada.status_aprovacao)}
                     className="p-4 rounded-lg border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all duration-300 flex flex-col items-center justify-center gap-2 disabled:opacity-50 hover:scale-105"
                   >
                     {gerandoPDF ? (
@@ -1371,7 +1415,7 @@ function ListarCotacoes() {
 
                   <button
                     onClick={() => enviarEmail(cotacaoSelecionada)}
-                    disabled={processandoEmail}
+                    disabled={processandoEmail || !cotacaoPodePartilhar(cotacaoSelecionada.status_aprovacao)}
                     className="p-4 rounded-lg border-2 border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white transition-all duration-300 flex flex-col items-center justify-center gap-2 disabled:opacity-50 hover:scale-105"
                   >
                     {processandoEmail ? (

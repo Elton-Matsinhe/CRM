@@ -83,6 +83,7 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
         const menuAtualizado = menuItems.map((item) => {
           if (item.id === 3) return { ...item, badge: String(total) };
           if (item.id === 5) return { ...item, badge: String(ativas) };
+          if (item.id === 9) return { ...item, badge: String(result.data.aprovacao_aguardando || 0) };
           return item;
         });
         setMenuItemsComBadges(menuAtualizado);
@@ -235,6 +236,7 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
       <nav className={`flex-1 overflow-y-auto mt-2 ${isCollapsed ? 'px-2' : 'px-3'} space-y-1 custom-scrollbar relative z-10 py-4`}>
         {menuItemsComBadges
           .filter((item) => !item.adminOnly || usuario?.role === 'admin')
+          .filter((item) => !item.approverOnly || usuario?.role === 'admin' || usuario?.role === 'subscritor')
           .map((item, index) => {
           const isActive = activeTab === item.path;
           const hasSubmenu = item.type === "submenu";

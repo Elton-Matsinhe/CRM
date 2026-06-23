@@ -365,6 +365,11 @@ export function getClassificacaoConfig(tipoCobertura, classificacao) {
   );
 }
 
+export function getTaxaPadrao(tipoCobertura, classificacao) {
+  const cfg = getClassificacaoConfig(tipoCobertura, classificacao);
+  return cfg ? Number(cfg.taxa) : 0;
+}
+
 export const TIPO_COBERTURA_TODOS_RISCOS = "Seguro Automóvel Todos os Riscos";
 
 export function exigeCapitalSeguro(tipoCobertura) {
@@ -440,6 +445,80 @@ export function calcularPremioVeiculo({
 
   const mostrarMensal = deveMostrarMensal(capital, debitoDiretoAtivo, tipo, premioFinal);
   let premioMensal = mostrarMensal ? (premioFinal / 12).toFixed(2) : "0.00";
+
+  if (debitoDiretoAtivo) {
+    premioFinal *= 1.15;
+    premioSemestral = (premioFinal / 2).toFixed(2);
+    if (mostrarTrimestral) premioTrimestral = (premioFinal / 4).toFixed(2);
+    if (mostrarMensal) premioMensal = (premioFinal / 12).toFixed(2);
+    taxaAplicada = capitalObrigatorio && taxa > 0
+      ? `${(taxa * 100).toFixed(2)}% + 15% (Débito Direto)`
+      : "Taxa Fixa + 15% (Débito Direto)";
+  }
+
+  return {
+    taxa: capitalObrigatorio ? taxa : 0,
+    premioAnnual: premioFinal.toFixed(2),
+    premioSemestral,
+    premioTrimestral,
+    premioMensal,
+    premioMinimo,
+    taxaAplicada,
+  };
+}
+
+/** Recalcular prémios com taxa personalizada (edição pelo agente) */
+export function calcularPremioComTaxaCustom({
+  capitalSeguro,
+  tipoCobertura,
+  classificacao,
+  taxaCustom,
+  debitoDiretoAtivo = false,
+}) {
+  const tipo = normalizarTipoCobertura(tipoCobertura);
+  const classificacaoConfig = getClassificacaoConfig(tipo, classificacao);
+  const capitalObrigatorio = exigeCapitalSeguro(tipo);
+  const capital = parseFloat(capitalSeguro) || 0;
+  const taxa = parseFloat(taxaCustom);
+
+  if (!classificacaoConfig || Number.isNaN(taxa)) {
+    return calcularPremioVeiculo({
+      capitalSeguro,
+      tipoCobertura,
+      classificacao,
+      debitoDiretoAtivo,
+    });
+  }
+
+  if (capitalObrigatorio && capital === 0) {
+    return {
+      taxa,
+      premioAnnual: "0.00",
+      premioSemestral: "0.00",
+      premioTrimestral: "0.00",
+      premioMensal: "0.00",
+      premioMinimo: classificacaoConfig.premioMinimo || 0,
+      taxaAplicada: `${(taxa * 100).toFixed(2)}%`,
+    };
+  }
+
+  const premioMinimo = classificacaoConfig.premioMinimo || 0;
+  let premioCalculado = capitalObrigatorio ? capital * taxa : premioMinimo;
+  let premioFinal = capitalObrigatorio
+    ? Math.max(premioCalculado, premioMinimo)
+    : premioCalculado;
+  let premioSemestral = (premioFinal / 2).toFixed(2);
+
+  const mostrarTrimestral = deveMostrarTrimestral(capital, tipo, premioFinal);
+  let premioTrimestral = mostrarTrimestral ? (premioFinal / 4).toFixed(2) : "0.00";
+
+  const mostrarMensal = deveMostrarMensal(capital, debitoDiretoAtivo, tipo, premioFinal);
+  let premioMensal = mostrarMensal ? (premioFinal / 12).toFixed(2) : "0.00";
+
+  let taxaAplicada =
+    capitalObrigatorio && taxa > 0
+      ? `${(taxa * 100).toFixed(2)}%`
+      : "Taxa Fixa";
 
   if (debitoDiretoAtivo) {
     premioFinal *= 1.15;
@@ -574,7 +653,16 @@ export function mapearVeiculoDoBackend(veiculo, opcoes = {}) {
 
   if (tipoCobertura && classificacao) {
     const precisaCapital = exigeCapitalSeguro(tipoCobertura);
-    if (!precisaCapital || (capitalSeguro !== "" && capitalSeguro != null)) {
+    const taxaArmazenada = veiculo.taxa != null && veiculo.taxa !== "";
+    const temPremioArmazenado = veiculo.premio_anual != null || veiculo.premioAnnual != null;
+
+    if (taxaArmazenada && temPremioArmazenado) {
+      const taxaNum = parseFloat(veiculo.taxa) || 0;
+      base.taxa = taxaNum;
+      base.taxaAplicada = taxaNum > 0
+        ? `${(taxaNum * 100).toFixed(2)}%`
+        : (base.taxaAplicada || "Taxa Fixa");
+    } else if (!precisaCapital || (capitalSeguro !== "" && capitalSeguro != null)) {
       const calc = calcularPremioVeiculo({
         capitalSeguro: precisaCapital ? capitalSeguro : "",
         tipoCobertura,

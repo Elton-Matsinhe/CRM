@@ -15,7 +15,8 @@ import {
   Scale,
   FileCheck,
   DollarSign,
-  Briefcase
+  Briefcase,
+  Percent,
 } from "lucide-react";
 
 export const menuItems = [
@@ -79,6 +80,16 @@ export const menuItems = [
     type: "single",
     color: "from-orange-500 to-red-500",
     badge: "42"
+  },
+  {
+    id: 9,
+    label: "Aprovação de Taxas",
+    icon: Percent,
+    path: "/crm/aprovacao-taxas",
+    type: "single",
+    color: "from-amber-500 to-yellow-500",
+    approverOnly: true,
+    badge: "0",
   },
   {
     id: 7,

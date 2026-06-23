@@ -20,6 +20,7 @@ import {
   MapPin,
   Building,
   Loader2,
+  Percent,
 } from "lucide-react";
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import CriarCotacao from "./pages/CriarCotacao";
@@ -27,6 +28,7 @@ import EditarCotacao from "./pages/EditarCotacao";
 import ListarCotacoes from "./pages/ListarCotacoes";
 import GestaoCotacoes from "./pages/GestaoCotacoes";
 import Acompanhamento from "./pages/Acompanhamento";
+import AprovacaoTaxas from "./pages/AprovacaoTaxas";
 import Relatorios from "./pages/Relatorios";
 import GestaoUsuarios from "./pages/GestaoUsuarios";
 import DepartamentoPlaceholder from "./pages/DepartamentoPlaceholder";
@@ -90,6 +92,9 @@ function App() {
     pendingApproval: 0,
     policiesIssued: 0,
     expiredQuotes: 0,
+    aprovacaoAguardando: 0,
+    aprovacaoAprovadas: 0,
+    aprovacaoRejeitadas: 0,
     activeAgents: 0,
     conversionRate: "0%",
     monthlyRevenue: "0",
@@ -151,6 +156,9 @@ function App() {
           pendingApproval: s.ativas || 0,
           policiesIssued: s.aprovadas || 0,
           expiredQuotes: s.expiradas || 0,
+          aprovacaoAguardando: s.aprovacao_aguardando || 0,
+          aprovacaoAprovadas: s.aprovacao_aprovadas || 0,
+          aprovacaoRejeitadas: s.aprovacao_rejeitadas || 0,
           activeAgents: s.agentes_ativos || 0,
           conversionRate: `${s.taxa_conversao || 0}%`,
           monthlyRevenue: s.receita_total >= 1000000
@@ -261,6 +269,30 @@ function App() {
     }
   ];
 
+  const approvalMetricCards = [
+    {
+      title: "Aguardando Aprovação",
+      value: crmData.aprovacaoAguardando,
+      icon: Clock,
+      color: "amber",
+      description: "Taxas alteradas",
+    },
+    {
+      title: "Taxas Aprovadas",
+      value: crmData.aprovacaoAprovadas,
+      icon: CheckCircle,
+      color: "green",
+      description: "Prontas para partilha",
+    },
+    {
+      title: "Taxas Rejeitadas",
+      value: crmData.aprovacaoRejeitadas,
+      icon: XCircle,
+      color: "red",
+      description: "Requerem correção",
+    },
+  ];
+
   // Dashboard como componente interno
   const DashboardPage = () => {
     if (loadingDashboard) {
@@ -286,6 +318,19 @@ function App() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {metricCards.map((card, index) => (
           <MetricCard key={index} card={card} index={index} />
+        ))}
+      </div>
+
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+          <Percent className="h-5 w-5 text-amber-600" />
+          Aprovação de Taxas
+        </h2>
+        <p className="text-sm text-gray-500">Fluxo independente do status operacional da cotação</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {approvalMetricCards.map((card, index) => (
+          <MetricCard key={`aprov-${index}`} card={card} index={index} />
         ))}
       </div>
 
@@ -481,6 +526,11 @@ function App() {
                 <Route path="/crm/acompanhamento" element={
                   <ProtectedRoute>
                     <Acompanhamento />
+                  </ProtectedRoute>
+                } />
+                <Route path="/crm/aprovacao-taxas" element={
+                  <ProtectedRoute>
+                    <AprovacaoTaxas />
                   </ProtectedRoute>
                 } />
                 <Route path="/crm/relatorios" element={

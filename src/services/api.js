@@ -241,6 +241,7 @@ export const cotacaoService = {
       if (filters.page) params.append('page', filters.page);
       if (filters.limit) params.append('limit', filters.limit);
       if (filters.status) params.append('status', filters.status);
+      if (filters.status_aprovacao) params.append('status_aprovacao', filters.status_aprovacao);
       if (filters.search) params.append('search', filters.search);
       const url = `/cotacoes?${params.toString()}`;
       const response = await api.get(url);
@@ -337,6 +338,58 @@ export const cotacaoService = {
       return {
         success: false,
         message: error.response?.data?.message || "Erro ao finalizar cotação"
+      };
+    }
+  },
+  listarPendentesAprovacao: async (filters = {}) => {
+    try {
+      const params = new URLSearchParams();
+      if (filters.page) params.append('page', filters.page);
+      if (filters.limit) params.append('limit', filters.limit);
+      if (filters.status_aprovacao) params.append('status_aprovacao', filters.status_aprovacao);
+      const response = await api.get(`/cotacoes/aprovacao/pendentes?${params.toString()}`);
+      return {
+        success: true,
+        data: response.data.data || [],
+        pagination: response.data.pagination
+      };
+    } catch (error) {
+      console.error('Erro ao listar aprovações:', error);
+      return {
+        success: false,
+        data: [],
+        message: error.response?.data?.message || 'Erro ao listar aprovações'
+      };
+    }
+  },
+  historicoAprovacao: async (id) => {
+    try {
+      const response = await api.get(`/cotacoes/${id}/aprovacao/historico`);
+      return { success: true, data: response.data.data || [] };
+    } catch (error) {
+      console.error('Erro ao buscar histórico de aprovação:', error);
+      return { success: false, data: [], message: error.response?.data?.message };
+    }
+  },
+  aprovarTaxa: async (id, comentario = '') => {
+    try {
+      const response = await api.post(`/cotacoes/${id}/aprovacao/aprovar`, { comentario });
+      return { success: true, data: response.data.data, message: response.data.message };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Erro ao aprovar taxa'
+      };
+    }
+  },
+  rejeitarTaxa: async (id, motivo) => {
+    try {
+      const response = await api.post(`/cotacoes/${id}/aprovacao/rejeitar`, { motivo });
+      return { success: true, data: response.data.data, message: response.data.message };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Erro ao rejeitar taxa'
       };
     }
   }

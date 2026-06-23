@@ -34,9 +34,11 @@ import { cotacaoService, arquivoService } from "../services/api";
 import {
   exigeCapitalSeguro,
   calcularPremioVeiculo,
+  calcularPremioComTaxaCustom,
   deveMostrarTrimestral,
   deveMostrarMensal,
 } from "../utils/cotacaoCoberturas";
+import { cotacaoPodePartilhar, getStatusAprovacaoLabel } from "../utils/statusAprovacao";
 
 function CriarCliente() {
   const [tipoCliente, setTipoCliente] = useState("Particular");
@@ -47,6 +49,7 @@ function CriarCliente() {
   const [enviandoEmail, setEnviandoEmail] = useState(false);
   const [salvandoCotacao, setSalvandoCotacao] = useState(false);
   const [debitoDiretoAtivo, setDebitoDiretoAtivo] = useState(false);
+  const [taxaManualAtiva, setTaxaManualAtiva] = useState(false);
   const [showMatriculaOptions, setShowMatriculaOptions] = useState(false);
   const [paisMatricula, setPaisMatricula] = useState("");
   const [formatoMatricula, setFormatoMatricula] = useState("");
@@ -551,9 +554,9 @@ function CriarCliente() {
     );
   };
 
-  // Atualizar cálculo do prêmio quando houver mudanças
+  // Atualizar cálculo do prêmio quando houver mudanças (taxa padrão)
   useEffect(() => {
-    if (!tipoCobertura || !classificacao) return;
+    if (!tipoCobertura || !classificacao || taxaManualAtiva) return;
 
     const precisaCapital = exigeCapitalSeguro(tipoCobertura);
     if (precisaCapital && !veiculoAtual.capitalSeguro) return;
@@ -575,11 +578,32 @@ function CriarCliente() {
       premioMinimo: resultado.premioMinimo,
       taxaAplicada: resultado.taxaAplicada,
     }));
-  }, [veiculoAtual.capitalSeguro, tipoCobertura, classificacao, debitoDiretoAtivo]);
+  }, [veiculoAtual.capitalSeguro, tipoCobertura, classificacao, debitoDiretoAtivo, taxaManualAtiva]);
+
+  const handleTaxaPercentualChange = (valorPercentual) => {
+    if (!tipoCobertura || !classificacao) return;
+    const taxaDecimal = parseFloat(valorPercentual);
+    if (Number.isNaN(taxaDecimal) || taxaDecimal < 0) return;
+
+    setTaxaManualAtiva(true);
+    const resultado = calcularPremioComTaxaCustom({
+      capitalSeguro: veiculoAtual.capitalSeguro,
+      tipoCobertura,
+      classificacao,
+      taxaCustom: taxaDecimal / 100,
+      debitoDiretoAtivo,
+    });
+
+    setVeiculoAtual((prev) => ({
+      ...prev,
+      ...resultado,
+    }));
+  };
 
   // Resetar classificação quando mudar o tipo de cobertura
   useEffect(() => {
     setClassificacao("");
+    setTaxaManualAtiva(false);
     setVeiculoAtual(prev => ({
       ...prev,
       capitalSeguro: exigeCapitalSeguro(tipoCobertura) ? prev.capitalSeguro : "",
@@ -720,7 +744,7 @@ function CriarCliente() {
           capital_seguro: exigeCapitalSeguro(tipoCobertura)
             ? parseFloat(v.capitalSeguro) || 0
             : null,
-          taxa: parseFloat(v.taxaAplicada?.replace('%', '')) || 0,
+          taxa: parseFloat(v.taxa) || 0,
           premio_anual: parseFloat(v.premioAnnual) || 0,
           premio_semestral: parseFloat(v.premioSemestral) || 0,
           premio_trimestral: parseFloat(v.premioTrimestral) || 0,
@@ -773,6 +797,7 @@ function CriarCliente() {
           })),
           totalPremio: calcularTotalPremio(),
           status: "ativa",
+          status_aprovacao: result.data.status_aprovacao || 'nao_requer',
           dataInicio: new Date().toISOString(),
           dataFim: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
           debitoDireto: debitoDiretoAtivo,
@@ -781,14 +806,15 @@ function CriarCliente() {
         };
 
         setCotacaoGerada(novaCotacao);
-        setMostrarOpcoesPartilha(true);
-        
-        // Disparar evento customizado para atualizar listas em outras páginas
-        window.dispatchEvent(new CustomEvent('cotacaoCriada', {
-          detail: { cotacao: novaCotacao }
-        }));
-        
-        alert("✅ Cotação criada com sucesso! ID: " + novaCotacao.id);
+
+        if (cotacaoPodePartilhar(novaCotacao.status_aprovacao)) {
+          setMostrarOpcoesPartilha(true);
+          alert("✅ Cotação criada com sucesso! ID: " + novaCotacao.id);
+        } else {
+          alert(
+            `✅ Cotação criada (ID: ${novaCotacao.id}). ${getStatusAprovacaoLabel(novaCotacao.status_aprovacao)} — PDF e e-mail disponíveis após aprovação.`
+          );
+        }
       } else {
         alert("❌ Erro ao criar cotação: " + (result.message || "Erro desconhecido"));
       }
@@ -803,6 +829,11 @@ function CriarCliente() {
   // Função para enviar cotação por email (via backend, igual à Lista de Cotações)
   const enviarEmail = async () => {
     if (!cotacaoGerada) return;
+
+    if (!cotacaoPodePartilhar(cotacaoGerada.status_aprovacao)) {
+      alert(`Não é possível enviar email: ${getStatusAprovacaoLabel(cotacaoGerada.status_aprovacao)}`);
+      return;
+    }
 
     if (!cotacaoGerada.cliente.email) {
       alert("❌ É necessário ter um email do cliente para enviar a cotação.");
@@ -1837,17 +1868,38 @@ function CriarCliente() {
                   {classificacao && (
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-800">
-                        Taxa Aplicada
+                        Taxa Aplicada {exigeCapitalSeguro(tipoCobertura) ? "(%)" : ""}
                       </label>
                       <div className="relative group">
                         <Calculator className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-600 h-4 w-4" />
-                        <input
-                          type="text"
-                          readOnly
-                          className="w-full pl-10 pr-4 py-3 rounded-lg text-gray-800 font-semibold bg-gray-100 border border-gray-300"
-                          value={veiculoAtual.taxaAplicada || ""}
-                        />
+                        {exigeCapitalSeguro(tipoCobertura) ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            className="w-full pl-10 pr-4 py-3 rounded-lg text-gray-800 font-semibold bg-white border border-gray-300 focus:ring-2 focus:ring-emerald-500"
+                            value={
+                              veiculoAtual.taxa !== "" && veiculoAtual.taxa != null
+                                ? (parseFloat(veiculoAtual.taxa) * 100).toFixed(2)
+                                : ""
+                            }
+                            onChange={(e) => handleTaxaPercentualChange(e.target.value)}
+                            placeholder="Ex: 4.00"
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            readOnly
+                            className="w-full pl-10 pr-4 py-3 rounded-lg text-gray-800 font-semibold bg-gray-100 border border-gray-300"
+                            value={veiculoAtual.taxaAplicada || "Taxa Fixa"}
+                          />
+                        )}
                       </div>
+                      {exigeCapitalSeguro(tipoCobertura) && taxaManualAtiva && (
+                        <p className="text-xs text-amber-700">
+                          Taxa alterada — a cotação poderá requerer aprovação antes de enviar o PDF.
+                        </p>
+                      )}
                     </div>
                   )}
 

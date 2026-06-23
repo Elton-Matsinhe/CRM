@@ -32,7 +32,9 @@ import {
   paises,
   formatosMatricula,
   getClassificacoesDisponiveis,
+  getClassificacaoConfig,
   calcularPremioVeiculo,
+  calcularPremioComTaxaCustom,
   formatarMatriculaValor,
   exigeCapitalSeguro,
   normalizarClassificacao,
@@ -42,6 +44,7 @@ import {
   deveMostrarTrimestral,
   deveMostrarMensal,
 } from "../utils/cotacaoCoberturas";
+import { cotacaoPodePartilhar, getStatusAprovacaoLabel } from "../utils/statusAprovacao";
 
 function EditarCotacao() {
   const [cotacaoId, setCotacaoId] = useState("");
@@ -106,6 +109,8 @@ function EditarCotacao() {
     veiculos,
     totalPremio: parseFloat(cotacao.total_premio) || 0,
     status: cotacao.status || 'pendente',
+    status_aprovacao: cotacao.status_aprovacao || 'nao_requer',
+    historico_aprovacao: cotacao.historico_aprovacao || [],
     dataCriacao: cotacao.data_criacao || cotacao.created_at,
     dataValidade: cotacao.data_validade,
     observacoes: cotacao.proxima_acao || '',
@@ -115,6 +120,15 @@ function EditarCotacao() {
   };
   };
 
+  const veiculoTemTaxaManual = (veiculo) => {
+    if (veiculo.taxaManual) return true;
+    if (!veiculo.tipoCobertura || !veiculo.classificacao) return false;
+    const cfg = getClassificacaoConfig(veiculo.tipoCobertura, veiculo.classificacao);
+    if (!cfg) return false;
+    const taxaAplicada = parseFloat(veiculo.taxa) || 0;
+    return Math.abs(taxaAplicada - cfg.taxa) > 0.00001;
+  };
+
   const recalcularVeiculos = (veiculos, debitoDireto = false) => {
     const atualizados = veiculos.map((veiculo) => {
       if (!veiculo.tipoCobertura || !veiculo.classificacao) return veiculo;
@@ -122,13 +136,22 @@ function EditarCotacao() {
       const precisaCapital = exigeCapitalSeguro(veiculo.tipoCobertura);
       if (precisaCapital && !veiculo.capitalSeguro) return veiculo;
 
-      const calc = calcularPremioVeiculo({
-        capitalSeguro: precisaCapital ? veiculo.capitalSeguro : "",
-        tipoCobertura: veiculo.tipoCobertura,
-        classificacao: veiculo.classificacao,
-        debitoDiretoAtivo: debitoDireto,
-      });
-      return { ...veiculo, ...calc };
+      const manual = veiculoTemTaxaManual(veiculo);
+      const calc = manual
+        ? calcularPremioComTaxaCustom({
+            capitalSeguro: precisaCapital ? veiculo.capitalSeguro : "",
+            tipoCobertura: veiculo.tipoCobertura,
+            classificacao: veiculo.classificacao,
+            taxaCustom: parseFloat(veiculo.taxa) || 0,
+            debitoDiretoAtivo: debitoDireto,
+          })
+        : calcularPremioVeiculo({
+            capitalSeguro: precisaCapital ? veiculo.capitalSeguro : "",
+            tipoCobertura: veiculo.tipoCobertura,
+            classificacao: veiculo.classificacao,
+            debitoDiretoAtivo: debitoDireto,
+          });
+      return { ...veiculo, ...calc, taxaManual: manual };
     });
     const totalPremio = atualizados.reduce(
       (total, v) => total + (parseFloat(v.premioAnnual) || 0),
@@ -302,8 +325,20 @@ function EditarCotacao() {
       const result = await cotacaoService.editar(formData.id, payload);
 
       if (result.success) {
-        alert('✅ Cotação atualizada com sucesso!');
-        setMostrarOpcoesPartilha(true);
+        const statusAprovacao = result.data?.status_aprovacao || formData.status_aprovacao;
+        setFormData((prev) => ({
+          ...prev,
+          status_aprovacao: statusAprovacao,
+        }));
+
+        if (cotacaoPodePartilhar(statusAprovacao)) {
+          alert('✅ Cotação atualizada com sucesso!');
+          setMostrarOpcoesPartilha(true);
+        } else {
+          alert(
+            `✅ Cotação atualizada. ${getStatusAprovacaoLabel(statusAprovacao)} — PDF e e-mail disponíveis após aprovação.`
+          );
+        }
         carregarListaCotacoes();
         window.dispatchEvent(new CustomEvent('cotacaoCriada'));
       } else {
@@ -347,12 +382,30 @@ function EditarCotacao() {
             capitalSeguro: exigeCapitalSeguro(valor) ? updated.capitalSeguro : "",
             taxa: "",
             taxaAplicada: "",
+            taxaManual: false,
             premioAnnual: "",
             premioSemestral: "",
             premioTrimestral: "",
             premioMensal: "",
             premioMinimo: "",
           };
+        }
+
+        if (campo === "taxaPercentual") {
+          const taxaDecimal = parseFloat(valor) / 100;
+          if (!Number.isNaN(taxaDecimal) && taxaDecimal >= 0) {
+            updated.taxaManual = true;
+            const calc = calcularPremioComTaxaCustom({
+              capitalSeguro: exigeCapitalSeguro(updated.tipoCobertura)
+                ? updated.capitalSeguro
+                : "",
+              tipoCobertura: updated.tipoCobertura,
+              classificacao: updated.classificacao,
+              taxaCustom: taxaDecimal,
+              debitoDiretoAtivo: prev.debitoDireto,
+            });
+            updated = { ...updated, ...calc };
+          }
         }
 
         if (campo === "marca" || campo === "modelo") {
@@ -404,17 +457,31 @@ function EditarCotacao() {
     };
   };
 
+  const podePartilhar = formData ? cotacaoPodePartilhar(formData.status_aprovacao) : true;
+
   const gerarPDF = () => {
+    if (!podePartilhar) {
+      alert(`Não é possível gerar PDF: ${getStatusAprovacaoLabel(formData.status_aprovacao)}`);
+      return;
+    }
     const cotacao = cotacaoParaPDF();
     if (cotacao) gerarPDFPersonalizado(cotacao, "download");
   };
 
   const visualizarPDF = () => {
+    if (!podePartilhar) {
+      alert(`Não é possível visualizar PDF: ${getStatusAprovacaoLabel(formData.status_aprovacao)}`);
+      return;
+    }
     const cotacao = cotacaoParaPDF();
     if (cotacao) gerarPDFPersonalizado(cotacao, "visualizar");
   };
 
   const imprimirCotacao = () => {
+    if (!podePartilhar) {
+      alert(`Não é possível imprimir: ${getStatusAprovacaoLabel(formData.status_aprovacao)}`);
+      return;
+    }
     const cotacao = cotacaoParaPDF();
     if (cotacao) gerarPDFPersonalizado(cotacao, "imprimir");
   };
@@ -422,6 +489,11 @@ function EditarCotacao() {
   // Função para enviar email
   const enviarEmail = async () => {
     if (!formData) return;
+
+    if (!podePartilhar) {
+      alert(`Não é possível enviar email: ${getStatusAprovacaoLabel(formData.status_aprovacao)}`);
+      return;
+    }
 
     if (!formData.cliente?.email) {
       alert("❌ O cliente não tem email cadastrado.");
@@ -1008,13 +1080,35 @@ function EditarCotacao() {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-800 mb-2">Taxa Aplicada</label>
-                          <input
-                            type="text"
-                            readOnly
-                            className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg font-semibold"
-                            value={veiculo.taxaAplicada || "0%"}
-                          />
+                          <label className="block text-sm font-medium text-gray-800 mb-2">
+                            Taxa Aplicada {exigeCapitalSeguro(veiculo.tipoCobertura) ? "(%)" : ""}
+                          </label>
+                          {exigeCapitalSeguro(veiculo.tipoCobertura) ? (
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg font-semibold"
+                              value={
+                                veiculo.taxa !== "" && veiculo.taxa != null
+                                  ? (parseFloat(veiculo.taxa) * 100).toFixed(2)
+                                  : ""
+                              }
+                              onChange={(e) =>
+                                atualizarVeiculo(veiculo.id, "taxaPercentual", e.target.value)
+                              }
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              readOnly
+                              className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg font-semibold"
+                              value={veiculo.taxaAplicada || "Taxa Fixa"}
+                            />
+                          )}
+                          {veiculo.taxaManual && (
+                            <p className="text-xs text-amber-700 mt-1">Taxa alterada — pode requerer aprovação.</p>
+                          )}
                         </div>
 
                         <div>
