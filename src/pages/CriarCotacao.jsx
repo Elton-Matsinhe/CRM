@@ -35,6 +35,7 @@ import {
   exigeCapitalSeguro,
   calcularPremioVeiculo,
   calcularPremioComTaxaCustom,
+  deveMostrarSemestral,
   deveMostrarTrimestral,
   deveMostrarMensal,
 } from "../utils/cotacaoCoberturas";
@@ -668,10 +669,15 @@ function CriarCliente() {
     );
   };
 
-  // Função para verificar se deve mostrar opção trimestral e mensal no total
+  const todosVeiculosTodosRiscos = () =>
+    veiculos.length > 0 &&
+    veiculos.every((v) => deveMostrarSemestral(v.tipoCobertura));
+
   const deveMostrarCamposEspeciaisNoTotal = () => {
-    const total = calcularTotalPremio();
-    return total > 15000;
+    if (!todosVeiculosTodosRiscos()) return false;
+    return veiculos.some((v) =>
+      deveMostrarTrimestral(v.capitalSeguro, v.tipoCobertura, v.premioAnnual),
+    );
   };
 
   // Formatar moeda
@@ -1905,9 +1911,35 @@ function CriarCliente() {
 
                   {/* Quarta linha - Informações de cálculo */}
                   <div className="space-y-2 lg:col-span-3">
-                    <div className={`grid ${deveMostrarTrimestral(veiculoAtual.capitalSeguro, tipoCobertura, veiculoAtual.premioAnnual) ? 
-                      (deveMostrarMensal(veiculoAtual.capitalSeguro, debitoDiretoAtivo, tipoCobertura, veiculoAtual.premioAnnual) ? 'grid-cols-1 md:grid-cols-5' : 'grid-cols-1 md:grid-cols-4') 
-                      : 'grid-cols-1 md:grid-cols-3'} gap-4`}>
+                    {(() => {
+                      const mostrarSemestral = deveMostrarSemestral(tipoCobertura);
+                      const mostrarTrim = deveMostrarTrimestral(
+                        veiculoAtual.capitalSeguro,
+                        tipoCobertura,
+                        veiculoAtual.premioAnnual,
+                      );
+                      const mostrarMes = deveMostrarMensal(
+                        veiculoAtual.capitalSeguro,
+                        debitoDiretoAtivo,
+                        tipoCobertura,
+                        veiculoAtual.premioAnnual,
+                      );
+                      const colunasPremio =
+                        2 +
+                        (mostrarSemestral ? 1 : 0) +
+                        (mostrarTrim ? 1 : 0) +
+                        (mostrarMes ? 1 : 0);
+                      const gridColsClass =
+                        colunasPremio >= 5
+                          ? "grid-cols-1 md:grid-cols-5"
+                          : colunasPremio === 4
+                            ? "grid-cols-1 md:grid-cols-4"
+                            : colunasPremio === 3
+                              ? "grid-cols-1 md:grid-cols-3"
+                              : "grid-cols-1 md:grid-cols-2";
+
+                      return (
+                    <div className={`grid ${gridColsClass} gap-4`}>
                       <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-800">
                           Prémio Annual (MT)
@@ -1927,6 +1959,7 @@ function CriarCliente() {
                         </div>
                       </div>
 
+                      {mostrarSemestral && (
                       <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-800">
                           Prémio Semestral (MT)
@@ -1945,8 +1978,9 @@ function CriarCliente() {
                           />
                         </div>
                       </div>
+                      )}
 
-                      {deveMostrarTrimestral(veiculoAtual.capitalSeguro, tipoCobertura, veiculoAtual.premioAnnual) && (
+                      {mostrarTrim && (
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-gray-800">
                             Prémio Trimestral (MT)
@@ -1967,7 +2001,7 @@ function CriarCliente() {
                         </div>
                       )}
 
-                      {deveMostrarMensal(veiculoAtual.capitalSeguro, debitoDiretoAtivo, tipoCobertura, veiculoAtual.premioAnnual) && (
+                      {mostrarMes && (
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-gray-800">
                             Prémio Mensal (MT)
@@ -2007,9 +2041,13 @@ function CriarCliente() {
                         </div>
                       </div>
                     </div>
+                      );
+                    })()}
 
                     {/* Mensagens informativas sobre os campos */}
                     <div className="mt-2 space-y-1">
+                      {deveMostrarSemestral(tipoCobertura) && (
+                        <>
                       {deveMostrarTrimestral(veiculoAtual.capitalSeguro, tipoCobertura, veiculoAtual.premioAnnual) ? (
                         <div className="text-sm text-green-600 bg-green-50 p-2 rounded">
                           ✓ Campo <strong>Prémio Trimestral</strong> visível porque o Capital Seguro é superior a 12.000 MT
@@ -2029,6 +2067,8 @@ function CriarCliente() {
                           ℹ️ Campo <strong>Prémio Mensal</strong> oculto porque o Capital Seguro é inferior ou igual a 12.000 MT (Débito Direto ativo)
                         </div>
                       ) : null}
+                        </>
+                      )}
                     </div>
 
                     {/* Opção de Débito Direto */}
@@ -2057,8 +2097,8 @@ function CriarCliente() {
                           </p>
                           <p className="text-gray-700 text-xs mt-1">
                             Os cálculos foram atualizados com a nova taxa
-                            {deveMostrarTrimestral(veiculoAtual.capitalSeguro, tipoCobertura, veiculoAtual.premioAnnual) && " (incluindo Prémio Trimestral)"}
-                            {deveMostrarMensal(veiculoAtual.capitalSeguro, debitoDiretoAtivo, tipoCobertura, veiculoAtual.premioAnnual) && " e Prémio Mensal"}
+                            {deveMostrarSemestral(tipoCobertura) && deveMostrarTrimestral(veiculoAtual.capitalSeguro, tipoCobertura, veiculoAtual.premioAnnual) && " (incluindo Prémio Trimestral)"}
+                            {deveMostrarSemestral(tipoCobertura) && deveMostrarMensal(veiculoAtual.capitalSeguro, debitoDiretoAtivo, tipoCobertura, veiculoAtual.premioAnnual) && " e Prémio Mensal"}
                           </p>
                         </div>
                       )}
@@ -2095,6 +2135,7 @@ function CriarCliente() {
                   <div className="space-y-3">
                     {veiculos.map((veiculo) => {
                       const premioAnnualNum = parseFloat(veiculo.premioAnnual) || 0;
+                      const mostrarSemestral = deveMostrarSemestral(veiculo.tipoCobertura);
                       const mostrarTrimestral = deveMostrarTrimestral(
                         veiculo.capitalSeguro,
                         veiculo.tipoCobertura,
@@ -2123,20 +2164,40 @@ function CriarCliente() {
                               Matrícula: {veiculo.matriculaCompleta || veiculo.matricula}
                             </div>
                             <div className="text-sm text-gray-700">
+                              {exigeCapitalSeguro(veiculo.tipoCobertura) && (
+                                <>
                               Capital: MT{" "}
                               {parseFloat(veiculo.capitalSeguro).toLocaleString(
                                 "pt-MZ"
                               )}{" "}
                               • Taxa: {veiculo.taxaAplicada} •
+                                </>
+                              )}
+                              {!exigeCapitalSeguro(veiculo.tipoCobertura) && (
+                                <>Taxa: {veiculo.taxaAplicada} • </>
+                              )}
                               Prémio Anual: MT{" "}
                               {parseFloat(veiculo.premioAnnual).toLocaleString(
                                 "pt-MZ",
                                 { minimumFractionDigits: 2 }
-                              )} •
-                              Prémio Semestral: MT{" "}
+                              )}
+                              {mostrarSemestral && (
+                                <>
+                              {" "}• Prémio Semestral: MT{" "}
                               {parseFloat(veiculo.premioSemestral).toLocaleString(
                                 "pt-MZ",
                                 { minimumFractionDigits: 2 }
+                              )}
+                                </>
+                              )}
+                              {!mostrarSemestral && veiculo.premioMinimo && (
+                                <>
+                              {" "}• Prémio Mínimo: MT{" "}
+                              {parseFloat(veiculo.premioMinimo).toLocaleString(
+                                "pt-MZ",
+                                { minimumFractionDigits: 2 }
+                              )}
+                                </>
                               )}
                               {mostrarTrimestral && (
                                 <span> • Prémio Trimestral: MT{" "}
@@ -2172,6 +2233,7 @@ function CriarCliente() {
                       Total do Prémio Anual:{" "}
                       {formatarMoeda(calcularTotalPremio())}
                     </div>
+                    {todosVeiculosTodosRiscos() && (
                     <div className="text-sm text-gray-700 mt-1">
                       Semestral: {formatarMoeda(calcularTotalPremio() / 2)}
                       {deveMostrarCamposEspeciaisNoTotal() && (
@@ -2183,6 +2245,7 @@ function CriarCliente() {
                         </>
                       )}
                     </div>
+                    )}
                     <div className="text-sm text-gray-600 mt-1">
                       {veiculos.length} veículo(s) adicionado(s)
                     </div>

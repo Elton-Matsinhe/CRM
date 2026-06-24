@@ -41,6 +41,7 @@ import {
   normalizarTipoCobertura,
   criarVeiculoVazio,
   mapearVeiculoDoBackend,
+  deveMostrarSemestral,
   deveMostrarTrimestral,
   deveMostrarMensal,
 } from "../utils/cotacaoCoberturas";
@@ -1125,6 +1126,7 @@ function EditarCotacao() {
                           />
                         </div>
 
+                        {deveMostrarSemestral(veiculo.tipoCobertura) && (
                         <div>
                           <label className="block text-sm font-medium text-gray-800 mb-2">Prémio Semestral (MT)</label>
                           <input
@@ -1138,6 +1140,7 @@ function EditarCotacao() {
                             }
                           />
                         </div>
+                        )}
 
                         {deveMostrarTrimestral(veiculo.capitalSeguro, veiculo.tipoCobertura, veiculo.premioAnnual) && (
                           <div>
@@ -1170,6 +1173,20 @@ function EditarCotacao() {
                             />
                           </div>
                         )}
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-800 mb-2">Prémio Mínimo (MT)</label>
+                          <input
+                            type="text"
+                            readOnly
+                            className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg"
+                            value={
+                              veiculo.premioMinimo
+                                ? `MT ${parseFloat(veiculo.premioMinimo).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })}`
+                                : "MT 0,00"
+                            }
+                          />
+                        </div>
                       </div>
 
                       {veiculo.tipoCobertura && veiculo.classificacao && (

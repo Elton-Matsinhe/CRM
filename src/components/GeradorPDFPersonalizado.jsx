@@ -2,6 +2,7 @@
 import React from "react";
 import logoSrc from "../assets/logo.png";
 import timbradoSrc from "../assets/timbrado.png";
+import { gerarLinhasPremioVeiculoHtml } from "../utils/cotacaoCoberturas";
 
 /**
  * Carrega uma imagem por URL e devolve como Data URL (base64) para o HTML ser autocontido (visualização/download).
@@ -310,11 +311,7 @@ export const gerarHTMLCotacaoPersonalizado = (
     <tr><td colspan="2" class="subheader-row">Veículo ${idx + 1} ${fmt(v.marca)} ${fmt(v.modelo)}</td></tr>
     <tr><td width="40%"><strong>Capital Seguro (MT)</strong></td><td class="text-right">MT ${fmtMoeda(v.capitalSeguro)}</td></tr>
     <tr><td><strong>Taxa Aplicada</strong></td><td class="text-right">${taxa}</td></tr>
-    <tr><td><strong>Prémio Anual (MT)</strong></td><td class="text-right">MT ${fmtMoeda(v.premioAnnual)}</td></tr>
-    <tr><td><strong>Prémio Semestral (MT)</strong></td><td class="text-right">MT ${fmtMoeda(v.premioSemestral)}</td></tr>
-    <tr><td><strong>Prémio Trimestral (MT)</strong></td><td class="text-right">MT ${fmtMoeda(v.premioTrimestral)}</td></tr>
-    <tr><td><strong>Prémio Mensal (MT)</strong></td><td class="text-right">MT ${fmtMoeda(v.premioMensal)}</td></tr>
-    <tr><td><strong>Prémio Mínimo (MT)</strong></td><td class="text-right">MT ${fmtMoeda(v.premioMinimo)}</td></tr>
+    ${gerarLinhasPremioVeiculoHtml(v, debitoDiretoAtivo, fmtMoeda)}
     <tr><td><strong>Débito Direto</strong></td><td class="text-right">${debitoDiretoAtivo ? "Sim" : "Não"}</td></tr>`;
   };
 

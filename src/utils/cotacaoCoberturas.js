@@ -376,18 +376,46 @@ export function exigeCapitalSeguro(tipoCobertura) {
   return normalizarTipoCobertura(tipoCobertura) === TIPO_COBERTURA_TODOS_RISCOS;
 }
 
+/** Semestral, trimestral e mensal só se aplicam a Seguro Automóvel Todos os Riscos */
+export function deveMostrarSemestral(tipoCobertura) {
+  return exigeCapitalSeguro(tipoCobertura);
+}
+
 export function deveMostrarTrimestral(capitalSeguro, tipoCobertura, premioAnnual) {
-  if (exigeCapitalSeguro(tipoCobertura)) {
-    return (parseFloat(capitalSeguro) || 0) > 12000;
-  }
-  const premio = parseFloat(premioAnnual);
-  if (!Number.isNaN(premio) && premio > 0) return premio > 12000;
+  if (!exigeCapitalSeguro(tipoCobertura)) return false;
   return (parseFloat(capitalSeguro) || 0) > 12000;
 }
 
 export function deveMostrarMensal(capitalSeguro, debitoDireto, tipoCobertura, premioAnnual) {
   if (!debitoDireto) return false;
   return deveMostrarTrimestral(capitalSeguro, tipoCobertura, premioAnnual);
+}
+
+/** Linhas HTML de prémios para PDF/email, conforme tipo de cobertura */
+export function gerarLinhasPremioVeiculoHtml(v, debitoDiretoAtivo, fmtMoeda) {
+  const tipo = v.tipoCobertura;
+  const capital = v.capitalSeguro;
+  const premioAnnual = v.premioAnnual;
+  let html = `
+    <tr><td><strong>Prémio Anual (MT)</strong></td><td class="text-right">MT ${fmtMoeda(v.premioAnnual)}</td></tr>`;
+
+  if (deveMostrarSemestral(tipo)) {
+    html += `
+    <tr><td><strong>Prémio Semestral (MT)</strong></td><td class="text-right">MT ${fmtMoeda(v.premioSemestral)}</td></tr>`;
+    if (deveMostrarTrimestral(capital, tipo, premioAnnual)) {
+      html += `
+    <tr><td><strong>Prémio Trimestral (MT)</strong></td><td class="text-right">MT ${fmtMoeda(v.premioTrimestral)}</td></tr>`;
+    }
+    if (deveMostrarMensal(capital, debitoDiretoAtivo, tipo, premioAnnual)) {
+      html += `
+    <tr><td><strong>Prémio Mensal (MT)</strong></td><td class="text-right">MT ${fmtMoeda(v.premioMensal)}</td></tr>`;
+    }
+  }
+
+  html += `
+    <tr><td><strong>Prémio Mínimo (MT)</strong></td><td class="text-right">MT ${fmtMoeda(v.premioMinimo)}</td></tr>`;
+
+  return html;
 }
 
 export function calcularPremioVeiculo({
