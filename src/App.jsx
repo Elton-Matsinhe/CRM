@@ -85,6 +85,9 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   const { themeConfig } = useTheme();
   const [sidebar, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('sidebarCollapsed') === 'true';
+  });
   const [currentTime, setCurrentTime] = useState(new Date());
   const [performanceView, setPerformanceView] = useState("individual");
   const [crmData, setCrmData] = useState({
@@ -465,31 +468,46 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="h-screen overflow-hidden">
       <div 
-        className="min-h-screen relative overflow-hidden transition-all duration-500 bg-gradient-to-br from-emerald-50 via-white to-green-50"
+        className="h-screen relative transition-all duration-500 bg-gradient-to-br from-emerald-50 via-white to-green-50"
       >
-        <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-emerald-200 rounded-full blur-3xl animate-pulse-slow opacity-70"></div>
           <div className="absolute bottom-1/3 right-1/3 w-96 h-96 bg-green-200 rounded-full blur-3xl animate-pulse-slower opacity-50"></div>
           <div className="absolute top-3/4 left-3/4 w-48 h-48 bg-emerald-300 rounded-full blur-2xl animate-pulse opacity-60"></div>
         </div>
 
-        <div className="flex min-h-screen relative z-10">
-          <Sidebar
-            sidebar={sidebar}
+        {/* Overlay mobile quando sidebar aberto */}
+        {sidebar && (
+          <div
+            className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
+        <Sidebar
+          sidebar={sidebar}
+          setSidebarOpen={setSidebarOpen}
+          sidebarCollapsed={sidebarCollapsed}
+          activeTab={location.pathname}
+          setActiveTab={() => {}}
+        />
+
+        <div
+          className={`relative z-10 flex flex-col h-screen min-w-0 transition-[margin] duration-300 ${
+            sidebarCollapsed ? 'lg:ml-[72px]' : 'lg:ml-72'
+          }`}
+        >
+          <Header
+            sidebarOpen={sidebar}
             setSidebarOpen={setSidebarOpen}
-            activeTab={location.pathname}
-            setActiveTab={() => {}}
+            sidebarCollapsed={sidebarCollapsed}
+            setSidebarCollapsed={setSidebarCollapsed}
           />
 
-          <div className="flex-1 flex flex-col min-w-0 w-full">
-            <Header
-              sidebarOpen={sidebar}
-              setSidebarOpen={setSidebarOpen}
-            />
-
-            <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden overflow-y-auto min-w-0">
+          <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden overflow-y-auto min-w-0 relative z-0">
               <Routes>
                 <Route path="/login" element={<Login />} />
                 
@@ -554,7 +572,6 @@ function App() {
             </main>
 
             <Footer currentTime={currentTime} />
-          </div>
         </div>
       </div>
 

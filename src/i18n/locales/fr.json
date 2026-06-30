@@ -1,0 +1,33 @@
+{
+  "header": {
+    "searchPlaceholder": "Rechercher...",
+    "summary": "Voici le résumé des performances du système aujourd'hui",
+    "quotes": "Devis",
+    "pending": "En attente",
+    "policies": "Polices",
+    "agents": "Agents",
+    "conversion": "Conversion",
+    "language": "Langue",
+    "administrator": "Administrateur",
+    "agent": "Agent"
+  },
+  "menu": {
+    "dashboard": "Tableau de bord",
+    "cotacoes": "Devis",
+    "criarCotacao": "Créer un devis",
+    "editarCotacao": "Modifier le devis",
+    "listarCotacoes": "Lister les devis",
+    "gestaoCotacoes": "Gestion des devis",
+    "acompanhamento": "Suivi",
+    "aprovacaoTaxas": "Approbation des tarifs",
+    "departamentos": "Départements",
+    "relatorios": "Rapports",
+    "utilizadores": "Utilisateurs",
+    "sistemaCrm": "Système CRM"
+  },
+  "greeting": {
+    "morning": "Bonjour",
+    "afternoon": "Bon après-midi",
+    "evening": "Bonsoir"
+  }
+}

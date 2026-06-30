@@ -20,9 +20,16 @@ import {
   Mail,
   Car,
   Shield,
-  ChevronDown,
+  Calendar,
+  Hash,
+  DollarSign,
+  Filter,
 } from "lucide-react";
 import CotacoesLayout from "../components/CotacoesLayout";
+import CotacaoStatusBadge from "../components/ui/CotacaoStatusBadge";
+import AnimatedPagination from "../components/ui/AnimatedPagination";
+import DataTableWrapper from "../components/ui/DataTableWrapper";
+import { STATUS_FILTER_OPTIONS } from "../utils/cotacaoStatus";
 import { gerarPDFPersonalizado } from "../components/GeradorPDFPersonalizado";
 import { cotacaoService } from "../services/api";
 import {
@@ -57,6 +64,9 @@ function EditarCotacao() {
   const [listaCotacoes, setListaCotacoes] = useState([]);
   const [loadingLista, setLoadingLista] = useState(true);
   const [filtroLista, setFiltroLista] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("all");
+  const [paginaLista, setPaginaLista] = useState(1);
+  const ITENS_POR_PAGINA = 10;
   const [matriculaDropdownId, setMatriculaDropdownId] = useState(null);
 
   const formatDateInput = (val) => {
@@ -529,6 +539,7 @@ function EditarCotacao() {
   };
 
   const cotacoesFiltradas = listaCotacoes.filter((c) => {
+    if (filtroStatus !== 'all' && c.status !== filtroStatus) return false;
     if (!filtroLista.trim()) return true;
     const termo = filtroLista.toLowerCase();
     const cliente = `${c.primeiro_nome || ''} ${c.sobrenome || ''}`.toLowerCase();
@@ -540,114 +551,139 @@ function EditarCotacao() {
     );
   });
 
-  const statusLabel = (status) => {
-    const map = {
-      pendente: 'Pendente',
-      ativa: 'Ativa',
-      aprovada: 'Aprovada',
-      finalizada: 'Finalizada',
-      expirada: 'Expirada',
-      cancelada: 'Cancelada',
-    };
-    return map[status] || status;
-  };
+  const totalPaginasLista = Math.max(1, Math.ceil(cotacoesFiltradas.length / ITENS_POR_PAGINA));
+  const cotacoesPagina = cotacoesFiltradas.slice(
+    (paginaLista - 1) * ITENS_POR_PAGINA,
+    paginaLista * ITENS_POR_PAGINA
+  );
+
+  useEffect(() => {
+    setPaginaLista(1);
+  }, [filtroLista, filtroStatus]);
 
   return (
     <CotacoesLayout
       title="Editar Cotação"
       subtitle="Selecione uma cotação da lista ou busque pelo número para editar"
     >
-      <div className="p-3 sm:p-6 bg-white min-h-screen page-container">
+      <div className="p-3 sm:p-6 min-h-screen page-container w-full">
         {/* Lista de cotações disponíveis */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-            <div className="flex items-center">
-              <FileText className="h-6 w-6 text-emerald-600 mr-3 shrink-0" />
+        <div className="mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 mb-4 border-b border-gray-200/60">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-emerald-100">
+                <FileText className="h-6 w-6 text-emerald-700" />
+              </div>
               <div>
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
-                  Cotações Disponíveis
-                </h3>
+                <h3 className="text-lg font-bold text-gray-900">Cotações Disponíveis</h3>
                 <p className="text-sm text-gray-500">
                   {loadingLista ? 'A carregar...' : `${cotacoesFiltradas.length} cotação(ões)`}
                 </p>
               </div>
             </div>
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Filtrar por número, cliente ou email..."
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                value={filtroLista}
-                onChange={(e) => setFiltroLista(e.target.value)}
-              />
+            <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+              <div className="relative flex-1 sm:min-w-[220px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-600" />
+                <input
+                  type="text"
+                  placeholder="Filtrar por número, cliente ou email..."
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  value={filtroLista}
+                  onChange={(e) => setFiltroLista(e.target.value)}
+                />
+              </div>
+              <div className="relative sm:min-w-[180px]">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-600 pointer-events-none" />
+                <select
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 appearance-none bg-white"
+                  value={filtroStatus}
+                  onChange={(e) => setFiltroStatus(e.target.value)}
+                >
+                  {STATUS_FILTER_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
           {loadingLista ? (
-            <div className="flex items-center justify-center py-12 text-gray-500">
+            <div className="flex items-center justify-center py-16 text-gray-500">
               <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mr-3" />
               Carregando cotações...
             </div>
           ) : cotacoesFiltradas.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              Nenhuma cotação encontrada.
-            </div>
+            <div className="text-center py-16 text-gray-500">Nenhuma cotação encontrada.</div>
           ) : (
-            <div className="table-responsive -mx-2 sm:mx-0">
-              <table className="w-full min-w-[640px] text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 text-left text-gray-600">
-                    <th className="py-3 px-3 font-semibold">Número</th>
-                    <th className="py-3 px-3 font-semibold">Cliente</th>
-                    <th className="py-3 px-3 font-semibold">Status</th>
-                    <th className="py-3 px-3 font-semibold">Total</th>
-                    <th className="py-3 px-3 font-semibold">Data</th>
-                    <th className="py-3 px-3 font-semibold text-right">Ação</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {cotacoesFiltradas.map((c) => (
-                    <tr
-                      key={c.id}
-                      className={`hover:bg-emerald-50/60 transition-colors ${
-                        formData?.id === c.id ? 'bg-emerald-50' : ''
-                      }`}
-                    >
-                      <td className="py-3 px-3 font-mono text-emerald-700 font-medium">
-                        {c.numero_cotacao}
-                      </td>
-                      <td className="py-3 px-3 text-gray-800">
-                        {`${c.primeiro_nome || ''} ${c.sobrenome || ''}`.trim() || '—'}
-                      </td>
-                      <td className="py-3 px-3">
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                          {statusLabel(c.status)}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 font-medium text-gray-800">
-                        MT {parseFloat(c.total_premio || 0).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-3 px-3 text-gray-600">
-                        {c.data_criacao ? new Date(c.data_criacao).toLocaleDateString('pt-MZ') : '—'}
-                      </td>
-                      <td className="py-3 px-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => selecionarCotacao(c)}
-                          disabled={isLoading && formData?.id === c.id}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 disabled:opacity-50"
-                        >
-                          <Edit3 className="h-3.5 w-3.5" />
-                          Editar
-                          <ChevronRight className="h-3.5 w-3.5" />
-                        </button>
-                      </td>
+            <>
+              <DataTableWrapper>
+                <table className="w-full min-w-[900px] text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200 text-left text-gray-600">
+                      <th className="py-3.5 px-4 font-semibold whitespace-nowrap"><span className="inline-flex items-center gap-1.5"><Hash className="h-4 w-4 text-emerald-600" />Número</span></th>
+                      <th className="py-3.5 px-4 font-semibold whitespace-nowrap"><span className="inline-flex items-center gap-1.5"><User className="h-4 w-4 text-emerald-600" />Cliente</span></th>
+                      <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Status</th>
+                      <th className="py-3.5 px-4 font-semibold whitespace-nowrap"><span className="inline-flex items-center gap-1.5"><DollarSign className="h-4 w-4 text-emerald-600" />Total</span></th>
+                      <th className="py-3.5 px-4 font-semibold whitespace-nowrap"><span className="inline-flex items-center gap-1.5"><Calendar className="h-4 w-4 text-emerald-600" />Data</span></th>
+                      <th className="py-3.5 px-4 font-semibold text-right whitespace-nowrap">Ação</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {cotacoesPagina.map((c) => (
+                      <tr
+                        key={c.id}
+                        className={`transition-colors duration-200 hover:bg-emerald-50/70 ${
+                          formData?.id === c.id ? 'bg-emerald-50' : ''
+                        }`}
+                      >
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-2 font-mono text-emerald-700 font-semibold">
+                            <FileText className="h-4 w-4 text-emerald-500" />
+                            {c.numero_cotacao}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-gray-800 whitespace-nowrap max-w-[200px] truncate" title={`${c.primeiro_nome || ''} ${c.sobrenome || ''}`.trim()}>
+                          {`${c.primeiro_nome || ''} ${c.sobrenome || ''}`.trim() || '—'}
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <CotacaoStatusBadge status={c.status} />
+                        </td>
+                        <td className="py-3 px-4 font-semibold text-gray-900 whitespace-nowrap">
+                          MT {parseFloat(c.total_premio || 0).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-3 px-4 text-gray-600 whitespace-nowrap">
+                          {c.data_criacao ? new Date(c.data_criacao).toLocaleDateString('pt-MZ') : '—'}
+                        </td>
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => selecionarCotacao(c)}
+                            disabled={isLoading && formData?.id === c.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                          >
+                            {isLoading && formData?.id === c.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Edit3 className="h-3.5 w-3.5" />
+                            )}
+                            Editar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </DataTableWrapper>
+              {cotacoesFiltradas.length > ITENS_POR_PAGINA && (
+                <AnimatedPagination
+                  currentPage={paginaLista}
+                  totalPages={totalPaginasLista}
+                  totalItems={cotacoesFiltradas.length}
+                  itemsPerPage={ITENS_POR_PAGINA}
+                  onPageChange={setPaginaLista}
+                />
+              )}
+            </>
           )}
         </div>
 

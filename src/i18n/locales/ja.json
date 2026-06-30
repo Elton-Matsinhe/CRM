@@ -1,0 +1,29 @@
+{
+  "header": {
+    "searchPlaceholder": "検索...",
+    "summary": "本日のシステムパフォーマンス概要",
+    "quotes": "見積",
+    "pending": "保留中",
+    "policies": "ポリシー",
+    "agents": "エージェント",
+    "conversion": "コンバージョン",
+    "language": "言語",
+    "administrator": "管理者",
+    "agent": "エージェント"
+  },
+  "menu": {
+    "dashboard": "ダッシュボード",
+    "cotacoes": "見積",
+    "criarCotacao": "見積作成",
+    "editarCotacao": "見積編集",
+    "listarCotacoes": "見積一覧",
+    "gestaoCotacoes": "見積管理",
+    "acompanhamento": "追跡",
+    "aprovacaoTaxas": "料金承認",
+    "departamentos": "部門",
+    "relatorios": "レポート",
+    "utilizadores": "ユーザー",
+    "sistemaCrm": "CRMシステム"
+  },
+  "greeting": { "morning": "おはようございます", "afternoon": "こんにちは", "evening": "こんばんは" }
+}

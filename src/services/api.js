@@ -642,6 +642,7 @@ export const relatorioService = {
       if (filtros.ano) params.append('ano', filtros.ano);
       if (filtros.status) params.append('status', filtros.status);
       if (filtros.agente_id) params.append('agente_id', filtros.agente_id);
+      if (filtros.balcao) params.append('balcao', filtros.balcao);
       if (filtros.data_inicio) params.append('data_inicio', filtros.data_inicio);
       if (filtros.data_fim) params.append('data_fim', filtros.data_fim);
       const response = await api.get(`/relatorios/pdf?${params.toString()}`, { responseType: 'blob' });
@@ -666,6 +667,7 @@ export const relatorioService = {
       if (filtros.ano) params.append('ano', filtros.ano);
       if (filtros.status) params.append('status', filtros.status);
       if (filtros.agente_id) params.append('agente_id', filtros.agente_id);
+      if (filtros.balcao) params.append('balcao', filtros.balcao);
       if (filtros.data_inicio) params.append('data_inicio', filtros.data_inicio);
       if (filtros.data_fim) params.append('data_fim', filtros.data_fim);
       const response = await api.get(`/relatorios/excel?${params.toString()}`, { responseType: 'blob' });

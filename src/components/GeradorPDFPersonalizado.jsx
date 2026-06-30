@@ -1,7 +1,7 @@
 // src/components/GeradorPDFPersonalizado.jsx
 import React from "react";
 import logoSrc from "../assets/logo.png";
-import timbradoSrc from "../assets/timbrado.png";
+import timbradoSrc from "../assets/papel-timbrado.png";
 import { gerarLinhasPremioVeiculoHtml } from "../utils/cotacaoCoberturas";
 
 /**

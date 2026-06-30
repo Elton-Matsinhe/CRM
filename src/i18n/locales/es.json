@@ -1,0 +1,29 @@
+{
+  "header": {
+    "searchPlaceholder": "Buscar...",
+    "summary": "Aquí está el resumen del rendimiento del sistema hoy",
+    "quotes": "Cotizaciones",
+    "pending": "Pendientes",
+    "policies": "Pólizas",
+    "agents": "Agentes",
+    "conversion": "Conversión",
+    "language": "Idioma",
+    "administrator": "Administrador",
+    "agent": "Agente"
+  },
+  "menu": {
+    "dashboard": "Panel",
+    "cotacoes": "Cotizaciones",
+    "criarCotacao": "Crear cotización",
+    "editarCotacao": "Editar cotización",
+    "listarCotacoes": "Listar cotizaciones",
+    "gestaoCotacoes": "Gestión de cotizaciones",
+    "acompanhamento": "Seguimiento",
+    "aprovacaoTaxas": "Aprobación de tarifas",
+    "departamentos": "Departamentos",
+    "relatorios": "Informes",
+    "utilizadores": "Usuarios",
+    "sistemaCrm": "Sistema CRM"
+  },
+  "greeting": { "morning": "Buenos días", "afternoon": "Buenas tardes", "evening": "Buenas noches" }
+}

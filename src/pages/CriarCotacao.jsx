@@ -628,9 +628,9 @@ function CriarCliente() {
       return;
     }
     
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 20 * 1024 * 1024; // 20MB
     if (file.size > maxSize) {
-      alert('O arquivo é muito grande. Tamanho máximo: 5MB');
+      alert('O arquivo é muito grande. Tamanho máximo: 20MB');
       return;
     }
     
@@ -1299,7 +1299,7 @@ function CriarCliente() {
                                   </span>
                                 </label>
                                 <p className="text-xs text-gray-500 mt-1">
-                                  PDF, JPG ou PNG (max 5MB)
+                                  PDF, JPG ou PNG (max 20MB)
                                 </p>
                               </div>
                             ) : (
@@ -1346,7 +1346,7 @@ function CriarCliente() {
                                   </span>
                                 </label>
                                 <p className="text-xs text-gray-500 mt-1">
-                                  PDF, JPG ou PNG (max 5MB)
+                                  PDF, JPG ou PNG (max 20MB)
                                 </p>
                               </div>
                             ) : (
@@ -1507,7 +1507,7 @@ function CriarCliente() {
                                   </span>
                                 </label>
                                 <p className="text-xs text-gray-500 mt-1">
-                                  PDF, JPG ou PNG (max 5MB)
+                                  PDF, JPG ou PNG (max 20MB)
                                 </p>
                               </div>
                             ) : (

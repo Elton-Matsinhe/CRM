@@ -1,0 +1,29 @@
+{
+  "header": {
+    "searchPlaceholder": "Поиск...",
+    "summary": "Краткая сводка работы системы за сегодня",
+    "quotes": "Котировки",
+    "pending": "Ожидание",
+    "policies": "Полисы",
+    "agents": "Агенты",
+    "conversion": "Конверсия",
+    "language": "Язык",
+    "administrator": "Администратор",
+    "agent": "Агент"
+  },
+  "menu": {
+    "dashboard": "Панель",
+    "cotacoes": "Котировки",
+    "criarCotacao": "Создать котировку",
+    "editarCotacao": "Редактировать",
+    "listarCotacoes": "Список котировок",
+    "gestaoCotacoes": "Управление котировками",
+    "acompanhamento": "Отслеживание",
+    "aprovacaoTaxas": "Утверждение тарифов",
+    "departamentos": "Отделы",
+    "relatorios": "Отчёты",
+    "utilizadores": "Пользователи",
+    "sistemaCrm": "CRM система"
+  },
+  "greeting": { "morning": "Доброе утро", "afternoon": "Добрый день", "evening": "Добрый вечер" }
+}

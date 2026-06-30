@@ -1,0 +1,29 @@
+{
+  "header": {
+    "searchPlaceholder": "بحث...",
+    "summary": "إليك ملخص أداء النظام اليوم",
+    "quotes": "عروض الأسعار",
+    "pending": "قيد الانتظار",
+    "policies": "البوالص",
+    "agents": "الوكلاء",
+    "conversion": "التحويل",
+    "language": "اللغة",
+    "administrator": "المسؤول",
+    "agent": "الوكيل"
+  },
+  "menu": {
+    "dashboard": "لوحة التحكم",
+    "cotacoes": "عروض الأسعار",
+    "criarCotacao": "إنشاء عرض",
+    "editarCotacao": "تعديل عرض",
+    "listarCotacoes": "قائمة العروض",
+    "gestaoCotacoes": "إدارة العروض",
+    "acompanhamento": "المتابعة",
+    "aprovacaoTaxas": "الموافقة على الأسعار",
+    "departamentos": "الأقسام",
+    "relatorios": "التقارير",
+    "utilizadores": "المستخدمون",
+    "sistemaCrm": "نظام CRM"
+  },
+  "greeting": { "morning": "صباح الخير", "afternoon": "مساء الخير", "evening": "مساء الخير" }
+}

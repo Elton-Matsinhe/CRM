@@ -1307,7 +1307,7 @@ Sistema de Gestão de Cotações
             if (startSemana?.status === 'concluida') {
               lineColor = 'bg-emerald-400';
             } else if (startWeek < semanaAtual) {
-              lineColor = 'bg-blue-400';
+              lineColor = 'bg-teal-400';
             }
             
             return (
@@ -1335,13 +1335,13 @@ Sistema de Gestão de Cotações
               textColor = 'text-white';
               borderColor = 'border-2 border-emerald-300';
             } else if (isCurrent) {
-              bgColor = 'bg-blue-500';
+              bgColor = 'bg-teal-500';
               textColor = 'text-white';
-              borderColor = 'border-2 border-blue-300';
+              borderColor = 'border-2 border-teal-300';
             } else if (isBeforeCurrent) {
-              bgColor = 'bg-blue-400';
+              bgColor = 'bg-teal-400';
               textColor = 'text-white';
-              borderColor = 'border-2 border-blue-200';
+              borderColor = 'border-2 border-teal-200';
             }
             
             return (
@@ -1355,11 +1355,11 @@ Sistema de Gestão de Cotações
                     <span className={`font-bold ${textColor}`}>{week + 1}</span>
                   )}
                 </div>
-                <span className={`text-sm font-medium ${isCurrent ? 'text-blue-700' : isConcluida ? 'text-emerald-700' : 'text-gray-500'}`}>
+                <span className={`text-sm font-medium ${isCurrent ? 'text-teal-700' : isConcluida ? 'text-emerald-700' : 'text-gray-500'}`}>
                   Semana {week + 1}
                 </span>
                 {semanaData?.data && (
-                  <span className={`text-xs mt-1 ${isCurrent ? 'text-blue-600' : isConcluida ? 'text-emerald-600' : 'text-gray-400'}`}>
+                  <span className={`text-xs mt-1 ${isCurrent ? 'text-teal-600' : isConcluida ? 'text-emerald-600' : 'text-gray-400'}`}>
                     {semanaData.data}
                   </span>
                 )}
@@ -1449,10 +1449,10 @@ Sistema de Gestão de Cotações
                     {titulosPorSemana[semanaAtual]}
                   </h2>
                   <div className="flex items-center space-x-4 mt-2">
-                    <span className="text-blue-100">
+                    <span className="text-teal-100">
                       Cliente: <strong className="text-white">{cotacaoSelecionada.cliente}</strong>
                     </span>
-                    <span className="text-blue-100">
+                    <span className="text-teal-100">
                       Código: <strong className="text-white">{cotacaoSelecionada.id}</strong>
                     </span>
                     <span className="bg-white/20 px-3 py-1 rounded-full text-sm text-white">
@@ -1478,9 +1478,9 @@ Sistema de Gestão de Cotações
             <div className="p-8">
               {/* Seleção de Tipo de Contato - Apenas para agentes */}
               {isAgente && (
-                <div className="bg-blue-50 rounded-2xl p-6 border border-blue-200 mb-6">
+                <div className="bg-teal-50 rounded-2xl p-6 border border-teal-200 mb-6">
                   <div className="flex items-center space-x-2 mb-4">
-                    <Phone className="h-5 w-5 text-blue-600" />
+                    <Phone className="h-5 w-5 text-teal-600" />
                     <h3 className="text-lg font-semibold text-gray-800">
                       Tipo de Contato
                     </h3>
@@ -1498,8 +1498,8 @@ Sistema de Gestão de Cotações
                           key={tipo.value}
                           className={`flex items-center justify-center p-3 rounded-lg cursor-pointer transition-all duration-200 border-2 ${
                             tipoContato === tipo.value
-                              ? 'bg-blue-500 text-white border-blue-600'
-                              : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                              ? 'bg-teal-500 text-white border-teal-600'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-teal-400'
                           }`}
                         >
                           <input
@@ -1520,11 +1520,11 @@ Sistema de Gestão de Cotações
 
               {/* Mostrar tipo de contato para admin/subscritor */}
               {isAdminOuSubscritor && cotacaoSelecionada.acompanhamentoSemanas[semanaAtual] && (
-                <div className="bg-blue-50 rounded-2xl p-4 border border-blue-200 mb-6">
+                <div className="bg-teal-50 rounded-2xl p-4 border border-teal-200 mb-6">
                   <div className="flex items-center space-x-2">
-                    <Phone className="h-5 w-5 text-blue-600" />
+                    <Phone className="h-5 w-5 text-teal-600" />
                     <span className="text-sm font-medium text-gray-700">Tipo de Contato:</span>
-                    <span className="text-sm font-semibold text-blue-700">
+                    <span className="text-sm font-semibold text-teal-700">
                       {(() => {
                         const tipo = cotacaoSelecionada.acompanhamentoSemanas[semanaAtual].tipoContato || 'telefone';
                         return tipo === 'telefone' ? '📞 Telefone' :
@@ -1539,7 +1539,7 @@ Sistema de Gestão de Cotações
               {/* Checkboxes de Impasses */}
               <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200 mb-6">
                 <div className="flex items-center space-x-2 mb-4">
-                  <AlertCircle className="h-5 w-5 text-blue-600" />
+                  <AlertCircle className="h-5 w-5 text-teal-600" />
                   <h3 className="text-lg font-semibold text-gray-800">
                     {isAgente ? 'Identificação de Possíveis Impasses' : 'Impasses Identificados pelo Agente'}
                   </h3>
@@ -1593,9 +1593,9 @@ Sistema de Gestão de Cotações
                         key={item.id}
                         className={`flex items-start p-4 rounded-lg transition-all duration-200 ${
                           isChecked 
-                            ? 'bg-blue-50 border-2 border-blue-200' 
+                            ? 'bg-teal-50 border-2 border-teal-200' 
                             : 'bg-white border border-gray-200'
-                        } ${isAgente ? 'cursor-pointer hover:border-blue-300' : 'cursor-default'}`}
+                        } ${isAgente ? 'cursor-pointer hover:border-teal-300' : 'cursor-default'}`}
                       >
                         <div className="flex items-center h-5 mr-3 mt-1">
                           <input
@@ -1603,11 +1603,11 @@ Sistema de Gestão de Cotações
                             checked={isChecked}
                             onChange={(e) => isAgente && handleImpassesChange(semanaAtual, item.id, e.target.checked)}
                             disabled={!isAgente}
-                            className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="h-5 w-5 text-teal-600 rounded border-gray-300 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           />
                         </div>
                         <div className="flex-1">
-                          <span className={`font-medium ${isChecked ? 'text-blue-700' : 'text-gray-700'}`}>
+                          <span className={`font-medium ${isChecked ? 'text-teal-700' : 'text-gray-700'}`}>
                             {item.label}
                           </span>
                           <p className="text-sm text-gray-500 mt-1">
@@ -1615,7 +1615,7 @@ Sistema de Gestão de Cotações
                           </p>
                         </div>
                         {isChecked && (
-                          <Check className="h-5 w-5 text-blue-500 ml-2" />
+                          <Check className="h-5 w-5 text-teal-500 ml-2" />
                         )}
                       </label>
                     );
@@ -1625,7 +1625,7 @@ Sistema de Gestão de Cotações
                 {/* Campo Outros */}
                 <div className="mt-6">
                   <label className={`flex items-start p-4 rounded-lg border border-gray-200 bg-white ${
-                    isAgente ? 'cursor-pointer hover:border-blue-300' : 'cursor-default'
+                    isAgente ? 'cursor-pointer hover:border-teal-300' : 'cursor-default'
                   }`}>
                     <div className="flex items-center h-5 mr-3 mt-1">
                       <input
@@ -1633,7 +1633,7 @@ Sistema de Gestão de Cotações
                         checked={cotacaoSelecionada.acompanhamentoSemanas[semanaAtual]?.impasses.outros || false}
                         onChange={(e) => isAgente && handleImpassesChange(semanaAtual, 'outros', e.target.checked)}
                         disabled={!isAgente}
-                        className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="h-5 w-5 text-teal-600 rounded border-gray-300 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                     <div className="flex-1">
@@ -1646,7 +1646,7 @@ Sistema de Gestão de Cotações
                           onChange={(e) => isAgente && handleImpassesChange(semanaAtual, 'outrosTexto', e.target.value)}
                           disabled={!isAgente}
                           placeholder="Descreva outros motivos específicos..."
-                          className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                           rows="2"
                         />
                       )}
@@ -1659,7 +1659,7 @@ Sistema de Gestão de Cotações
               <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200 mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
-                    <MessageSquare className="h-5 w-5 text-blue-600" />
+                    <MessageSquare className="h-5 w-5 text-teal-600" />
                     <h3 className="text-lg font-semibold text-gray-800">
                       Feedback da Interação {isAgente ? '(Opcional)' : ''}
                     </h3>
@@ -1671,7 +1671,7 @@ Sistema de Gestão de Cotações
                   onChange={(e) => isAgente && handleFeedbackChange(semanaAtual, e.target.value)}
                   disabled={!isAgente}
                   rows="4"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   placeholder={isAgente ? "Descreva detalhadamente a interação com o cliente..." : "Nenhum feedback registrado para esta semana."}
                 />
               </div>
@@ -1679,7 +1679,7 @@ Sistema de Gestão de Cotações
               {/* Upload de Comprovativo */}
               <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200 mb-6">
                 <div className="flex items-center space-x-2 mb-4">
-                  <Upload className="h-5 w-5 text-blue-600" />
+                  <Upload className="h-5 w-5 text-teal-600" />
                   <h3 className="text-lg font-semibold text-gray-800">
                     Comprovativo da Interação
                   </h3>
@@ -1711,7 +1711,7 @@ Sistema de Gestão de Cotações
                       </p>
                     </div>
                   ) : (
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-teal-400 transition-colors">
                       <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                       <p className="text-gray-600 mb-4">
                         Arraste arquivos ou clique para fazer upload
@@ -1725,7 +1725,7 @@ Sistema de Gestão de Cotações
                       />
                       <label
                         htmlFor="file-upload"
-                        className="inline-block px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 cursor-pointer transition-colors font-medium"
+                        className="inline-block px-6 py-3 bg-teal-500 text-white rounded-lg hover:bg-teal-600 cursor-pointer transition-colors font-medium"
                       >
                         Selecionar Arquivo
                       </label>
@@ -1761,7 +1761,7 @@ Sistema de Gestão de Cotações
                                 cotacaoSelecionada.acompanhamentoSemanas[semanaAtual].comprovativo,
                                 cotacaoSelecionada.acompanhamentoSemanas[semanaAtual].comprovativo.split('/').pop()
                               )}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
                               title="Visualizar"
                             >
                               <Eye className="h-4 w-4" />
@@ -1819,7 +1819,7 @@ Sistema de Gestão de Cotações
                 {isAgente && (
                   <button
                     onClick={handleUpdateAcompanhamento}
-                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-colors duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2 font-bold text-lg"
+                    className="w-full py-4 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-xl hover:from-teal-700 hover:to-teal-800 transition-colors duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2 font-bold text-lg"
                   >
                     <CheckCircle className="h-6 w-6" />
                     <span>
@@ -1998,7 +1998,7 @@ Sistema de Gestão de Cotações
                           </div>
                           
                           {/* Seleção de Subscritores */}
-                          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="mt-6 p-4 bg-teal-50 rounded-lg border border-teal-200">
                             <h3 className="text-lg font-semibold text-gray-800 mb-4">
                               📧 Enviar Cotação para Subscritores
                             </h3>
@@ -2014,7 +2014,7 @@ Sistema de Gestão de Cotações
                                       setSubscritoresSelecionados([]);
                                     }
                                   }}
-                                  className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                  className="h-5 w-5 text-teal-600 rounded border-gray-300 focus:ring-teal-500"
                                 />
                                 <span className="text-sm font-medium text-gray-700">
                                   Enviar para todos os subscritores
@@ -2046,7 +2046,7 @@ Sistema de Gestão de Cotações
                                               );
                                             }
                                           }}
-                                          className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                          className="h-4 w-4 text-teal-600 rounded border-gray-300 focus:ring-teal-500"
                                         />
                                         <span className="text-sm text-gray-700">
                                           {subscritor.nome} {subscritor.email ? `(${subscritor.email})` : ''}
@@ -2206,7 +2206,7 @@ Sistema de Gestão de Cotações
                         </span>
                       )}
                       {cotacao.reencaminhadoSubscricao && (
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-600 text-white border border-blue-700">
+                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-teal-600 text-white border border-teal-700">
                           Enviado para Subscrição
                         </span>
                       )}
@@ -2242,7 +2242,7 @@ Sistema de Gestão de Cotações
                                 semana?.status === 'concluida'
                                   ? 'bg-green-500'
                                   : week <= semanasCompletas + 1
-                                    ? 'bg-blue-500'
+                                    ? 'bg-teal-500'
                                     : 'bg-gray-300'
                               }`}
                               title={`Semana ${week}: ${semana?.status === 'concluida' ? 'Concluída' : 'Pendente'}`}
@@ -2257,7 +2257,7 @@ Sistema de Gestão de Cotações
                     {!cotacao.encerrado && !cotacao.recusado && (
                       <button
                         onClick={() => handleAcompanhamentoClick(cotacao)}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
+                        className="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors flex items-center space-x-2"
                         title={isAgente ? "Iniciar Acompanhamento Semanal" : "Visualizar Acompanhamento"}
                       >
                         <Clock className="h-4 w-4" />
