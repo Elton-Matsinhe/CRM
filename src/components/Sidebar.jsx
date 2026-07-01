@@ -3,29 +3,44 @@ import {
   Rocket,
   X,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
+import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { menuItems } from "../data/data";
+import { menuLabelKeys } from "../i18n/menuKeys";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
-import { estatisticasService, cotacaoService } from "../services/api";
+import { cotacaoService } from "../services/api";
 
 // Importando o logo diretamente
 import logo from "../assets/logo.png";
 
-function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
-  const { theme } = useTheme();
+function Sidebar({ sidebar, setSidebarOpen, sidebarCollapsed, activeTab }) {
+  const { theme, themeConfig } = useTheme();
+  const { t } = useTranslation();
   const { usuario } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [openSubmenus, setOpenSubmenus] = useState({});
   const [hoveredItem, setHoveredItem] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState(null);
   const [submenuScrollable, setSubmenuScrollable] = useState({});
   const [menuItemsComBadges, setMenuItemsComBadges] = useState(menuItems);
   const submenuRefs = useRef({});
   const navigate = useNavigate();
+
+  const isCollapsed = sidebarCollapsed;
+
+  const isItemActive = (item) => {
+    if (item.path) return activeTab === item.path;
+    if (item.submenu) return item.submenu.some((s) => activeTab === s.path);
+    return false;
+  };
+
+  const getLabel = (id, fallback) => {
+    const key = menuLabelKeys[id];
+    return key ? t(key) : fallback;
+  };
 
   const toggleSubmenu = (menuId) => {
     setOpenSubmenus((prev) => ({
@@ -74,6 +89,15 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
     };
   }, []);
 
+  // Abrir submenu do item activo automaticamente
+  useEffect(() => {
+    menuItems.forEach((item) => {
+      if (item.submenu?.some((s) => activeTab === s.path)) {
+        setOpenSubmenus((prev) => ({ ...prev, [item.id]: true }));
+      }
+    });
+  }, [activeTab]);
+
   // Carregar badges dinamicamente
   const carregarBadgesDinamicos = async () => {
     try {
@@ -115,51 +139,36 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
   }, [openSubmenus]);
 
   // Obter cores do tema atual para sidebar
-  const getSidebarStyle = () => {
-    switch (theme) {
-      case 'verde':
-        return {
-          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%)',
-          borderColor: '#e5e7eb',
-          activeBg: 'linear-gradient(135deg, #106a37, #0a4f2e)'
-        };
-      case 'vermelho':
-        return {
-          background: 'linear-gradient(135deg, #ffffff 0%, #fef2f2 50%, #ffffff 100%)',
-          borderColor: '#fee2e2',
-          activeBg: 'linear-gradient(135deg, #dc2626, #b91c1c)'
-        };
-      case 'preto':
-        return {
-          background: 'linear-gradient(135deg, #ffffff 0%, #f8f8f8 50%, #ffffff 100%)',
-          borderColor: '#e5e5e5',
-          activeBg: 'linear-gradient(135deg, #1a1a1a, #000000)'
-        };
-      default:
-        return {
-          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%)',
-          borderColor: '#e5e7eb',
-          activeBg: 'linear-gradient(135deg, #106a37, #0a4f2e)'
-        };
-    }
+  const sidebarStyle = {
+    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%)',
+    borderColor: themeConfig.border,
+    activeBg: themeConfig.sidebarActive,
+    primary: themeConfig.primary,
+    hoverGlow: themeConfig.hoverGlow,
   };
-
-  const sidebarStyle = getSidebarStyle();
 
   return (
     <div
       className={`${
         sidebar ? "translate-x-0" : "-translate-x-full"
-      } fixed inset-y-0 left-0 z-50 ${isCollapsed ? 'w-20' : 'w-80'} backdrop-blur-xl border-r transform transition-all duration-700 ease-out lg:translate-x-0 lg:static lg:inset-0 flex flex-col shadow-xl`}
+      } fixed inset-y-0 left-0 z-[60] backdrop-blur-xl border-r transform transition-all duration-300 ease-out lg:translate-x-0 flex flex-col shadow-xl overflow-visible ${
+        isCollapsed ? 'w-[72px]' : 'w-72'
+      }`}
       style={{
         background: sidebarStyle.background,
-        borderColor: sidebarStyle.borderColor
+        borderColor: sidebarStyle.borderColor,
       }}
     >
       {/* Efeitos de Background — leves, sem animação contínua */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#106a37]/5 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#0a4f2e]/5 rounded-full blur-3xl"></div>
+        <div
+          className="absolute -top-40 -right-40 w-80 h-80 rounded-full blur-3xl opacity-60"
+          style={{ background: sidebarStyle.hoverGlow }}
+        />
+        <div
+          className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full blur-3xl opacity-40"
+          style={{ background: sidebarStyle.hoverGlow }}
+        />
       </div>
 
       {/* Header do Sidebar - Design Limpo */}
@@ -220,16 +229,6 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
         >
           <X className="h-5 w-5" />
         </button>
-
-        {/* Botão para colapsar/expandir sidebar */}
-        <button
-          className="hidden lg:flex absolute right-2 top-4 p-2 rounded-lg hover:bg-gray-100 transition-all duration-300 hover:scale-110 backdrop-blur-sm z-10"
-          style={{ color: '#374151' }}
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          title={isCollapsed ? "Expandir Menu" : "Ocultar Menu"}
-        >
-          {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-        </button>
       </div>
 
       {/* Navegação com Scroll - Design Limpo */}
@@ -238,135 +237,92 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
           .filter((item) => !item.adminOnly || usuario?.role === 'admin')
           .filter((item) => !item.approverOnly || usuario?.role === 'admin' || usuario?.role === 'subscritor')
           .map((item, index) => {
-          const isActive = activeTab === item.path;
+          const isActive = isItemActive(item);
           const hasSubmenu = item.type === "submenu";
           const isOpen = isSubmenuOpen(item.id);
           const IconComponent = item.icon;
           const needsScroll = submenuScrollable[item.id];
+          const label = getLabel(item.id, item.label);
 
-          // Adicionar linha divisória após "Cotações"
-          const showDivider = item.label === "Cotações" && !isCollapsed;
+          const showDivider = item.id === 2 && !isCollapsed;
 
           return (
-            <div key={item.id} className="space-y-1 relative">
-              {/* Efeito de brilho no hover - Verde sutil */}
-              <div
-                className="absolute inset-0 rounded-lg opacity-0 blur-sm transition-all duration-500"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(16,106,55,0.1), rgba(10,79,46,0.05))',
-                  opacity: hoveredItem === item.id ? 0.1 : 0,
-                  transform: hoveredItem === item.id ? 'scale(1.02)' : 'scale(1)'
-                }}
-              ></div>
-
-              {/* Item Principal - Com bordas visíveis */}
+            <div key={item.id} className="space-y-1 relative overflow-visible">
               <button
-                className={`w-full flex items-center ${isCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-3.5 text-left rounded-lg transition-all duration-400 group relative overflow-hidden backdrop-blur-sm ${
-                  isActive
-                    ? "text-white shadow-md scale-[1.02]"
-                    : "text-gray-800 hover:text-gray-900 bg-white hover:bg-white"
+                className={`menu-neon-hover w-full flex items-center ${isCollapsed ? 'justify-center px-2' : 'justify-between px-3'} py-3 text-left rounded-xl relative overflow-hidden transition-all duration-300 ${
+                  isActive ? 'menu-item-active' : ''
                 }`}
                 style={{
-                  border: isActive 
-                    ? '2px solid rgba(255, 255, 255, 0.6)' // Linha branca para menus ativos
-                    : '1px solid rgba(209, 213, 219, 0.8)', // Cinza mais visível
-                  background: isActive
-                    ? sidebarStyle.activeBg
-                    : '',
-                  boxShadow: isActive 
-                    ? '0 4px 20px rgba(16,106,55,0.15)'
-                    : '0 2px 8px rgba(0,0,0,0.08)', // Sombra mais visível
-                  outline: 'none'
+                  border: isActive ? '2px solid rgba(255,255,255,0.55)' : '1px solid rgba(209,213,219,0.75)',
+                  background: isActive ? sidebarStyle.activeBg : 'rgba(255,255,255,0.85)',
+                  boxShadow: isActive
+                    ? `0 6px 24px ${sidebarStyle.hoverGlow}, inset 0 1px 0 rgba(255,255,255,0.2)`
+                    : hoveredItem === item.id
+                    ? `0 4px 16px ${sidebarStyle.hoverGlow}`
+                    : 'none',
+                  outline: 'none',
                 }}
                 onClick={() => handleMenuClick(item)}
-                onMouseEnter={() => setHoveredItem(item.id)}
-                onMouseLeave={() => setHoveredItem(null)}
+                onMouseEnter={(e) => {
+                  setHoveredItem(item.id);
+                  if (isCollapsed) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setTooltipPos({
+                      top: rect.top + rect.height / 2,
+                      left: rect.right + 10,
+                      text: label,
+                    });
+                  }
+                }}
+                onMouseLeave={() => {
+                  setHoveredItem(null);
+                  setTooltipPos(null);
+                }}
               >
-                {/* Efeito de onda no hover - muito sutil */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#106a37]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-lg"></div>
-
-                {/* Linha brilhante lateral - BRANCA para menus ativos */}
-                {!isCollapsed && (
-                  <div
-                    className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1.5 h-12 rounded-r-full transition-all duration-500"
-                    style={{
-                      background: 'linear-gradient(to bottom, #ffffff, #f8fafc)', // Linha branca
-                      opacity: isActive ? 1 : 0,
-                      transform: isActive ? 'scaleY(1)' : 'scaleY(0.5)',
-                      boxShadow: isActive ? '0 0 10px rgba(255, 255, 255, 0.5)' : 'none'
-                    }}
-                  ></div>
+                {/* Indicador activo — barra lateral */}
+                {isActive && (
+                  <span
+                    className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full"
+                    style={{ background: 'linear-gradient(180deg, #fff, rgba(255,255,255,0.4))' }}
+                  />
                 )}
 
-                <div className="flex items-center relative z-10 flex-1">
-                  {/* Ícone com efeito flutuante */}
+                {/* Glow pulsante no hover (sem sublinhado) */}
+                {hoveredItem === item.id && !isActive && (
+                  <span className="menu-hover-glow absolute inset-0 rounded-xl pointer-events-none" />
+                )}
+
+                <div className="flex items-center relative z-10 flex-1 min-w-0">
                   <div
-                    className={`relative p-2 rounded-lg ${isCollapsed ? 'mr-0' : 'mr-3'} transition-all duration-400 group-hover:scale-105 ${
-                      isActive
-                        ? "bg-white/40 shadow-inner shadow-white/30" // Mais branco para ativos
-                        : "bg-gray-100 group-hover:bg-gray-200 border border-gray-200"
-                    }`}
-                    style={{
-                      boxShadow: isActive 
-                        ? 'inset 0 2px 6px rgba(255,255,255,0.3), 0 2px 8px rgba(255,255,255,0.2)'
-                        : '0 2px 4px rgba(0,0,0,0.05)',
-                      border: !isActive ? '1px solid #e5e7eb' : 'none'
-                    }}
+                    className={`relative p-2 rounded-lg flex-shrink-0 ${isCollapsed ? '' : 'mr-3'} transition-transform duration-300 ${
+                      hoveredItem === item.id && !isActive ? 'scale-110' : ''
+                    } ${isActive ? 'bg-white/35' : 'bg-gray-100 border border-gray-200'}`}
+                    style={
+                      isActive && isCollapsed
+                        ? { boxShadow: `0 0 0 3px rgba(255,255,255,0.45)` }
+                        : undefined
+                    }
                   >
-                    {/* Brilho atrás do ícone - Branco para ativos */}
-                    <div
-                      className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-30 transition-opacity duration-400 blur-sm"
-                      style={{
-                        background: isActive 
-                          ? 'linear-gradient(135deg, #ffffff, #f8fafc)' // Branco para ativos
-                          : 'linear-gradient(135deg, #106a37, #0a4f2e)'
-                      }}
-                    ></div>
                     <IconComponent
-                      className={`h-5 w-5 relative z-10 transition-all duration-300 ${
-                        isActive
-                          ? "text-white scale-110" // Branco para ativos
-                          : "text-gray-600 group-hover:text-[#106a37]"
-                      }`}
+                      className="h-5 w-5"
                       style={{
-                        filter: isActive ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))' : 'none'
+                        color: isActive ? '#fff' : hoveredItem === item.id ? sidebarStyle.primary : '#6b7280',
                       }}
                     />
                   </div>
 
-                  {/* Label com efeito de brilho - Oculto quando colapsado */}
                   {!isCollapsed && (
-                    <span
-                      className={`font-medium relative transition-all duration-400 flex-1 ${
-                        isActive
-                          ? "text-white drop-shadow-lg" // Mais contraste para ativos
-                          : "text-gray-800 group-hover:text-gray-900"
-                      }`}
-                    >
-                      {item.label}
-                      {/* Sublinhado animado - BRANCO para menus ativos */}
-                      <span
-                        className="absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-400"
-                        style={{
-                          background: isActive 
-                            ? 'linear-gradient(90deg, #ffffff, #f8fafc)' // Branco para ativos
-                            : 'linear-gradient(90deg, #106a37, #0a4f2e)',
-                          width: isActive ? '100%' : (hoveredItem === item.id ? '100%' : '0'),
-                          boxShadow: isActive ? '0 0 8px rgba(255,255,255,0.5)' : 'none'
-                        }}
-                      ></span>
+                    <span className={`font-medium truncate ${isActive ? 'text-white' : 'text-gray-800'}`}>
+                      {label}
                     </span>
                   )}
 
-                  {/* Badge para contadores nos menus principais - Oculto quando colapsado */}
                   {item.badge && !isCollapsed && (
-                    <span 
-                      className="text-xs font-semibold px-2 py-1 rounded-full ml-2 transition-all duration-300 whitespace-nowrap"
+                    <span
+                      className="text-xs font-semibold px-2 py-0.5 rounded-full ml-2 flex-shrink-0"
                       style={{
-                        background: isActive ? 'rgba(255,255,255,0.4)' : 'rgba(16,106,55,0.1)',
-                        color: isActive ? 'white' : '#106a37',
-                        border: isActive ? '1px solid rgba(255,255,255,0.6)' : '1px solid rgba(16,106,55,0.3)',
-                        boxShadow: isActive ? '0 2px 8px rgba(255,255,255,0.3)' : '0 1px 3px rgba(0,0,0,0.1)'
+                        background: isActive ? 'rgba(255,255,255,0.35)' : sidebarStyle.hoverGlow,
+                        color: isActive ? '#fff' : sidebarStyle.primary,
                       }}
                     >
                       {item.badge}
@@ -374,20 +330,11 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
                   )}
                 </div>
 
-                {/* Seta animada apenas para submenus - Oculto quando colapsado */}
                 {hasSubmenu && !isCollapsed && (
-                  <div
-                    className={`relative z-10 transition-all duration-400 transform ${
-                      isOpen
-                        ? "rotate-180"
-                        : "text-gray-500 group-hover:text-[#106a37]"
-                    }`}
-                    style={{
-                      color: isOpen ? (isActive ? '#ffffff' : '#106a37') : ''
-                    }}
-                  >
-                    <ChevronDown className="h-4 w-4 transition-transform duration-400" />
-                  </div>
+                  <ChevronDown
+                    className={`h-4 w-4 flex-shrink-0 relative z-10 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+                    style={{ color: isActive ? '#fff' : sidebarStyle.primary }}
+                  />
                 )}
               </button>
 
@@ -408,102 +355,41 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
                       const isSubActive = activeTab === subItem.path;
                       const SubIconComponent = subItem.icon;
 
+                      const subLabel = getLabel(subItem.id, subItem.label);
+
                       return (
                         <button
                           key={subItem.id}
-                          className={`w-full flex items-center justify-between px-4 py-3 text-left rounded-lg transition-all duration-400 group relative overflow-hidden backdrop-blur-sm ${
-                            isSubActive
-                              ? "text-white shadow-sm scale-[1.02]"
-                              : "text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50"
+                          className={`menu-neon-hover w-full flex items-center justify-between px-3 py-2.5 text-left rounded-lg relative overflow-hidden transition-all duration-300 ${
+                            isSubActive ? '' : ''
                           }`}
                           style={{
-                            border: isSubActive 
-                              ? '2px solid rgba(255, 255, 255, 0.5)' // Linha branca para submenus ativos
-                              : '1px solid rgba(209, 213, 219, 0.7)', // Borda mais visível
-                            background: isSubActive
-                              ? sidebarStyle.activeBg
-                              : '',
-                            boxShadow: isSubActive 
-                              ? '0 2px 12px rgba(16,106,55,0.1), 0 0 10px rgba(255,255,255,0.2)'
-                              : '0 1px 4px rgba(0,0,0,0.06)',
+                            border: isSubActive ? '2px solid rgba(255,255,255,0.5)' : '1px solid rgba(209,213,219,0.6)',
+                            background: isSubActive ? sidebarStyle.activeBg : 'rgba(255,255,255,0.9)',
+                            boxShadow: isSubActive ? `0 4px 16px ${sidebarStyle.hoverGlow}` : 'none',
                             outline: 'none',
-                            marginBottom: '2px'
+                            marginBottom: '2px',
                           }}
                           onClick={() => handleSubmenuItemClick(subItem.path)}
                           onMouseEnter={() => setHoveredItem(subItem.id)}
                           onMouseLeave={() => setHoveredItem(null)}
                         >
-                          <div className="flex items-center relative z-10 flex-1">
-                            {/* Ícone do subitem */}
-                            <div
-                              className={`p-1.5 rounded-md mr-3 transition-all duration-400 group-hover:scale-105 relative z-10 ${
-                                isSubActive
-                                  ? "bg-white/40" // Mais branco para ativos
-                                  : "bg-gray-100 group-hover:bg-gray-200 border border-gray-200"
-                              }`}
-                            >
+                          {hoveredItem === subItem.id && !isSubActive && (
+                            <span className="menu-hover-glow absolute inset-0 rounded-lg pointer-events-none" />
+                          )}
+                          {isSubActive && (
+                            <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-white/80" />
+                          )}
+                          <div className="flex items-center relative z-10 flex-1 min-w-0">
+                            <div className={`p-1.5 rounded-md mr-2 flex-shrink-0 ${isSubActive ? 'bg-white/35' : 'bg-gray-100 border border-gray-200'}`}>
                               <SubIconComponent
-                                className={`h-3.5 w-3.5 transition-colors duration-300 ${
-                                  isSubActive
-                                    ? "text-white scale-105"
-                                    : "text-gray-500 group-hover:text-[#106a37]"
-                                }`}
+                                className="h-3.5 w-3.5"
+                                style={{ color: isSubActive ? '#fff' : hoveredItem === subItem.id ? sidebarStyle.primary : '#6b7280' }}
                               />
                             </div>
-
-                            {/* Label do subitem */}
-                            <div className="flex flex-col flex-1 min-w-0">
-                              <span
-                                className={`text-sm font-normal relative z-10 transition-all duration-300 ${
-                                  isSubActive
-                                    ? "text-white"
-                                    : "group-hover:text-gray-900"
-                                }`}
-                              >
-                                {subItem.label}
-                                {/* Sublinhado branco para submenus ativos */}
-                                {isSubActive && (
-                                  <span
-                                    className="absolute bottom-0 left-0 w-full h-0.5"
-                                    style={{
-                                      background: 'linear-gradient(90deg, #ffffff, #f8fafc)',
-                                      boxShadow: '0 0 6px rgba(255,255,255,0.4)'
-                                    }}
-                                  ></span>
-                                )}
-                              </span>
-                              {/* Formato dos relatórios */}
-                              {subItem.formats && (
-                                <span className={`text-xs mt-1 ${
-                                  isSubActive ? "text-gray-300" : "text-gray-500"
-                                }`}>
-                                  {subItem.formats}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Badge para contadores */}
-                            {subItem.badge && (
-                              <span 
-                                className="text-xs font-medium px-2 py-0.5 rounded-full ml-2 transition-all duration-300 whitespace-nowrap"
-                                style={{
-                                  background: isSubActive 
-                                    ? 'rgba(255,255,255,0.4)' 
-                                    : 'rgba(16,106,55,0.1)',
-                                  color: isSubActive 
-                                    ? 'white' 
-                                    : '#106a37',
-                                  border: isSubActive 
-                                    ? '1px solid rgba(255,255,255,0.6)'
-                                    : '1px solid rgba(16,106,55,0.3)',
-                                  boxShadow: isSubActive 
-                                    ? '0 2px 6px rgba(255,255,255,0.3)'
-                                    : '0 1px 2px rgba(0,0,0,0.05)'
-                                }}
-                              >
-                                {subItem.badge}
-                              </span>
-                            )}
+                            <span className={`text-sm truncate ${isSubActive ? 'text-white font-medium' : 'text-gray-700'}`}>
+                              {subLabel}
+                            </span>
                           </div>
                         </button>
                       );
@@ -536,7 +422,7 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
                         zIndex: 10
                       }}
                     >
-                      Sistema CRM
+                      {t('menu.sistemaCrm')}
                     </span>
                   </div>
                 </div>
@@ -763,6 +649,22 @@ function Sidebar({ sidebar, setSidebarOpen, activeTab, setActiveTab }) {
           animation-delay: 300ms;
         }
       `}</style>
+
+      {/* Tooltip fixo — fora do overflow do nav */}
+      {isCollapsed && tooltipPos && (
+        <div
+          className="fixed z-[200] px-3 py-2 rounded-xl text-sm font-semibold text-white whitespace-nowrap pointer-events-none shadow-2xl sidebar-tooltip"
+          style={{
+            top: tooltipPos.top,
+            left: tooltipPos.left,
+            transform: 'translateY(-50%)',
+            background: sidebarStyle.activeBg,
+            boxShadow: `0 8px 32px ${sidebarStyle.hoverGlow}`,
+          }}
+        >
+          {tooltipPos.text}
+        </div>
+      )}
     </div>
   );
 }

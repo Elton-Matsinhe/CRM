@@ -1,0 +1,33 @@
+{
+  "header": {
+    "searchPlaceholder": "Search...",
+    "summary": "Here is today's system performance summary",
+    "quotes": "Quotes",
+    "pending": "Pending",
+    "policies": "Policies",
+    "agents": "Agents",
+    "conversion": "Conversion",
+    "language": "Language",
+    "administrator": "Administrator",
+    "agent": "Agent"
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "cotacoes": "Quotes",
+    "criarCotacao": "Create Quote",
+    "editarCotacao": "Edit Quote",
+    "listarCotacoes": "List Quotes",
+    "gestaoCotacoes": "Quote Management",
+    "acompanhamento": "Tracking",
+    "aprovacaoTaxas": "Rate Approval",
+    "departamentos": "Departments",
+    "relatorios": "Reports",
+    "utilizadores": "Users",
+    "sistemaCrm": "CRM System"
+  },
+  "greeting": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening"
+  }
+}

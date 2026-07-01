@@ -1,17 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Users, UserPlus, Search, Edit, Key, Shield, User, Eye, Trash2,
-  X, Loader2, CheckCircle, XCircle, Mail, Building, MapPin
+  Users, UserPlus, Search, Edit, Key, Shield, Eye, Trash2,
+  X, Loader2, CheckCircle, XCircle, Mail, Building, MapPin, Filter, Calendar, Briefcase
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { usuarioService, balcaoService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import AnimatedPagination from '../components/ui/AnimatedPagination';
+import DataTableWrapper from '../components/ui/DataTableWrapper';
+import UserAvatar from '../components/ui/UserAvatar';
 
 const ROLES = [
-  { value: 'admin', label: 'Administrador', color: 'bg-purple-100 text-purple-800 border-purple-200' },
-  { value: 'agente', label: 'Agente', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  { value: 'subscritor', label: 'Subscritor', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' }
+  { value: 'admin', label: 'Administrador', color: 'bg-purple-100 text-purple-800 border-purple-300 ring-1 ring-purple-200' },
+  { value: 'agente', label: 'Agente', color: 'bg-teal-100 text-teal-800 border-teal-300 ring-1 ring-teal-200' },
+  { value: 'subscritor', label: 'Subscritor', color: 'bg-emerald-100 text-emerald-800 border-emerald-300 ring-1 ring-emerald-200' }
 ];
+
+const ITENS_POR_PAGINA = 10;
 
 const exigeBalcao = (role) => role === 'admin' || role === 'agente';
 
@@ -32,6 +37,10 @@ function GestaoUsuarios() {
   const [salvando, setSalvando] = useState(false);
   const [busca, setBusca] = useState('');
   const [filtroRole, setFiltroRole] = useState('all');
+  const [filtroBalcao, setFiltroBalcao] = useState('all');
+  const [filtroEstado, setFiltroEstado] = useState('all');
+  const [filtroDepartamento, setFiltroDepartamento] = useState('all');
+  const [paginaAtual, setPaginaAtual] = useState(1);
   const [modalCriar, setModalCriar] = useState(false);
   const [modalEditar, setModalEditar] = useState(null);
   const [modalSenha, setModalSenha] = useState(null);
@@ -86,15 +95,43 @@ function GestaoUsuarios() {
 
   const getRoleInfo = (role) => ROLES.find(r => r.value === role) || ROLES[1];
 
+  const departamentosUnicos = useMemo(() => {
+    const set = new Set(
+      usuarios.map((u) => u.departamento).filter(Boolean)
+    );
+    return [...set].sort();
+  }, [usuarios]);
+
   const usuariosFiltrados = usuarios.filter((u) => {
     const matchBusca =
+      !busca.trim() ||
       u.nome?.toLowerCase().includes(busca.toLowerCase()) ||
       u.email?.toLowerCase().includes(busca.toLowerCase()) ||
       u.departamento?.toLowerCase().includes(busca.toLowerCase()) ||
       u.balcao?.toLowerCase().includes(busca.toLowerCase());
     const matchRole = filtroRole === 'all' || u.role === filtroRole;
-    return matchBusca && matchRole;
+    const matchBalcao = filtroBalcao === 'all' || u.balcao === filtroBalcao;
+    const ativo = u.ativo === 1 || u.ativo === true;
+    const matchEstado =
+      filtroEstado === 'all' ||
+      (filtroEstado === 'ativo' && ativo) ||
+      (filtroEstado === 'inativo' && !ativo);
+    const matchDept =
+      filtroDepartamento === 'all' ||
+      (filtroDepartamento === '__none__' && !u.departamento) ||
+      u.departamento === filtroDepartamento;
+    return matchBusca && matchRole && matchBalcao && matchEstado && matchDept;
   });
+
+  const totalPaginas = Math.max(1, Math.ceil(usuariosFiltrados.length / ITENS_POR_PAGINA));
+  const usuariosPagina = usuariosFiltrados.slice(
+    (paginaAtual - 1) * ITENS_POR_PAGINA,
+    paginaAtual * ITENS_POR_PAGINA
+  );
+
+  useEffect(() => {
+    setPaginaAtual(1);
+  }, [busca, filtroRole, filtroBalcao, filtroEstado, filtroDepartamento]);
 
   const handleCriar = async (e) => {
     e.preventDefault();
@@ -233,10 +270,10 @@ function GestaoUsuarios() {
   if (usuario?.role !== 'admin') return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen p-4 md:p-6">
+      <div className="w-full max-w-[100%]">
         {/* Header */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+        <div className="mb-6 pb-4 border-b border-gray-200/80">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
@@ -252,7 +289,7 @@ function GestaoUsuarios() {
                 carregarBalcoes();
                 setModalCriar(true);
               }}
-              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium shadow-sm"
+              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-medium shadow-sm"
             >
               <UserPlus className="h-5 w-5" />
               Novo Utilizador
@@ -260,133 +297,189 @@ function GestaoUsuarios() {
           </div>
         </div>
 
+        {/* Stats */}
+        <div className="flex flex-wrap gap-3 mb-6">
+          {[
+            { label: 'Total', value: usuarios.length, cls: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
+            { label: 'Administradores', value: usuarios.filter(u => u.role === 'admin').length, cls: 'bg-purple-50 border-purple-200 text-purple-700' },
+            { label: 'Agentes', value: usuarios.filter(u => u.role === 'agente').length, cls: 'bg-teal-50 border-teal-200 text-teal-700' },
+            { label: 'Ativos', value: usuarios.filter(u => u.ativo === 1 || u.ativo === true).length, cls: 'bg-green-50 border-green-200 text-green-700' },
+          ].map((s) => (
+            <div key={s.label} className={`px-4 py-2 rounded-xl border ${s.cls}`}>
+              <div className="text-xs font-medium opacity-80">{s.label}</div>
+              <div className="text-xl font-bold text-gray-900">{s.value}</div>
+            </div>
+          ))}
+        </div>
+
         {/* Filtros */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <div className="mb-4 pb-4 border-b border-gray-200/60">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="lg:col-span-2 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-600" />
               <input
                 type="text"
-                placeholder="Pesquisar por nome, email, balcão ou departamento..."
+                placeholder="Pesquisar nome, email, balcão..."
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white/70"
               />
             </div>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-600 pointer-events-none" />
+              <select
+                value={filtroRole}
+                onChange={(e) => setFiltroRole(e.target.value)}
+                className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl bg-white/70 focus:ring-2 focus:ring-emerald-500/20"
+              >
+                <option value="all">Todos os perfis</option>
+                <option value="admin">Administradores</option>
+                <option value="agente">Agentes</option>
+                <option value="subscritor">Subscritores</option>
+              </select>
+            </div>
             <select
-              value={filtroRole}
-              onChange={(e) => setFiltroRole(e.target.value)}
-              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              value={filtroBalcao}
+              onChange={(e) => setFiltroBalcao(e.target.value)}
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-xl bg-white/70 focus:ring-2 focus:ring-emerald-500/20"
             >
-              <option value="all">Todos os perfis</option>
-              <option value="admin">Administradores</option>
-              <option value="agente">Agentes</option>
-              <option value="subscritor">Subscritores</option>
+              <option value="all">Todos os balcões</option>
+              {balcoes.map((b) => (
+                <option key={b.id} value={b.nome}>{b.nome}</option>
+              ))}
+            </select>
+            <select
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-xl bg-white/70 focus:ring-2 focus:ring-emerald-500/20"
+            >
+              <option value="all">Todos os estados</option>
+              <option value="ativo">Ativos</option>
+              <option value="inativo">Inativos</option>
             </select>
           </div>
+          {departamentosUnicos.length > 0 && (
+            <div className="mt-3 max-w-xs">
+              <select
+                value={filtroDepartamento}
+                onChange={(e) => setFiltroDepartamento(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-xl bg-white/70 text-sm"
+              >
+                <option value="all">Todos os departamentos</option>
+                <option value="__none__">Sem departamento</option>
+                {departamentosUnicos.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Tabela */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mr-3" />
-              <span className="text-gray-600">Carregando utilizadores...</span>
-            </div>
-          ) : usuariosFiltrados.length === 0 ? (
-            <div className="text-center py-16 text-gray-500">
-              <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-              <p>Nenhum utilizador encontrado</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Utilizador</th>
-                    <th className="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Perfil</th>
-                    <th className="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Balcão</th>
-                    <th className="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Departamento</th>
-                    <th className="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Estado</th>
-                    <th className="text-left px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Criado em</th>
-                    <th className="text-right px-6 py-3 text-xs font-semibold text-gray-600 uppercase">Ações</th>
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mr-3" />
+            <span className="text-gray-600">Carregando utilizadores...</span>
+          </div>
+        ) : usuariosFiltrados.length === 0 ? (
+          <div className="text-center py-16 text-gray-500">
+            <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+            <p>Nenhum utilizador encontrado</p>
+          </div>
+        ) : (
+          <>
+            <DataTableWrapper>
+              <table className="w-full min-w-[1100px] border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-gray-200 bg-gradient-to-r from-gray-50/90 to-emerald-50/40">
+                    <th className="text-left px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5"><Users className="h-4 w-4 text-emerald-600" />Utilizador</span>
+                    </th>
+                    <th className="text-left px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5"><Shield className="h-4 w-4 text-emerald-600" />Perfil</span>
+                    </th>
+                    <th className="text-left px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-emerald-600" />Balcão</span>
+                    </th>
+                    <th className="text-left px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5"><Building className="h-4 w-4 text-emerald-600" />Departamento</span>
+                    </th>
+                    <th className="text-left px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">Estado</th>
+                    <th className="text-left px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5"><Calendar className="h-4 w-4 text-emerald-600" />Criado em</span>
+                    </th>
+                    <th className="text-right px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {usuariosFiltrados.map((u) => {
+                <tbody className="divide-y divide-gray-100/80">
+                  {usuariosPagina.map((u) => {
                     const roleInfo = getRoleInfo(u.role);
                     const ativo = u.ativo === 1 || u.ativo === true;
                     return (
-                      <tr key={u.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                              <User className="h-5 w-5 text-emerald-600" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{u.nome}</p>
-                              <p className="text-sm text-gray-500 flex items-center gap-1">
-                                <Mail className="h-3 w-3" />
+                      <tr key={u.id} className="hover:bg-emerald-50/50 transition-colors duration-200">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center gap-3 min-w-[220px]">
+                            <UserAvatar size={38} />
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-900 truncate">{u.nome}</p>
+                              <p className="text-sm text-gray-500 truncate flex items-center gap-1">
+                                <Mail className="h-3 w-3 flex-shrink-0" />
                                 {u.email}
                               </p>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${roleInfo.color}`}>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${roleInfo.color}`}>
                             {u.role === 'admin' && <Shield className="h-3 w-3" />}
                             {u.role === 'subscritor' && <Eye className="h-3 w-3" />}
+                            {u.role === 'agente' && <Briefcase className="h-3 w-3" />}
                             {roleInfo.label}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           {u.balcao ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200">
                               <MapPin className="h-3 w-3" />
                               {u.balcao}
                             </span>
                           ) : (
-                            <span className="text-red-500 text-xs font-medium">Não definido</span>
+                            <span className="text-amber-600 text-xs font-medium">Não definido</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          {u.departamento ? (
-                            <span className="flex items-center gap-1">
-                              <Building className="h-3 w-3" />
-                              {u.departamento}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">—</span>
-                          )}
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 max-w-[160px] truncate">
+                          {u.departamento || '—'}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <button
+                            type="button"
                             onClick={() => toggleAtivo(u)}
                             disabled={u.id === usuario?.id}
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                            className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
                               ativo
-                                ? 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200'
-                                : 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200'
+                                ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200/80'
+                                : 'bg-red-100 text-red-800 border-red-300 hover:bg-red-200/80'
                             } ${u.id === usuario?.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                            title={u.id === usuario?.id ? 'Não pode alterar o seu próprio estado' : 'Clique para alternar'}
                           >
-                            {ativo ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                            {ativo ? <CheckCircle className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
                             {ativo ? 'Ativo' : 'Inativo'}
                           </button>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                           {u.created_at ? new Date(u.created_at).toLocaleDateString('pt-MZ') : '—'}
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1">
                             <button
+                              type="button"
                               onClick={() => abrirEditar(u)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
                               title="Editar"
                             >
                               <Edit className="h-4 w-4" />
                             </button>
                             <button
+                              type="button"
                               onClick={() => {
                                 setModalSenha(u);
                                 setNovaSenha('');
@@ -398,10 +491,11 @@ function GestaoUsuarios() {
                               <Key className="h-4 w-4" />
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleExcluir(u)}
                               disabled={u.id === usuario?.id}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              title={u.id === usuario?.id ? 'Não pode eliminar a sua própria conta' : 'Eliminar utilizador'}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                              title="Eliminar"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -412,13 +506,20 @@ function GestaoUsuarios() {
                   })}
                 </tbody>
               </table>
-            </div>
-          )}
-        </div>
+            </DataTableWrapper>
 
-        <p className="text-sm text-gray-500 mt-4 text-center">
-          Total: {usuariosFiltrados.length} de {usuarios.length} utilizador(es)
-        </p>
+            {usuariosFiltrados.length > ITENS_POR_PAGINA && (
+              <AnimatedPagination
+                currentPage={paginaAtual}
+                totalPages={totalPaginas}
+                totalItems={usuariosFiltrados.length}
+                itemsPerPage={ITENS_POR_PAGINA}
+                onPageChange={setPaginaAtual}
+                itemLabel="utilizadores"
+              />
+            )}
+          </>
+        )}
       </div>
 
       {/* Modal Criar */}

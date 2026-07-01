@@ -1,0 +1,29 @@
+{
+  "header": {
+    "searchPlaceholder": "Cerca...",
+    "summary": "Ecco il riepilogo delle prestazioni di oggi",
+    "quotes": "Preventivi",
+    "pending": "In attesa",
+    "policies": "Polizze",
+    "agents": "Agenti",
+    "conversion": "Conversione",
+    "language": "Lingua",
+    "administrator": "Amministratore",
+    "agent": "Agente"
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "cotacoes": "Preventivi",
+    "criarCotacao": "Crea preventivo",
+    "editarCotacao": "Modifica preventivo",
+    "listarCotacoes": "Elenco preventivi",
+    "gestaoCotacoes": "Gestione preventivi",
+    "acompanhamento": "Monitoraggio",
+    "aprovacaoTaxas": "Approvazione tariffe",
+    "departamentos": "Dipartimenti",
+    "relatorios": "Report",
+    "utilizadores": "Utenti",
+    "sistemaCrm": "Sistema CRM"
+  },
+  "greeting": { "morning": "Buongiorno", "afternoon": "Buon pomeriggio", "evening": "Buonasera" }
+}

@@ -1,0 +1,29 @@
+{
+  "header": {
+    "searchPlaceholder": "Suchen...",
+    "summary": "Hier ist die heutige Systemleistungsübersicht",
+    "quotes": "Angebote",
+    "pending": "Ausstehend",
+    "policies": "Policen",
+    "agents": "Agenten",
+    "conversion": "Conversion",
+    "language": "Sprache",
+    "administrator": "Administrator",
+    "agent": "Agent"
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "cotacoes": "Angebote",
+    "criarCotacao": "Angebot erstellen",
+    "editarCotacao": "Angebot bearbeiten",
+    "listarCotacoes": "Angebote auflisten",
+    "gestaoCotacoes": "Angebotsverwaltung",
+    "acompanhamento": "Verfolgung",
+    "aprovacaoTaxas": "Tarifgenehmigung",
+    "departamentos": "Abteilungen",
+    "relatorios": "Berichte",
+    "utilizadores": "Benutzer",
+    "sistemaCrm": "CRM-System"
+  },
+  "greeting": { "morning": "Guten Morgen", "afternoon": "Guten Tag", "evening": "Guten Abend" }
+}

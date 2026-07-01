@@ -16,6 +16,10 @@ import {
   User,
 } from "lucide-react";
 import CotacoesLayout from "../components/CotacoesLayout";
+import CotacaoStatusBadge from "../components/ui/CotacaoStatusBadge";
+import AnimatedPagination from "../components/ui/AnimatedPagination";
+import DataTableWrapper from "../components/ui/DataTableWrapper";
+import { STATUS_FILTER_OPTIONS } from "../utils/cotacaoStatus";
 import { cotacaoService } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import VisualizacaoClienteDocumentos from "../components/VisualizacaoClienteDocumentos";
@@ -168,29 +172,14 @@ function ListarCotacoes() {
     return () => clearTimeout(timeoutId);
   }, [searchTerm]);
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "ativa":
-        return "bg-emerald-100 text-emerald-800 border border-emerald-200";
-      case "expirada":
-        return "bg-yellow-100 text-yellow-800 border border-yellow-200";
-      case "cancelada":
-        return "bg-red-100 text-red-800 border border-red-200";
-      default:
-        return "bg-gray-100 text-gray-800 border border-gray-200";
-    }
-  };
-
   const getStatusText = (status) => {
     switch (status) {
-      case "ativa":
-        return "Ativa";
-      case "expirada":
-        return "Expirada";
-      case "cancelada":
-        return "Cancelada";
-      default:
-        return status;
+      case "ativa": return "Ativa";
+      case "pendente": return "Pendente";
+      case "finalizada": return "Finalizada";
+      case "expirada": return "Expirada";
+      case "cancelada": return "Cancelada";
+      default: return status;
     }
   };
 
@@ -955,7 +944,7 @@ function ListarCotacoes() {
       title="Listar Cotações"
       subtitle="Visualize e gerencie todas as cotações do sistema"
     >
-      <div className="p-8 bg-white min-h-screen">
+      <div className="p-4 md:p-6 min-h-screen w-full">
         {/* Loading overlay para geração de PDF */}
         {gerandoPDF && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
@@ -968,7 +957,7 @@ function ListarCotacoes() {
         )}
 
         {/* Filtros e Busca */}
-        <div className="bg-white rounded-lg p-6 mb-8">
+        <div className="mb-6 pb-4 border-b border-gray-200/60">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
             <div className="flex-1 max-w-md">
               <div className="relative">
@@ -987,29 +976,13 @@ function ListarCotacoes() {
               <div className="flex items-center space-x-2">
                 <Filter className="h-5 w-5 text-emerald-600" />
                 <select
-                  className="px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all duration-300 min-w-[180px] hover:border-emerald-400 hover:bg-gray-50"
+                  className="px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-colors duration-200 min-w-[180px]"
                   value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
+                  onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
                 >
-                  <option value="all">Todos os status</option>
-                  <option value="ativa">Ativas</option>
-                  <option value="expirada">Expiradas</option>
-                  <option value="cancelada">Canceladas</option>
-                </select>
-              </div>
-              
-              <div className="flex items-center space-x-2 text-gray-700">
-                <span className="text-sm">Mostrar:</span>
-                <select
-                  className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all duration-300 hover:border-emerald-400 hover:bg-gray-50"
-                  onChange={(e) => {
-                    setCurrentPage(1);
-                  }}
-                  defaultValue="10"
-                >
-                  <option value="10">10 por página</option>
-                  <option value="25">25 por página</option>
-                  <option value="50">50 por página</option>
+                  {STATUS_FILTER_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -1025,7 +998,15 @@ function ListarCotacoes() {
               <div className="text-sm text-green-700">Ativas</div>
               <div className="text-xl font-bold text-gray-900">{cotacoes.filter(c => c.status === 'ativa').length}</div>
             </div>
-            <div className="px-4 py-2 bg-yellow-50 rounded-lg border border-yellow-200 hover:bg-yellow-100 hover:border-yellow-300 transition-all duration-300 cursor-default">
+            <div className="px-4 py-2 bg-amber-50 rounded-lg border border-amber-200">
+              <div className="text-sm text-amber-700">Pendentes</div>
+              <div className="text-xl font-bold text-gray-900">{cotacoes.filter(c => c.status === 'pendente').length}</div>
+            </div>
+            <div className="px-4 py-2 bg-teal-50 rounded-lg border border-teal-200">
+              <div className="text-sm text-teal-700">Finalizadas</div>
+              <div className="text-xl font-bold text-gray-900">{cotacoes.filter(c => c.status === 'finalizada').length}</div>
+            </div>
+            <div className="px-4 py-2 bg-yellow-50 rounded-lg border border-yellow-200 transition-colors duration-200">
               <div className="text-sm text-yellow-700">Expiradas</div>
               <div className="text-xl font-bold text-gray-900">{cotacoes.filter(c => c.status === 'expirada').length}</div>
             </div>
@@ -1037,41 +1018,29 @@ function ListarCotacoes() {
         </div>
 
         {/* Tabela de Cotações */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-              <span className="ml-3 text-gray-600">Carregando cotações...</span>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1000px]">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+            <span className="ml-3 text-gray-600">Carregando cotações...</span>
+          </div>
+        ) : (
+          <>
+            <DataTableWrapper>
+              <table className="w-full min-w-[1280px] border-collapse">
                 <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-32">
-                      ID
+                  <tr className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-emerald-50/40">
+                    <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5"><FileText className="h-4 w-4 text-emerald-600" />ID</span>
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-48">
-                      Cliente
+                    <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5"><User className="h-4 w-4 text-emerald-600" />Cliente</span>
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-64">
-                      Email / Telefone
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-32">
-                      Veículos
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-40">
-                      Valor Total
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-32">
-                      Data
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-32">
-                      Status
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-56">
-                      Ações
-                    </th>
+                    <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">Email / Telefone</th>
+                    <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">Veículos</th>
+                    <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">Valor Total</th>
+                    <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">Data</th>
+                    <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">Status</th>
+                    <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -1079,88 +1048,50 @@ function ListarCotacoes() {
                   currentItems.map((cotacao) => (
                     <tr
                       key={cotacao.id}
-                      className="hover:bg-emerald-50/50 transition-all duration-300 group hover:shadow-sm border-b border-gray-100 hover:border-emerald-100"
+                      className="hover:bg-emerald-50/60 transition-colors duration-200"
                     >
-                      <td className="px-6 py-4 group-hover:pl-7 transition-all duration-300">
-                        <div className="flex items-center space-x-2">
-                          <FileText className="h-4 w-4 text-emerald-600 group-hover:text-emerald-700 transition-colors duration-300" />
-                          <span className="font-mono text-emerald-700 font-semibold text-sm group-hover:text-emerald-800 transition-colors duration-300">
-                            {cotacao.id}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                          <span className="font-mono text-emerald-700 font-semibold text-sm">
+                            {cotacao.numero_cotacao || cotacao.id}
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 group-hover:pl-7 transition-all duration-300">
-                        <div className="text-gray-900 font-medium group-hover:text-gray-950 transition-colors duration-300">
-                          {cotacao.cliente.primeiroNome}{" "}
-                          {cotacao.cliente.sobrenome}
+                      <td className="px-4 py-3 whitespace-nowrap max-w-[180px]">
+                        <div className="text-gray-900 font-medium truncate">
+                          {cotacao.cliente.primeiroNome} {cotacao.cliente.sobrenome}
                         </div>
-                        <div className="text-gray-600 text-xs mt-1 group-hover:text-gray-700 transition-colors duration-300">
-                          {cotacao.cliente.tipo} • {cotacao.cliente.numeroDocumento?.substring(0, 8) || 'N/A'}...
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 group-hover:pl-7 transition-all duration-300">
-                        <div className="text-gray-700 text-sm truncate max-w-[200px] group-hover:text-gray-800 transition-colors duration-300" title={cotacao.cliente.email || 'N/A'}>
-                          {cotacao.cliente.email || 'N/A'}
-                        </div>
-                        <div className="text-gray-600 text-xs mt-1 group-hover:text-gray-700 transition-colors duration-300">
-                          {cotacao.cliente.telefone || 'N/A'}
+                        <div className="text-gray-500 text-xs truncate">
+                          {cotacao.cliente.tipo} • {cotacao.cliente.numeroDocumento || 'N/A'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 group-hover:pl-7 transition-all duration-300">
-                        <div className="text-gray-700 group-hover:text-gray-800 transition-colors duration-300">
-                          {cotacao.veiculos?.length || 0} veículo(s)
-                        </div>
-                        {cotacao.veiculos && cotacao.veiculos.length > 0 && (
-                          <div className="text-gray-600 text-xs mt-1 truncate max-w-[120px] group-hover:text-gray-700 transition-colors duration-300" title={cotacao.veiculos[0].marca_modelo || cotacao.veiculos[0].marcaModelo}>
-                            {cotacao.veiculos[0].marca_modelo || cotacao.veiculos[0].marcaModelo || 'N/A'}
-                          </div>
-                        )}
+                      <td className="px-4 py-3 whitespace-nowrap max-w-[200px]">
+                        <div className="text-gray-700 text-sm truncate" title={cotacao.cliente.email}>{cotacao.cliente.email || 'N/A'}</div>
+                        <div className="text-gray-500 text-xs truncate">{cotacao.cliente.telefone || 'N/A'}</div>
                       </td>
-                      <td className="px-6 py-4 group-hover:pl-7 transition-all duration-300">
-                        <span className="text-gray-900 font-semibold group-hover:text-gray-950 transition-colors duration-300">
-                          MT{" "}
-                          {parseFloat(cotacao.totalPremio || 0).toLocaleString(
-                            "pt-MZ",
-                            { minimumFractionDigits: 2 }
-                          )}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="text-gray-700">{cotacao.veiculos?.length || 0} veículo(s)</span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="text-gray-900 font-semibold">
+                          MT {parseFloat(cotacao.totalPremio || 0).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })}
                         </span>
-                        {cotacao.veiculos && cotacao.veiculos.length > 0 && (
-                          <div className="text-gray-600 text-xs mt-1 group-hover:text-gray-700 transition-colors duration-300">
-                            {cotacao.veiculos.length} x MT {parseFloat((cotacao.totalPremio || 0) / cotacao.veiculos.length).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })}
-                          </div>
-                        )}
                       </td>
-                      <td className="px-6 py-4 group-hover:pl-7 transition-all duration-300">
-                        <span className="text-gray-700 group-hover:text-gray-800 transition-colors duration-300">
-                          {new Date(cotacao.dataCriacao).toLocaleDateString(
-                            "pt-MZ"
-                          )}
-                        </span>
-                        <div className="text-gray-600 text-xs mt-1 group-hover:text-gray-700 transition-colors duration-300">
-                          {new Date(cotacao.dataCriacao).toLocaleTimeString("pt-MZ", { hour: '2-digit', minute: '2-digit' })}
-                        </div>
+                      <td className="px-4 py-3 whitespace-nowrap text-gray-700 text-sm">
+                        {new Date(cotacao.dataCriacao).toLocaleDateString("pt-MZ")}{' '}
+                        {new Date(cotacao.dataCriacao).toLocaleTimeString("pt-MZ", { hour: '2-digit', minute: '2-digit' })}
                       </td>
-                      <td className="px-6 py-4 group-hover:pl-7 transition-all duration-300">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                            cotacao.status
-                          )} group-hover:scale-105 transition-transform duration-300`}
-                        >
-                          {getStatusText(cotacao.status)}
-                        </span>
-                        {cotacao.status_aprovacao && cotacao.status_aprovacao !== 'nao_requer' && (
-                          <div className={`mt-1 inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_APROVACAO_CORES[cotacao.status_aprovacao] || ''}`}>
-                            {getStatusAprovacaoLabel(cotacao.status_aprovacao)}
-                          </div>
-                        )}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <CotacaoStatusBadge status={cotacao.status} />
                       </td>
-                      <td className="px-6 py-4 group-hover:pl-7 transition-all duration-300">
-                        <div className="flex space-x-2">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1">
                           {/* Botão VISUALIZAR — apenas se aprovado ou sem necessidade */}
                           <button
-                            className={`p-2 rounded-lg transition-all duration-300 group/tooltip relative hover:scale-110 ${
+                            className={`p-2 rounded-lg transition-colors duration-200 ${
                               cotacaoPodePartilhar(cotacao.status_aprovacao)
-                                ? 'text-blue-600 hover:bg-blue-50 hover:text-blue-700'
+                                ? 'text-teal-600 hover:bg-teal-50'
                                 : 'text-gray-300 cursor-not-allowed'
                             }`}
                             title={
@@ -1179,9 +1110,9 @@ function ListarCotacoes() {
                           
                           {/* Botão BAIXAR */}
                           <button
-                            className={`p-2 rounded-lg transition-all duration-300 group/tooltip relative hover:scale-110 ${
+                            className={`p-2 rounded-lg transition-colors duration-200 ${
                               cotacaoPodePartilhar(cotacao.status_aprovacao)
-                                ? 'text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700'
+                                ? 'text-emerald-600 hover:bg-emerald-50'
                                 : 'text-gray-300 cursor-not-allowed'
                             }`}
                             title={
@@ -1200,9 +1131,9 @@ function ListarCotacoes() {
                           
                           {/* Botão IMPRIMIR */}
                           <button
-                            className={`p-2 rounded-lg transition-all duration-300 group/tooltip relative hover:scale-110 ${
+                            className={`p-2 rounded-lg transition-colors duration-200 ${
                               cotacaoPodePartilhar(cotacao.status_aprovacao)
-                                ? 'text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700'
+                                ? 'text-amber-600 hover:bg-amber-50'
                                 : 'text-gray-300 cursor-not-allowed'
                             }`}
                             title={
@@ -1221,7 +1152,7 @@ function ListarCotacoes() {
                           
                           {/* Botão MAIS OPÇÕES */}
                           <button
-                            className="p-2 text-purple-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all duration-300 group/tooltip relative hover:scale-110"
+                            className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors duration-200"
                             title="Mais opções"
                             onClick={() => abrirOpcoesPartilha(cotacao)}
                             disabled={gerandoPDF}
@@ -1235,7 +1166,7 @@ function ListarCotacoes() {
                           {/* Botão DADOS DO CLIENTE (apenas admin/subscritor) */}
                           {isAdminOuSubscritor && (
                             <button
-                              className="p-2 text-green-600 hover:bg-green-50 hover:text-green-700 rounded-lg transition-all duration-300 group/tooltip relative hover:scale-110"
+                              className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors duration-200"
                               title="Ver Dados do Cliente e Documentos"
                               onClick={() => {
                                 setCotacaoSelecionada(cotacao);
@@ -1264,67 +1195,20 @@ function ListarCotacoes() {
                 )}
                 </tbody>
               </table>
-            </div>
-          )}
+            </DataTableWrapper>
 
           {/* Rodapé da Tabela com Paginação */}
-          {!loading && (
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-              <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
-                <span className="text-sm text-gray-600">
-                  Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, pagination.total || 0)} de {pagination.total || 0} cotações
-                </span>
-              
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={prevPage}
-                  disabled={currentPage === 1}
-                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                
-                <div className="flex space-x-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNum;
-                    if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
-                    } else {
-                      pageNum = currentPage - 2 + i;
-                    }
-                    
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => paginate(pageNum)}
-                        className={`px-3 py-1 text-sm rounded transition-all duration-300 ${
-                          currentPage === pageNum
-                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
-                </div>
-                
-                <button
-                  onClick={nextPage}
-                  disabled={currentPage === totalPages}
-                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-          </div>
+          {totalPages > 0 && (
+            <AnimatedPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={pagination.total || filteredCotações.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={paginate}
+            />
           )}
-        </div>
+          </>
+        )}
 
         {/* Modal de Dados do Cliente e Documentos */}
         {mostrarDadosCliente && cotacaoSelecionada && (

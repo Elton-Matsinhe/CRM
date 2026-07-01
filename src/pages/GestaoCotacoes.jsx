@@ -10,6 +10,10 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { cotacaoService } from '../services/api';
 import VisualizacaoClienteDocumentos from '../components/VisualizacaoClienteDocumentos';
+import CotacaoStatusBadge from '../components/ui/CotacaoStatusBadge';
+import AnimatedPagination from '../components/ui/AnimatedPagination';
+import DataTableWrapper from '../components/ui/DataTableWrapper';
+import { STATUS_FILTER_OPTIONS } from '../utils/cotacaoStatus';
 
 function GestaoCotacoes() {
   const { themeConfig, language } = useTheme();
@@ -22,7 +26,7 @@ function GestaoCotacoes() {
   const [selectedCotacao, setSelectedCotacao] = useState(null);
   const [mostrarDadosCliente, setMostrarDadosCliente] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [itemsPerPage] = useState(10);
   const [cotacoes, setCotacoes] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -259,20 +263,24 @@ function GestaoCotacoes() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'ativa': return { bg: 'bg-emerald-600', text: 'text-white', border: 'border-emerald-700' };
-      case 'aprovada': return { bg: 'bg-green-600', text: 'text-white', border: 'border-green-700' };
-      case 'pendente': return { bg: 'bg-amber-600', text: 'text-white', border: 'border-amber-700' };
-      case 'expirada': return { bg: 'bg-red-600', text: 'text-white', border: 'border-red-700' };
+      case 'finalizada': return { bg: 'bg-emerald-600', text: 'text-white', border: 'border-emerald-700' };
+      case 'ativa': return { bg: 'bg-green-600', text: 'text-white', border: 'border-green-700' };
+      case 'aprovada': return { bg: 'bg-teal-600', text: 'text-white', border: 'border-teal-700' };
+      case 'pendente': return { bg: 'bg-amber-500', text: 'text-white', border: 'border-amber-600' };
+      case 'expirada': return { bg: 'bg-orange-600', text: 'text-white', border: 'border-orange-700' };
+      case 'cancelada': return { bg: 'bg-red-600', text: 'text-white', border: 'border-red-700' };
       default: return { bg: 'bg-gray-600', text: 'text-white', border: 'border-gray-700' };
     }
   };
 
   const getStatusText = (status) => {
     switch (status) {
+      case 'finalizada': return 'Finalizada';
       case 'ativa': return 'Ativa';
       case 'aprovada': return 'Aprovada';
       case 'pendente': return 'Pendente';
       case 'expirada': return 'Expirada';
+      case 'cancelada': return 'Cancelada';
       default: return status;
     }
   };
@@ -467,7 +475,7 @@ function GestaoCotacoes() {
         <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-green-100/30 rounded-full blur-3xl animate-pulse-slower"></div>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="relative z-10 w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl lg:text-3xl font-black mb-2 text-gray-900 tracking-tight">
@@ -481,7 +489,7 @@ function GestaoCotacoes() {
         {/* Cards de Estatísticas */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[
-            { label: getText("Total de Cotações", "Total Quotes", "Total Devis"), value: cotacoes.length, icon: FileText, color: "bg-blue-100 text-blue-700 hover:bg-blue-200" },
+            { label: getText("Total de Cotações", "Total Quotes", "Total Devis"), value: cotacoes.length, icon: FileText, color: "bg-emerald-100 text-emerald-700" },
             { label: getText("Ativas", "Active", "Actives"), value: cotacoes.filter(c => c.status === 'ativa').length, icon: CheckCircle, color: "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" },
             { label: getText("Pendentes", "Pending", "En attente"), value: cotacoes.filter(c => c.status === 'pendente').length, icon: Clock, color: "bg-amber-100 text-amber-700 hover:bg-amber-200" },
             { label: getText("Valor Total", "Total Value", "Valeur Totale"), value: "2.0M", icon: TrendingUp, color: "bg-purple-100 text-purple-700 hover:bg-purple-200" }
@@ -511,7 +519,7 @@ function GestaoCotacoes() {
         </div>
 
         {/* Filtros e Busca */}
-        <div className="rounded-xl p-6 bg-white border border-gray-200 mb-8 shadow-sm">
+        <div className="mb-6 pb-4 border-b border-gray-200/60">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
             <div className="flex-1 max-w-md">
               <div className="relative">
@@ -535,10 +543,9 @@ function GestaoCotacoes() {
                   onChange={(e) => setFilterStatus(e.target.value)}
                 >
                   <option value="all">{getText("Todos os status", "All status", "Tous les statuts")}</option>
-                  <option value="ativa">{getText("Ativas", "Active", "Actives")}</option>
-                  <option value="aprovada">{getText("Aprovadas", "Approved", "Approuvées")}</option>
-                  <option value="pendente">{getText("Pendentes", "Pending", "En attente")}</option>
-                  <option value="expirada">{getText("Expiradas", "Expired", "Expirées")}</option>
+                  {STATUS_FILTER_OPTIONS.filter(o => o.value !== 'all').map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
                 </select>
               </div>
               
@@ -553,55 +560,46 @@ function GestaoCotacoes() {
         </div>
 
         {/* Tabela de Cotações */}
-        <div className="rounded-xl bg-white border border-gray-200 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full">
+        <DataTableWrapper>
+            <table className="w-full min-w-[1100px] border-collapse">
               <thead>
-                <tr className="border-b border-gray-300 bg-gray-50">
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">ID</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Cliente</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Tipo</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Valor</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Agente</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Progresso</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Ações</th>
+                <tr className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-emerald-50/40">
+                  <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap"><span className="inline-flex items-center gap-1.5"><FileText className="h-4 w-4 text-emerald-600" />ID</span></th>
+                  <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap"><span className="inline-flex items-center gap-1.5"><User className="h-4 w-4 text-emerald-600" />Cliente</span></th>
+                  <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">Tipo</th>
+                  <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">Valor</th>
+                  <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">Status</th>
+                  <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">Agente</th>
+                  <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">Progresso</th>
+                  <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-gray-600 whitespace-nowrap">Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {currentItems.map((cotacao) => {
-                  const statusColors = getStatusColor(cotacao.status);
-                  return (
+                {currentItems.map((cotacao) => (
                     <tr 
                       key={cotacao.id} 
-                      className="border-b border-gray-100 hover:bg-emerald-50/50 transition-colors duration-200"
+                      className="border-b border-gray-100 hover:bg-emerald-50/60 transition-colors duration-200"
                     >
-                      <td className="px-6 py-4">
-                        <span className="font-mono text-emerald-700 font-semibold">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="font-mono text-emerald-700 font-semibold text-sm">
                           {cotacao.numero_cotacao || cotacao.id}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="text-gray-900 font-medium">{cotacao.cliente}</div>
-                        <div className="text-gray-600 text-xs">{cotacao.data}</div>
+                      <td className="px-4 py-3 whitespace-nowrap max-w-[200px]">
+                        <div className="text-gray-900 font-medium truncate">{cotacao.cliente}</div>
+                        <div className="text-gray-500 text-xs truncate">{cotacao.data ? new Date(cotacao.data).toLocaleDateString('pt-MZ') : '—'}</div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-gray-700">{cotacao.tipo}</span>
-                      </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3 whitespace-nowrap text-gray-700">{cotacao.tipo}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <span className="text-gray-900 font-semibold">
                           {cotacao.valor.toLocaleString('pt-MZ')} MZN
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors.bg} ${statusColors.text} ${statusColors.border}`}>
-                          {getStatusText(cotacao.status)}
-                        </span>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <CotacaoStatusBadge status={cotacao.status} />
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-gray-700 text-sm">{cotacao.agente}</span>
-                      </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3 whitespace-nowrap text-gray-700 text-sm">{cotacao.agente}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center space-x-2">
                           <div className="flex-1 h-2 rounded-full overflow-hidden bg-gray-200">
                             <div 
@@ -617,7 +615,7 @@ function GestaoCotacoes() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex space-x-2">
                           <button 
                             onClick={() => handlePrint(cotacao)}
@@ -628,7 +626,7 @@ function GestaoCotacoes() {
                           </button>
                           <button 
                             onClick={() => handleEmail(cotacao)}
-                            className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-200"
+                            className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors duration-200"
                             title="Enviar Email"
                           >
                             <Send className="h-4 w-4" />
@@ -676,96 +674,20 @@ function GestaoCotacoes() {
                         </div>
                       </td>
                     </tr>
-                  );
-                })}
+                ))}
               </tbody>
             </table>
-          </div>
+        </DataTableWrapper>
 
-          {/* Paginação Profissional */}
-          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-            <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
-              <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-600">
-                  {getText("Mostrar:", "Show:", "Afficher:")}
-                </span>
-                <select
-                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all duration-300 hover:border-emerald-400"
-                  value={itemsPerPage}
-                  onChange={(e) => {
-                    setItemsPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                >
-                  <option value="5">5</option>
-                  <option value="10">10</option>
-                  <option value="20">20</option>
-                  <option value="50">50</option>
-                </select>
-                <span className="text-sm text-gray-600">
-                  {getText("Itens por página", "Items per page", "Éléments par page")}
-                </span>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600 mr-4">
-                  {getText("Página", "Page", "Page")} <span className="font-semibold">{currentPage}</span> {getText("de", "of", "de")} <span className="font-semibold">{totalPages}</span>
-                </span>
-
-                <div className="flex items-center space-x-1">
-                  {/* Primeira página */}
-                  <button
-                    onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === 1}
-                    className="p-2 text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                    title={getText("Primeira página", "First page", "Première page")}
-                  >
-                    <ChevronsLeft className="h-4 w-4" />
-                  </button>
-
-                  {/* Página anterior */}
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="p-2 text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                    title={getText("Página anterior", "Previous page", "Page précédente")}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-
-                  {/* Números de página */}
-                  <div className="flex items-center space-x-1 bg-white border border-gray-300 rounded-lg p-1">
-                    {renderPageNumbers()}
-                  </div>
-
-                  {/* Próxima página */}
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="p-2 text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                    title={getText("Próxima página", "Next page", "Page suivante")}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-
-                  {/* Última página */}
-                  <button
-                    onClick={() => setCurrentPage(totalPages)}
-                    disabled={currentPage === totalPages}
-                    className="p-2 text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                    title={getText("Última página", "Last page", "Dernière page")}
-                  >
-                    <ChevronsRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="text-sm text-gray-600">
-                {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredCotacoes.length)} {getText("de", "of", "de")} {filteredCotacoes.length} {getText("cotações", "quotes", "devis")}
-              </div>
-            </div>
-          </div>
-        </div>
+          {filteredCotacoes.length > 0 && (
+            <AnimatedPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredCotacoes.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
+          )}
       </div>
 
       {/* Modal de Dados do Cliente e Documentos */}

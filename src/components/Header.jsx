@@ -1,16 +1,15 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
-  Search,
   Bell,
   MessageSquare,
   Settings,
-  Menu,
+  PanelLeftClose,
+  PanelLeft,
   User,
   FileText,
   TrendingUp,
   CheckCircle,
   Clock,
-  XCircle,
   Shield,
   BarChart3,
   Users,
@@ -20,20 +19,26 @@ import {
   Database,
   ShieldCheck,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { estatisticasService } from "../services/api";
+import { useTranslation } from 'react-i18next';
+import GlobalSearch from "./GlobalSearch";
+import LanguageSelector from "./LanguageSelector";
+import UserAvatar from "./ui/UserAvatar";
+import { getGreetingKey, getFirstName } from "../utils/greeting";
 
-const Header = ({ sidebarOpen, setSidebarOpen }) => {
-  const { theme, setTheme, language, setLanguage } = useTheme();
+const Header = ({ sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed }) => {
+  const { theme, setTheme, language, themeConfig } = useTheme();
+  const { t } = useTranslation();
   const { logout, usuario } = useAuth();
   const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [notifications, setNotifications] = useState([]);
   const [messages, setMessages] = useState([]);
   const [crmMetrics, setCrmMetrics] = useState({
@@ -49,7 +54,25 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
   const notificationsRef = useRef(null);
   const messagesRef = useRef(null);
   const settingsRef = useRef(null);
-  const searchInputRef = useRef(null);
+
+  const greeting = useMemo(() => t(getGreetingKey()), [t, language]);
+  const userName = getFirstName(usuario?.nome);
+
+  const handleMenuToggle = () => {
+    if (window.innerWidth >= 1024) {
+      const next = !sidebarCollapsed;
+      setSidebarCollapsed(next);
+      localStorage.setItem('sidebarCollapsed', String(next));
+    } else {
+      setSidebarOpen(!sidebarOpen);
+    }
+  };
+
+  const themes = [
+    { id: 'branco', colors: ['#ffffff', '#e5e7eb'], ring: '#3b82f6' },
+    { id: 'verde', colors: ['#16a34a', '#0a4f2e'], ring: '#16a34a' },
+    { id: 'preto', colors: ['#374151', '#000000'], ring: '#374151' },
+  ];
 
   // Carregar dados dinâmicos
   useEffect(() => {
@@ -126,12 +149,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
 
   // Dados agora são carregados dinamicamente do backend via useEffect
 
-  // Dados de idiomas - Agora com siglas visíveis
-  const languages = [
-    { code: "pt", name: "Português", flag: "🇵🇹", shortName: "PT" },
-    { code: "en", name: "English", flag: "🇺🇸", shortName: "EN" },
-    { code: "fr", name: "Français", flag: "🇫🇷", shortName: "FR" }
-  ];
+  // Dados de idiomas movidos para LanguageSelector com Google Translate
 
   const unreadNotifications = notifications.filter((n) => n.unread).length;
   const unreadMessages = messages.filter((m) => m.unread).length;
@@ -159,29 +177,8 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
     }
   };
 
-  // Função de pesquisa
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      console.log("Pesquisando por:", searchQuery);
-      // Aqui você implementaria a lógica de pesquisa real
-      alert(`Pesquisando por: ${searchQuery}`);
-    }
-  };
+  // Pesquisa em tempo real via GlobalSearch
 
-  // Função para lidar com Enter na pesquisa
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
-
-  // Função para mudar idioma
-  const handleLanguageChange = (langCode) => {
-    setLanguage(langCode);
-    setIsSettingsOpen(false);
-  };
-
-  // Função para mudar tema
   const handleThemeChange = (themeName) => {
     setTheme(themeName);
   };
@@ -206,147 +203,109 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
     }
   };
 
-  // Obter cores do tema atual - FUNDO BRANCO PARA TODOS
-  const getHeaderStyle = () => {
-    return {
-      background: '#ffffff',
-      color: '#000000', // Texto preto
-      borderColor: '#e5e7eb' // Border cinza claro
-    };
+  // Obter cores do tema atual
+  const headerStyle = {
+    background: 'rgba(255, 255, 255, 0.85)',
+    color: themeConfig.text,
+    borderColor: themeConfig.border,
   };
-
-  const headerStyle = getHeaderStyle();
 
   return (
     <header 
-      className="sticky top-0 z-40 border-b shadow-sm transition-all duration-500"
+      className="flex-shrink-0 relative z-[80] border-b shadow-sm transition-all duration-500 backdrop-blur-xl overflow-visible"
       style={{
         background: headerStyle.background,
         color: headerStyle.color,
-        borderColor: headerStyle.borderColor
+        borderColor: headerStyle.borderColor,
+        boxShadow: `0 4px 24px -4px ${themeConfig.hoverGlow}`,
       }}
     >
-      <div className="px-6 py-4">
-        {/* Primeira Linha: Navegação e Ações */}
-        <div className="flex items-center justify-between mb-4">
-          {/* Lado Esquerdo: Navegação */}
-          <div className="flex items-center space-x-6">
-            {/* Botão Menu */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-xl transition-all duration-300 hover:scale-105 group hover:bg-green-50 border border-gray-200"
+      <div className="px-4 py-3 overflow-visible">
+        {/* Linha única — sem quebras, dropdowns visíveis */}
+        <div className="flex items-center justify-between gap-2 mb-3 flex-nowrap overflow-visible">
+          <div className="flex items-center gap-2 min-w-0 flex-shrink overflow-visible">
+            {/* Botão Menu — ocultar/expandir sidebar */}
+            <motion.button
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleMenuToggle}
+              className="p-2.5 rounded-2xl transition-all duration-300 group border-2"
+              style={{
+                borderColor: themeConfig.border,
+                background: themeConfig.hoverGlow,
+              }}
+              title={sidebarCollapsed ? "Expandir menu" : "Ocultar menu"}
             >
-              <Menu className="h-5 w-5 text-green-600 transition-colors duration-300 group-hover:text-green-700" />
-            </button>
+              {sidebarCollapsed ? (
+                <PanelLeft className="h-5 w-5 transition-colors duration-300" style={{ color: themeConfig.primary }} />
+              ) : (
+                <PanelLeftClose className="h-5 w-5 transition-colors duration-300" style={{ color: themeConfig.primary }} />
+              )}
+            </motion.button>
 
-            {/* Navegação */}
-            <div className="hidden md:flex items-center space-x-3">
-              <span 
-                className="text-sm font-medium px-3 py-1 rounded-full border"
-                style={{
-                  background: '#16a34a', // Verde
-                  color: '#ffffff',
-                  borderColor: '#16a34a'
-                }}
-              >
-                CRM Imperial
-              </span>
-              <span style={{ color: '#000000' }}>•</span>
-              <span className="text-sm font-semibold" style={{ color: '#000000' }}>
-                {getText("Painel Administrativo", "Admin Dashboard", "Tableau de Bord Admin")}
-              </span>
-            </div>
+            {/* Badge CRM */}
+            <span 
+              className="hidden md:inline text-xs font-semibold px-2.5 py-1 rounded-full border shadow-sm flex-shrink-0 whitespace-nowrap"
+              style={{
+                background: `linear-gradient(135deg, ${themeConfig.primary}, ${themeConfig.primaryDark})`,
+                color: '#ffffff',
+                borderColor: themeConfig.primaryDark,
+              }}
+            >
+              CRM Imperial
+            </span>
 
-            {/* Barra de Pesquisa Dinâmica */}
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400" />
-              </div>
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={getText(
-                  "Pesquisar cotações, apólices, agentes...",
-                  "Search quotes, policies, agents...",
-                  "Rechercher devis, polices, agents..."
-                )}
-                className="pl-10 pr-12 py-2.5 w-80 rounded-xl focus:ring-2 transition-all duration-300 placeholder-gray-400 border text-sm"
-                style={{
-                  background: '#ffffff',
-                  borderColor: '#d1d5db',
-                  color: '#000000'
-                }}
-              />
-              {/* Botão de Pesquisa Dinâmico */}
-              <button
-                onClick={handleSearch}
-                disabled={!searchQuery.trim()}
-                className={`absolute inset-y-0 right-0 pr-3 flex items-center transition-all duration-300 ${
-                  searchQuery.trim() 
-                    ? 'text-green-600 hover:text-green-700 cursor-pointer' 
-                    : 'text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                <Search className="h-4 w-4" />
-              </button>
-            </div>
+            <GlobalSearch />
           </div>
 
-          {/* Lado Direito: Ações Rápidas */}
-          <div className="flex items-center space-x-3">
-            {/* Seleção de Tema - Branco, Verde, Preto */}
-            <div className="flex items-center space-x-2">
-              {/* Branco (Primeira opção) */}
-              <button
-                onClick={() => handleThemeChange('branco')}
-                className={`p-2 rounded-xl transition-all duration-300 hover:scale-110 border-2 ${
-                  theme === 'branco' ? 'ring-2 ring-offset-2 ring-gray-300' : ''
-                } bg-white hover:bg-gray-50 border-gray-300`}
-                title={getText("Tema Branco", "White Theme", "Thème Blanc")}
-              >
-                <div className="w-4 h-4 rounded-full bg-gradient-to-br from-white to-gray-100 border border-gray-300"></div>
-              </button>
-              
-              {/* Verde */}
-              <button
-                onClick={() => handleThemeChange('verde')}
-                className={`p-2 rounded-xl transition-all duration-300 hover:scale-110 border-2 ${
-                  theme === 'verde' ? 'ring-2 ring-offset-2 ring-green-500' : ''
-                } bg-white hover:bg-green-50 border-green-300`}
-                title={getText("Tema Verde", "Green Theme", "Thème Vert")}
-              >
-                <div className="w-4 h-4 rounded-full bg-gradient-to-br from-green-400 to-green-600"></div>
-              </button>
-              
-              {/* Preto */}
-              <button
-                onClick={() => handleThemeChange('preto')}
-                className={`p-2 rounded-xl transition-all duration-300 hover:scale-110 border-2 ${
-                  theme === 'preto' ? 'ring-2 ring-offset-2 ring-black' : ''
-                } bg-white hover:bg-gray-100 border-gray-700`}
-                title={getText("Tema Preto", "Black Theme", "Thème Noir")}
-              >
-                <div className="w-4 h-4 rounded-full bg-gradient-to-br from-gray-700 to-black"></div>
-              </button>
+          <div className="flex items-center gap-1.5 flex-shrink-0 relative z-[90] overflow-visible">
+            {/* Seleção de Tema */}
+            <div className="hidden sm:flex items-center gap-1.5 p-1 rounded-2xl border bg-white/60 backdrop-blur-sm" style={{ borderColor: themeConfig.border }}>
+              {themes.map((t) => (
+                <motion.button
+                  key={t.id}
+                  whileHover={{ scale: 1.15 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => handleThemeChange(t.id)}
+                  className={`p-1.5 rounded-xl transition-all duration-300 border-2 ${
+                    theme === t.id ? 'ring-2 ring-offset-1' : 'border-transparent'
+                  }`}
+                  style={{
+                    ringColor: t.ring,
+                    borderColor: theme === t.id ? t.ring : 'transparent',
+                  }}
+                  title={t.id.charAt(0).toUpperCase() + t.id.slice(1)}
+                >
+                  <div
+                    className="w-4 h-4 rounded-full shadow-inner"
+                    style={{
+                      background: `linear-gradient(135deg, ${t.colors[0]}, ${t.colors[1]})`,
+                      border: t.id === 'branco' ? '1px solid #d1d5db' : 'none',
+                    }}
+                  />
+                </motion.button>
+              ))}
             </div>
 
+            {/* Seletor de Idioma — Google Translate */}
+            <LanguageSelector />
+
             {/* Mensagens */}
-            <div className="relative" ref={messagesRef}>
+            <div className="relative z-[90]" ref={messagesRef}>
               <button
                 onClick={() => {
                   setIsMessagesOpen(!isMessagesOpen);
                   setIsNotificationsOpen(false);
                   setIsSettingsOpen(false);
                 }}
-                className="relative p-2 rounded-xl transition-all duration-300 hover:scale-110 group hover:bg-green-50 border border-gray-200"
+                className="relative p-2 rounded-xl transition-all duration-300 hover:scale-110 group border"
+                style={{ borderColor: themeConfig.border, background: themeConfig.hoverGlow }}
               >
-                <MessageSquare className="h-5 w-5 text-green-600 transition-colors duration-300 group-hover:text-green-700" />
+                <MessageSquare className="h-5 w-5 transition-colors duration-300" style={{ color: themeConfig.primary }} />
                 {unreadMessages > 0 && (
                   <span 
-                    className="absolute -top-1 -right-1 w-5 h-5 text-xs rounded-full flex items-center justify-center animate-pulse font-medium bg-green-600 text-white"
+                    className="absolute -top-1 -right-1 w-5 h-5 text-xs rounded-full flex items-center justify-center animate-pulse font-medium text-white"
+                    style={{ background: themeConfig.primary }}
                   >
                     {unreadMessages}
                   </span>
@@ -356,7 +315,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
               {/* Dropdown Mensagens */}
               {isMessagesOpen && (
                 <div 
-                  className="absolute right-0 mt-2 w-96 rounded-xl shadow-2xl bg-white border border-gray-200 z-50 animate-slideDown"
+                  className="absolute right-0 mt-2 w-96 rounded-xl shadow-2xl bg-white border border-gray-200 z-[200] animate-slideDown"
                 >
                   <div className="p-4 border-b border-gray-100">
                     <div className="flex items-center justify-between">
@@ -410,19 +369,21 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
             </div>
 
             {/* Notificações */}
-            <div className="relative" ref={notificationsRef}>
+            <div className="relative z-[90]" ref={notificationsRef}>
               <button
                 onClick={() => {
                   setIsNotificationsOpen(!isNotificationsOpen);
                   setIsMessagesOpen(false);
                   setIsSettingsOpen(false);
                 }}
-                className="relative p-2 rounded-xl transition-all duration-300 hover:scale-110 group hover:bg-green-50 border border-gray-200"
+                className="relative p-2 rounded-xl transition-all duration-300 hover:scale-110 group border"
+                style={{ borderColor: themeConfig.border, background: themeConfig.hoverGlow }}
               >
-                <Bell className="h-5 w-5 text-green-600 transition-colors duration-300 group-hover:text-green-700" />
+                <Bell className="h-5 w-5 transition-colors duration-300" style={{ color: themeConfig.primary }} />
                 {unreadNotifications > 0 && (
                   <span 
-                    className="absolute -top-1 -right-1 w-5 h-5 text-xs rounded-full flex items-center justify-center animate-pulse font-medium bg-green-600 text-white"
+                    className="absolute -top-1 -right-1 w-5 h-5 text-xs rounded-full flex items-center justify-center animate-pulse font-medium text-white"
+                    style={{ background: themeConfig.primary }}
                   >
                     {unreadNotifications}
                   </span>
@@ -432,7 +393,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
               {/* Dropdown Notificações */}
               {isNotificationsOpen && (
                 <div 
-                  className="absolute right-0 mt-2 w-96 rounded-xl shadow-2xl bg-white border border-gray-200 z-50 animate-slideDown"
+                  className="absolute right-0 mt-2 w-96 rounded-xl shadow-2xl bg-white border border-gray-200 z-[200] animate-slideDown"
                 >
                   <div className="p-4 border-b border-gray-100">
                     <div className="flex items-center justify-between">
@@ -486,22 +447,23 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
             </div>
 
             {/* Configurações com Dropdown */}
-            <div className="relative" ref={settingsRef}>
+            <div className="relative z-[90]" ref={settingsRef}>
               <button
                 onClick={() => {
                   setIsSettingsOpen(!isSettingsOpen);
                   setIsMessagesOpen(false);
                   setIsNotificationsOpen(false);
                 }}
-                className="p-2 rounded-xl transition-all duration-300 hover:scale-110 group hover:bg-green-50 border border-gray-200"
+                className="p-2 rounded-xl transition-all duration-300 hover:scale-110 group border"
+                style={{ borderColor: themeConfig.border, background: themeConfig.hoverGlow }}
               >
-                <Settings className="h-5 w-5 text-green-600 transition-colors duration-300 group-hover:text-green-700" />
+                <Settings className="h-5 w-5 transition-colors duration-300" style={{ color: themeConfig.primary }} />
               </button>
 
               {/* Dropdown Configurações */}
               {isSettingsOpen && (
                 <div 
-                  className="absolute right-0 mt-2 w-64 rounded-xl shadow-2xl bg-white border border-gray-200 z-50 animate-slideDown"
+                  className="absolute right-0 mt-2 w-64 rounded-xl shadow-2xl bg-white border border-gray-200 z-[200] animate-slideDown"
                 >
                   <div className="p-4 border-b border-gray-100">
                     <h3 className="font-semibold text-gray-900 text-base">
@@ -510,35 +472,6 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
                   </div>
 
                   <div className="p-2">
-                    {/* Idioma */}
-                    <div className="mb-2">
-                      <p className="text-xs font-medium px-3 mb-2 text-green-700">
-                        {getText("Idioma", "Language", "Langue")}
-                      </p>
-                      {languages.map((lang) => (
-                        <button
-                          key={lang.code}
-                          onClick={() => handleLanguageChange(lang.code)}
-                          className={`w-full flex items-center space-x-3 px-3 py-2 text-left rounded-lg transition-all duration-200 mb-1 ${
-                            language === lang.code 
-                              ? 'bg-green-50 border border-green-200' 
-                              : 'hover:bg-green-50'
-                          }`}
-                        >
-                          <span className="text-base">{lang.flag}</span>
-                          <span className="text-sm text-gray-900 flex-1">{lang.name}</span>
-                          <span className="text-xs px-2 py-1 rounded font-medium bg-green-50 text-green-700 border border-green-200">
-                            {lang.shortName}
-                          </span>
-                          {language === lang.code && (
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="border-t my-2 border-gray-100"></div>
-
                     {/* Outras Configurações */}
                     <button className="w-full flex items-center space-x-3 px-3 py-2.5 text-left rounded-lg transition-all duration-200 hover:bg-green-50 group">
                       <UserCog className="h-4 w-4 text-green-600" />
@@ -566,29 +499,25 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
             </div>
 
             {/* Perfil do Administrador */}
-            <div className="relative" ref={profileRef}>
+            <div className="relative z-[90]" ref={profileRef}>
               <button
                 onClick={() => {
                   setIsProfileOpen(!isProfileOpen);
                   setIsSettingsOpen(false);
                 }}
-                className="flex items-center space-x-3 p-2 rounded-xl transition-all duration-300 group hover:bg-green-50 border border-gray-200"
+                className="flex items-center space-x-3 p-2 rounded-xl transition-all duration-300 group border"
+                style={{ borderColor: themeConfig.border, background: themeConfig.hoverGlow }}
               >
-                <div 
-                  className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg transition-all duration-300 group-hover:shadow-green-200"
-                  style={{
-                    background: 'linear-gradient(135deg, #16a34a, #15803d)' // Gradiente verde
-                  }}
-                >
-                  <Shield className="h-4 w-4 text-white" />
-                </div>
+                <UserAvatar size={36} className="ring-0 shadow-md" />
                 <div className="hidden lg:block text-left">
                   <p className="text-sm font-semibold text-gray-900 leading-tight">
                     {usuario?.nome || 'Usuário'}
                   </p>
-                  <p className="text-xs text-green-700">
+                  <p className="text-xs" style={{ color: themeConfig.primary }}>
                     {usuario?.role === 'admin' 
                       ? getText("Administrador", "Administrator", "Administrateur")
+                      : usuario?.role === 'subscritor'
+                      ? getText("Subscritor", "Underwriter", "Souscripteur")
                       : getText("Agente", "Agent", "Agent")}
                   </p>
                 </div>
@@ -597,18 +526,11 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
               {/* Dropdown Perfil */}
               {isProfileOpen && (
                 <div 
-                  className="absolute right-0 mt-2 w-64 rounded-xl shadow-2xl bg-white border border-gray-200 z-50 animate-slideDown"
+                  className="absolute right-0 mt-2 w-64 rounded-xl shadow-2xl bg-white border border-gray-200 z-[200] animate-slideDown"
                 >
                   <div className="p-4 border-b border-gray-100">
                     <div className="flex items-center space-x-3">
-                      <div 
-                        className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
-                        style={{
-                          background: 'linear-gradient(135deg, #16a34a, #15803d)'
-                        }}
-                      >
-                        <Shield className="h-5 w-5 text-white" />
-                      </div>
+                      <UserAvatar size={40} />
                       <div>
                         <p className="font-semibold text-gray-900 text-sm">
                           {usuario?.nome || 'Usuário'}
@@ -668,17 +590,32 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
 
         {/* Segunda Linha: Saudação e Métricas */}
         <div className="flex items-center justify-between">
-          {/* Saudação */}
+          {/* Saudação dinâmica */}
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: '#000000' }}>
-              {getText("Olá, Administrador! 👋", "Hello, Administrator! 👋", "Bonjour, Administrateur! 👋")}
-            </h1>
-            <p className="mt-1 text-sm" style={{ color: '#374151' }}>
-              {getText(
-                "Aqui está o resumo do desempenho do sistema hoje",
-                "Here's today's system performance summary", 
-                "Voici le résumé des performances du sistema aujourd'hui"
-              )}
+            <motion.h1
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-2xl font-bold flex items-center gap-2"
+              style={{ color: themeConfig.text }}
+            >
+              <span>{greeting},</span>
+              <span
+                className="bg-clip-text text-transparent"
+                style={{
+                  backgroundImage: `linear-gradient(135deg, ${themeConfig.primary}, ${themeConfig.accent})`,
+                }}
+              >
+                {userName}!
+              </span>
+              <motion.span
+                animate={{ rotate: [0, 14, -8, 14, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 3 }}
+              >
+                👋
+              </motion.span>
+            </motion.h1>
+            <p className="mt-1 text-sm" style={{ color: themeConfig.textSecondary }}>
+              {t('header.summary')}
             </p>
           </div>
 
@@ -686,51 +623,51 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
           <div className="flex items-center space-x-6">
             <div className="text-center">
               <div className="flex items-center space-x-2 justify-center">
-                <FileText className="h-4 w-4 text-green-600" />
+                <FileText className="h-4 w-4" style={{ color: themeConfig.primary }} />
                 <span className="text-sm font-semibold text-black">{crmMetrics.totalQuotes}</span>
               </div>
               <p className="text-xs mt-1 text-gray-700">
-                {getText("Cotações", "Quotes", "Devis")}
+                {t('header.quotes')}
               </p>
             </div>
 
             <div className="text-center">
               <div className="flex items-center space-x-2 justify-center">
-                <Clock className="h-4 w-4 text-green-600" />
+                <Clock className="h-4 w-4" style={{ color: themeConfig.primary }} />
                 <span className="text-sm font-semibold text-black">{crmMetrics.pendingApproval}</span>
               </div>
               <p className="text-xs mt-1 text-gray-700">
-                {getText("Pendentes", "Pending", "En Attente")}
+                {t('header.pending')}
               </p>
             </div>
 
             <div className="text-center">
               <div className="flex items-center space-x-2 justify-center">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+                <CheckCircle className="h-4 w-4" style={{ color: themeConfig.primary }} />
                 <span className="text-sm font-semibold text-black">{crmMetrics.policiesIssued}</span>
               </div>
               <p className="text-xs mt-1 text-gray-700">
-                {getText("Apólices", "Policies", "Polices")}
+                {t('header.policies')}
               </p>
             </div>
 
             <div className="text-center">
               <div className="flex items-center space-x-2 justify-center">
-                <Users className="h-4 w-4 text-green-600" />
+                <Users className="h-4 w-4" style={{ color: themeConfig.primary }} />
                 <span className="text-sm font-semibold text-black">{crmMetrics.activeAgents}</span>
               </div>
               <p className="text-xs mt-1 text-gray-700">
-                {getText("Agentes", "Agents", "Agents")}
+                {t('header.agents')}
               </p>
             </div>
 
             <div className="text-center">
               <div className="flex items-center space-x-2 justify-center">
-                <TrendingUp className="h-4 w-4 text-green-600" />
+                <TrendingUp className="h-4 w-4" style={{ color: themeConfig.primary }} />
                 <span className="text-sm font-semibold text-black">{crmMetrics.conversionRate}</span>
               </div>
               <p className="text-xs mt-1 text-gray-700">
-                {getText("Conversão", "Conversion", "Conversion")}
+                {t('header.conversion')}
               </p>
             </div>
           </div>
