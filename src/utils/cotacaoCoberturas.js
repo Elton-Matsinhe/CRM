@@ -41,7 +41,9 @@ export const configCoberturas = {
     nome: "Seguro de Transporte Público",
     classificacoes: [
       { nome: "Lotação até 29 Passageiros (Incluindo Motorista e Cobrador)", taxa: 0, premioMinimo: 15750 },
+      { nome: "Lotação até 29 lugares sem incluir motorista e cobrador", taxa: 0, premioMinimo: 14750 },
       { nome: "Lotação até 15 Passageiros (Incluindo Motorista e Cobrador)", taxa: 0, premioMinimo: 9250 },
+      { nome: "Lotação até 15 lugares sem motorista e cobrador", taxa: 0, premioMinimo: 8250 },
       { nome: "Taxis / Yango", taxa: 0, premioMinimo: 5000 },
     ],
     coberturas: {
