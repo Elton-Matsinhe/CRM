@@ -9,11 +9,11 @@ export const configCoberturas = {
     classificacoes: [
       { nome: "Ligeiro Peso Bruto Total Até 3.500 kg", taxa: 0, premioMinimo: 2999 },
       { nome: "Pesado Médio - Peso Bruto Total Entre 3.501 kg a 12.000 kg", taxa: 0, premioMinimo: 5999 },
-      { nome: "Pesado Grande - Peso Bruto Total Entre 12.001 kg a 26.000 kg", taxa: 0, premioMinimo: 6999 },
-      { nome: "Muito Pesado (articulado) - Acima de 26.000 kg (com reboque ou semi-reboque)", taxa: 0, premioMinimo: 8500 },
+      { nome: "Pesado Grande - Peso Bruto Total Entre 12.001 kg a 26.000 kg", taxa: 0, premioMinimo: 5999 },
+      { nome: "Muito Pesado (articulado) - Acima de 26.000 kg (com reboque ou semi-reboque)", taxa: 0, premioMinimo: 5999 },
       { nome: "Viaturas Especias (Motorizadas)", taxa: 0, premioMinimo: 2500 },
-      { nome: "Viaturas Especias (Atrelados Domesticos)", taxa: 0, premioMinimo: 2500 },
-      { nome: "Viaturas Especias (Atrelados Comerciais)", taxa: 0, premioMinimo: 3000 },
+      { nome: "Viaturas Especias (Atrelados Domesticos)", taxa: 0, premioMinimo: 3500 },
+      { nome: "Viaturas Especias (Atrelados Comerciais)", taxa: 0, premioMinimo: 3500 },
     ],
     coberturas: {
       responsabilidadeCivil: 5000000,
@@ -26,9 +26,9 @@ export const configCoberturas = {
     nome: "Seguro Automóvel Responsabilidade Civil & Ocupantes",
     classificacoes: [
       { nome: "Ligeiro Peso Bruto Total Até 3.500 kg", taxa: 0, premioMinimo: 3500 },
-      { nome: "Pesado Médio - Peso Bruto Total Entre 3.501 kg a 12.000 kg", taxa: 0, premioMinimo: 6750 },
-      { nome: "Pesado Grande - Peso Bruto Total Entre 12.001 kg a 26.000 kg", taxa: 0, premioMinimo: 6999 },
-      { nome: "Muito Pesado (articulado) - Acima de 26.000 kg (com reboque ou semi-reboque)", taxa: 0, premioMinimo: 8500 },
+      { nome: "Pesado Médio - Peso Bruto Total Entre 3.501 kg a 12.000 kg", taxa: 0, premioMinimo: 8000 },
+      { nome: "Pesado Grande - Peso Bruto Total Entre 12.001 kg a 26.000 kg", taxa: 0, premioMinimo: 8000 },
+      { nome: "Muito Pesado (articulado) - Acima de 26.000 kg (com reboque ou semi-reboque)", taxa: 0, premioMinimo: 8000 },
     ],
     coberturas: {
       responsabilidadeCivil: 5000000,
@@ -55,14 +55,15 @@ export const configCoberturas = {
     nome: "Seguro Automóvel Todos os Riscos",
     classificacoes: [
       { nome: "Ligeiro Peso Bruto Total Até 3.500 kg", taxa: 0.04, premioMinimo: 12000 },
-      { nome: "Pesado Médio - Peso Bruto Total Entre 3.501 kg a 12.000 kg", taxa: 0.05, premioMinimo: 12000 },
-      { nome: "Pesado Grande - Peso Bruto Total Entre 12.001 kg a 26.000 kg", taxa: 0.06, premioMinimo: 12000 },
-      { nome: "Muito Pesado (articulado) - Acima de 26.000 kg (com reboque ou semi-reboque)", taxa: 0.075, premioMinimo: 15000 },
+      { nome: "Pesado Médio - Peso Bruto Total Entre 3.501 kg a 12.000 kg", taxa: 0.07, premioMinimo: 15000 },
+      { nome: "Pesado Grande - Peso Bruto Total Entre 12.001 kg a 26.000 kg", taxa: 0.07, premioMinimo: 15000 },
+      { nome: "Muito Pesado (articulado) - Acima de 26.000 kg (com reboque ou semi-reboque)", taxa: 0.07, premioMinimo: 15000 },
       { nome: "Ligeiro Matrícula Estrangeira (Ligeiro Peso Bruto Total Até 3.500 kg)", taxa: 0.045, premioMinimo: 12000 },
-      { nome: "Viaturas Especias (Motorizadas)", taxa: 0.03, premioMinimo: 8000 },
-      { nome: "Viaturas Especias (Atrelados Domesticos)", taxa: 0.025, premioMinimo: 8000 },
-      { nome: "Viaturas Especias (Atrelados Comerciais)", taxa: 0.03, premioMinimo: 8000 },
+      { nome: "Viaturas Especias (Motorizadas)", taxa: 0.025, premioMinimo: 10000 },
+      { nome: "Viaturas Especias (Atrelados Domesticos)", taxa: 0.025, premioMinimo: 10000 },
+      { nome: "Viaturas Especias (Atrelados Comerciais)", taxa: 0.025, premioMinimo: 10000 },
       { nome: "Txopelas", taxa: 0.04, premioMinimo: 10000 },
+      { nome: "Taxis / Yango (Comerciais)", taxa: 0.06, premioMinimo: 12000 },
     ],
     coberturas: {
       responsabilidadeCivil: 10000000,
@@ -368,6 +369,28 @@ export function getClassificacaoConfig(tipoCobertura, classificacao) {
 export function getTaxaPadrao(tipoCobertura, classificacao) {
   const cfg = getClassificacaoConfig(tipoCobertura, classificacao);
   return cfg ? Number(cfg.taxa) : 0;
+}
+
+const LABELS_COBERTURAS = {
+  responsabilidadeCivil: "Responsabilidade Civil",
+  morteInvalidez: "Morte e Invalidez",
+  despesasMedicas: "Despesas Médicas",
+  despesasFuneral: "Despesas de Funeral",
+  perdaChaves: "Perda de Chaves",
+  remocaoSalvados: "Remoção de Salvados",
+  danosProprios: "Danos Próprios",
+};
+
+export function listarCoberturasProduto(tipoCobertura) {
+  const tipo = normalizarTipoCobertura(tipoCobertura);
+  const coberturas = configCoberturas[tipo]?.coberturas;
+  if (!coberturas) return [];
+  return Object.entries(coberturas).map(([chave, valor]) => ({
+    label: LABELS_COBERTURAS[chave] || chave,
+    valor: typeof valor === "number"
+      ? `MT ${valor.toLocaleString("pt-MZ")}`
+      : String(valor),
+  }));
 }
 
 export const TIPO_COBERTURA_TODOS_RISCOS = "Seguro Automóvel Todos os Riscos";

@@ -26,3 +26,19 @@ export function formatarTaxaPercentual(taxaDecimal) {
   if (Number.isNaN(taxa)) return "—";
   return `${(taxa * 100).toFixed(2)}%`;
 }
+
+export function getTipoAcaoHistoricoLabel(tipoAcao) {
+  const labels = {
+    alteracao_taxa: "Alteração de taxa (comercial)",
+    aprovacao: "Aprovação sem alteração",
+    aprovacao_com_alteracao: "Aprovação com alteração de taxa",
+    rejeicao: "Rejeição",
+  };
+  return labels[tipoAcao] || tipoAcao?.replace(/_/g, " ") || "—";
+}
+
+export function formatarMoedaMT(valor) {
+  const n = parseFloat(valor);
+  if (Number.isNaN(n)) return "—";
+  return `MT ${n.toLocaleString("pt-MZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}

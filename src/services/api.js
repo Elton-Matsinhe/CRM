@@ -371,9 +371,13 @@ export const cotacaoService = {
       return { success: false, data: [], message: error.response?.data?.message };
     }
   },
-  aprovarTaxa: async (id, comentario = '') => {
+  aprovarTaxa: async (id, comentario = '', taxas = null) => {
     try {
-      const response = await api.post(`/cotacoes/${id}/aprovacao/aprovar`, { comentario });
+      const body = { comentario };
+      if (taxas && taxas.length > 0) {
+        body.taxas = taxas;
+      }
+      const response = await api.post(`/cotacoes/${id}/aprovacao/aprovar`, body);
       return { success: true, data: response.data.data, message: response.data.message };
     } catch (error) {
       return {
