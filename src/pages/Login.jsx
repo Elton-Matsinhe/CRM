@@ -27,6 +27,7 @@ import {
   FiLayers
 } from "react-icons/fi";
 import { AuthContext } from "../contexts/AuthContext";
+import { consumeSessionExpiredMessage } from "../utils/authSession";
 import logo from "../assets/logo.png";
 
 // Uma imagem de fundo (evita carregar 13 imagens pesadas)
@@ -42,6 +43,13 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const sessaoExpirada = consumeSessionExpiredMessage();
+    if (sessaoExpirada) {
+      setErro(sessaoExpirada);
+    }
+  }, []);
 
   // Características do sistema
   const features = [

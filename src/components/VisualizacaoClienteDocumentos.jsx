@@ -147,7 +147,7 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100]">
         <div className="bg-white p-8 rounded-xl border border-emerald-200 flex flex-col items-center">
           <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mb-4" />
           <div className="text-gray-900">Carregando dados do cliente...</div>
@@ -157,7 +157,7 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-3 sm:p-4 overflow-y-auto">
       <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-gray-200 shadow-2xl">
         <div className="sticky top-0 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white p-6 rounded-t-xl flex items-center justify-between z-10">
           <div>
@@ -361,7 +361,7 @@ function VisualizacaoClienteDocumentos({ cotacaoId, clienteId, onClose }) {
       </div>
 
       {previewDoc && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[60] p-4">
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[110] p-4">
           <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="bg-emerald-600 text-white p-4 flex items-center justify-between">
               <h3 className="text-xl font-bold">{previewDoc.nome}</h3>

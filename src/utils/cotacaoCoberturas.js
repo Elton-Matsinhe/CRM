@@ -9,11 +9,11 @@ export const configCoberturas = {
     classificacoes: [
       { nome: "Ligeiro Peso Bruto Total Até 3.500 kg", taxa: 0, premioMinimo: 2999 },
       { nome: "Pesado Médio - Peso Bruto Total Entre 3.501 kg a 12.000 kg", taxa: 0, premioMinimo: 5999 },
-      { nome: "Pesado Grande - Peso Bruto Total Entre 12.001 kg a 26.000 kg", taxa: 0, premioMinimo: 5999 },
-      { nome: "Muito Pesado (articulado) - Acima de 26.000 kg (com reboque ou semi-reboque)", taxa: 0, premioMinimo: 5999 },
+      { nome: "Pesado Grande - Peso Bruto Total Entre 12.001 kg a 26.000 kg", taxa: 0, premioMinimo: 6999 },
+      { nome: "Muito Pesado (articulado) - Acima de 26.000 kg (com reboque ou semi-reboque)", taxa: 0, premioMinimo: 8500 },
       { nome: "Viaturas Especias (Motorizadas)", taxa: 0, premioMinimo: 2500 },
-      { nome: "Viaturas Especias (Atrelados Domesticos)", taxa: 0, premioMinimo: 3500 },
-      { nome: "Viaturas Especias (Atrelados Comerciais)", taxa: 0, premioMinimo: 3500 },
+      { nome: "Viaturas Especias (Atrelados Domesticos)", taxa: 0, premioMinimo: 2500 },
+      { nome: "Viaturas Especias (Atrelados Comerciais )", taxa: 0, premioMinimo: 3000 },
     ],
     coberturas: {
       responsabilidadeCivil: 5000000,
@@ -26,9 +26,9 @@ export const configCoberturas = {
     nome: "Seguro Automóvel Responsabilidade Civil & Ocupantes",
     classificacoes: [
       { nome: "Ligeiro Peso Bruto Total Até 3.500 kg", taxa: 0, premioMinimo: 3500 },
-      { nome: "Pesado Médio - Peso Bruto Total Entre 3.501 kg a 12.000 kg", taxa: 0, premioMinimo: 8000 },
-      { nome: "Pesado Grande - Peso Bruto Total Entre 12.001 kg a 26.000 kg", taxa: 0, premioMinimo: 8000 },
-      { nome: "Muito Pesado (articulado) - Acima de 26.000 kg (com reboque ou semi-reboque)", taxa: 0, premioMinimo: 8000 },
+      { nome: "Pesado Médio - Peso Bruto Total Entre 3.501 kg a 12.000 kg", taxa: 0, premioMinimo: 6750 },
+      { nome: "Pesado Grande - Peso Bruto Total Entre 12.001 kg a 26.000 kg", taxa: 0, premioMinimo: 7750 },
+      { nome: "Muito Pesado (articulado) - Acima de 26.000 kg (com reboque ou semi-reboque)", taxa: 0, premioMinimo: 9150 },
     ],
     coberturas: {
       responsabilidadeCivil: 5000000,
@@ -37,13 +37,11 @@ export const configCoberturas = {
       despesasFuneral: 5000,
     },
   },
-  "Seguro de Transporte Público": {
-    nome: "Seguro de Transporte Público",
+  "Seguro de Tranporte Público": {
+    nome: "Seguro de Tranporte Público",
     classificacoes: [
-      { nome: "Lotação até 29 Passageiros (Incluindo Motorista e Cobrador)", taxa: 0, premioMinimo: 15750 },
-      { nome: "Lotação até 29 lugares sem incluir motorista e cobrador", taxa: 0, premioMinimo: 14750 },
-      { nome: "Lotação até 15 Passageiros (Incluindo Motorista e Cobrador)", taxa: 0, premioMinimo: 9250 },
-      { nome: "Lotação até 15 lugares sem motorista e cobrador", taxa: 0, premioMinimo: 8250 },
+      { nome: "Lotação até 29 Passageiros ( Incluindo Motorista e Cobrador)", taxa: 0, premioMinimo: 15750 },
+      { nome: "Lotação até 15 Passageiros ( Incluindo Motorista e Cobrador)", taxa: 0, premioMinimo: 9250 },
       { nome: "Taxis / Yango", taxa: 0, premioMinimo: 5000 },
     ],
     coberturas: {
@@ -57,13 +55,13 @@ export const configCoberturas = {
     nome: "Seguro Automóvel Todos os Riscos",
     classificacoes: [
       { nome: "Ligeiro Peso Bruto Total Até 3.500 kg", taxa: 0.04, premioMinimo: 12000 },
-      { nome: "Pesado Médio - Peso Bruto Total Entre 3.501 kg a 12.000 kg", taxa: 0.07, premioMinimo: 15000 },
-      { nome: "Pesado Grande - Peso Bruto Total Entre 12.001 kg a 26.000 kg", taxa: 0.07, premioMinimo: 15000 },
-      { nome: "Muito Pesado (articulado) - Acima de 26.000 kg (com reboque ou semi-reboque)", taxa: 0.07, premioMinimo: 15000 },
-      { nome: "Ligeiro Matrícula Estrangeira (Ligeiro Peso Bruto Total Até 3.500 kg)", taxa: 0.045, premioMinimo: 12000 },
-      { nome: "Viaturas Especias (Motorizadas)", taxa: 0.025, premioMinimo: 10000 },
-      { nome: "Viaturas Especias (Atrelados Domesticos)", taxa: 0.025, premioMinimo: 10000 },
-      { nome: "Viaturas Especias (Atrelados Comerciais)", taxa: 0.025, premioMinimo: 10000 },
+      { nome: "Pesado Médio - Peso Bruto Total Entre 3.501 kg a 12.000 kg", taxa: 0.05, premioMinimo: 12000 },
+      { nome: "Pesado Grande - Peso Bruto Total Entre 12.001 kg a 26.000 kg", taxa: 0.06, premioMinimo: 12000 },
+      { nome: "Muito Pesado (articulado) - Acima de 26.000 kg (com reboque ou semi-reboque)", taxa: 0.075, premioMinimo: 15000 },
+      { nome: "Ligeiro Matrícula Estrangeira.(Ligeiro Peso Bruto Total Até 3.500 kg)", taxa: 0.045, premioMinimo: 12000 },
+      { nome: "Viaturas Especias (Motorizadas)", taxa: 0.03, premioMinimo: 8000 },
+      { nome: "Viaturas Especias (Atrelados Domesticos)", taxa: 0.025, premioMinimo: 8000 },
+      { nome: "Viaturas Especias (Atrelados Comerciais )", taxa: 0.03, premioMinimo: 8000 },
       { nome: "Txopelas", taxa: 0.04, premioMinimo: 10000 },
       { nome: "Taxis / Yango (Comerciais)", taxa: 0.06, premioMinimo: 12000 },
     ],
@@ -85,6 +83,22 @@ const LEGACY_TIPO_COBERTURA = {
   DP_SEM_FRANQUIA: "Seguro Automóvel Todos os Riscos",
   RC_NORMAL: "Seguro Automóvel Responsabilidade Civil Apenas",
   RC_OCUPANTES: "Seguro Automóvel Responsabilidade Civil & Ocupantes",
+  "Seguro de Transporte Público": "Seguro de Tranporte Público",
+};
+
+/** Classificações de cotações antigas → nomenclatura oficial atual */
+const LEGACY_CLASSIFICACAO = {
+  "Lotação até 29 Passageiros (Incluindo Motorista e Cobrador)":
+    "Lotação até 29 Passageiros ( Incluindo Motorista e Cobrador)",
+  "Lotação até 15 Passageiros (Incluindo Motorista e Cobrador)":
+    "Lotação até 15 Passageiros ( Incluindo Motorista e Cobrador)",
+  "Lotação até 29 lugares sem incluir motorista e cobrador":
+    "Lotação até 29 Passageiros ( Incluindo Motorista e Cobrador)",
+  "Lotação até 15 lugares sem motorista e cobrador":
+    "Lotação até 15 Passageiros ( Incluindo Motorista e Cobrador)",
+  "Viaturas Especias (Atrelados Comerciais)": "Viaturas Especias (Atrelados Comerciais )",
+  "Ligeiro Matrícula Estrangeira (Ligeiro Peso Bruto Total Até 3.500 kg)":
+    "Ligeiro Matrícula Estrangeira.(Ligeiro Peso Bruto Total Até 3.500 kg)",
 };
 
 export const TIPOS_COBERTURA_OPCOES = Object.keys(configCoberturas);
@@ -98,6 +112,55 @@ export const paises = [
   { code: "BR", name: "Brasil", flag: "🇧🇷" },
   { code: "CV", name: "Cabo Verde", flag: "🇨🇻" },
 ];
+
+/** Classificações com matrícula Moçambique no formato XX-000-XX (ex.: AB-123-DE). */
+export const CLASSIFICACOES_MATRICULA_MZ_CURTA = new Set([
+  "Viaturas Especias (Motorizadas)",
+  "Viaturas Especias (Atrelados Domesticos)",
+  "Viaturas Especias (Atrelados Comerciais )",
+  "Viaturas Especias (Atrelados Comerciais)",
+]);
+
+const formatoMatriculaMozambiqueCurta = {
+  formato: "XX-000-XX",
+  exemplo: "AB-123-DE",
+  regex: /^[A-Z]{2}-[0-9]{3}-[A-Z]{2}$/,
+  placeholder: "AB-123-DE",
+  descricao: "2 letras, 3 números, 2 letras",
+  mascara: (valor) => {
+    let v = valor.replace(/[^A-Z0-9]/gi, "").toUpperCase();
+    if (v.length > 7) v = v.substring(0, 7);
+    let result = "";
+    for (let i = 0; i < v.length; i++) {
+      if (i === 2 || i === 5) result += "-";
+      if (i < 2) result += /[A-Z]/.test(v[i]) ? v[i] : "";
+      else if (i < 5) result += /[0-9]/.test(v[i]) ? v[i] : "";
+      else result += /[A-Z]/.test(v[i]) ? v[i] : "";
+    }
+    return result;
+  },
+};
+
+export function usaMatriculaMozambiqueCurta(classificacao) {
+  if (!classificacao) return false;
+  const norm = String(classificacao).trim();
+  if (CLASSIFICACOES_MATRICULA_MZ_CURTA.has(norm)) return true;
+
+  const lower = norm.toLowerCase();
+  return (
+    (lower.includes("viaturas especiai") && lower.includes("motorizada")) ||
+    lower.includes("atrelados domestic") ||
+    lower.includes("atrelados comerci")
+  );
+}
+
+export function getFormatoMatriculaConfig(paisMatricula, classificacao) {
+  if (paisMatricula === "Moçambique" && usaMatriculaMozambiqueCurta(classificacao)) {
+    return formatoMatriculaMozambiqueCurta;
+  }
+  if (!paisMatricula || paisMatricula === "Outros") return null;
+  return formatosMatricula[paisMatricula] || null;
+}
 
 export const formatosMatricula = {
   Moçambique: {
@@ -299,7 +362,11 @@ export function normalizarTipoCobertura(tipo) {
 export function normalizarClassificacao(tipoCobertura, classificacao, tipoViatura = "") {
   const tipo = normalizarTipoCobertura(tipoCobertura);
   const classes = getClassificacoesDisponiveis(tipo);
-  const valor = normalizarTexto(classificacao);
+  let valor = normalizarTexto(classificacao);
+
+  if (valor && LEGACY_CLASSIFICACAO[valor]) {
+    valor = LEGACY_CLASSIFICACAO[valor];
+  }
 
   if (valor && classes.length) {
     const exacta = classes.find((c) => c.nome === valor);
@@ -608,16 +675,16 @@ export function extrairPaisMatricula(matriculaCompleta, matricula, paisSalvo) {
   return { paisMatricula: "", matricula: matricula || "" };
 }
 
-export function formatarMatriculaValor(valor, paisMatricula) {
+export function formatarMatriculaValor(valor, paisMatricula, classificacao) {
   if (!paisMatricula || paisMatricula === "Outros") return (valor || "").toUpperCase();
-  const formato = formatosMatricula[paisMatricula];
+  const formato = getFormatoMatriculaConfig(paisMatricula, classificacao);
   if (!formato?.mascara) return (valor || "").toUpperCase();
   return formato.mascara(valor);
 }
 
-export function validarMatriculaValor(matricula, paisMatricula) {
+export function validarMatriculaValor(matricula, paisMatricula, classificacao) {
   if (!matricula || !paisMatricula || paisMatricula === "Outros") return true;
-  const formato = formatosMatricula[paisMatricula];
+  const formato = getFormatoMatriculaConfig(paisMatricula, classificacao);
   if (!formato?.regex) return true;
   return formato.regex.test(matricula);
 }

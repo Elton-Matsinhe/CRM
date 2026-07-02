@@ -14,6 +14,7 @@ import {
   FileText,
   Loader2,
   User,
+  Trash2,
 } from "lucide-react";
 import CotacoesLayout from "../components/CotacoesLayout";
 import CotacaoStatusBadge from "../components/ui/CotacaoStatusBadge";
@@ -24,6 +25,7 @@ import { cotacaoService } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import VisualizacaoClienteDocumentos from "../components/VisualizacaoClienteDocumentos";
 import { cotacaoPodePartilhar, getStatusAprovacaoLabel, STATUS_APROVACAO_CORES } from "../utils/statusAprovacao";
+import { podeApagarCotacao } from "../utils/cotacaoPermissions";
 
 function ListarCotacoes() {
   const { usuario } = useAuth();
@@ -103,7 +105,8 @@ function ListarCotacoes() {
           dataCriacao: cotacao.data_criacao,
           dataValidade: cotacao.data_validade,
           agente_nome: cotacao.agente_nome || '',
-          agente_balcao: cotacao.agente_balcao || ''
+          agente_balcao: cotacao.agente_balcao || '',
+          agente_id: cotacao.agente_id,
         }));
         
         setCotacoes(cotacoesFormatadas);
@@ -180,6 +183,36 @@ function ListarCotacoes() {
       case "expirada": return "Expirada";
       case "cancelada": return "Cancelada";
       default: return status;
+    }
+  };
+
+  const handleApagarCotacao = async (cotacao) => {
+    if (!podeApagarCotacao(usuario, cotacao)) {
+      alert("Não tem permissão para apagar esta cotação.");
+      return;
+    }
+
+    const idApagar = cotacao.id;
+    const label = cotacao.numero_cotacao || cotacao.id;
+
+    if (
+      !window.confirm(
+        `Tem a certeza que deseja apagar a cotação ${label}?\n\nEsta ação é irreversível e eliminará todos os dados associados (veículos, histórico, anexos, etc.).`
+      )
+    ) {
+      return;
+    }
+
+    const result = await cotacaoService.excluir(idApagar);
+    if (result.success) {
+      setCotacoes((prev) => prev.filter((c) => c.id !== idApagar));
+      setPagination((prev) => ({
+        ...prev,
+        total: Math.max(0, (prev.total || 1) - 1),
+      }));
+      alert(`✅ Cotação ${label} apagada com sucesso.`);
+    } else {
+      alert(`❌ ${result.message || "Erro ao apagar cotação."}`);
     }
   };
 
@@ -1176,6 +1209,20 @@ function ListarCotacoes() {
                               <User className="h-4 w-4" />
                               <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap">
                                 Dados Cliente
+                              </span>
+                            </button>
+                          )}
+
+                          {/* Botão APAGAR COTAÇÃO */}
+                          {podeApagarCotacao(usuario, cotacao) && (
+                            <button
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                              title="Apagar Cotação"
+                              onClick={() => handleApagarCotacao(cotacao)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap">
+                                Apagar Cotação
                               </span>
                             </button>
                           )}

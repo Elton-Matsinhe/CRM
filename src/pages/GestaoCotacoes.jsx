@@ -14,6 +14,7 @@ import CotacaoStatusBadge from '../components/ui/CotacaoStatusBadge';
 import AnimatedPagination from '../components/ui/AnimatedPagination';
 import DataTableWrapper from '../components/ui/DataTableWrapper';
 import { STATUS_FILTER_OPTIONS } from '../utils/cotacaoStatus';
+import { podeApagarCotacao } from '../utils/cotacaoPermissions';
 
 function GestaoCotacoes() {
   const { themeConfig, language } = useTheme();
@@ -85,6 +86,7 @@ function GestaoCotacoes() {
           data: cotacao.data_criacao,
           status: cotacao.status,
           agente: cotacao.agente_nome || 'N/A',
+          agente_id: cotacao.agente_id,
           seguradora: 'Imperial Seguros',
           vencimento: cotacao.data_validade,
           progresso: calcularProgresso(cotacao.status),
@@ -285,35 +287,42 @@ function GestaoCotacoes() {
     }
   };
 
-  const handleEliminar = async (cotacao) => {
+  const handleApagarCotacao = async (cotacao) => {
     if (!cotacao || (!cotacao.id && !cotacao.idNumerico)) {
       alert("❌ Cotação inválida.");
       return;
     }
 
-    // Usar o ID numérico do backend
-    const idParaEliminar = cotacao.idNumerico || cotacao.id;
+    if (!podeApagarCotacao(usuario, cotacao)) {
+      alert("Não tem permissão para apagar esta cotação.");
+      return;
+    }
 
-    const confirmarEliminacao = window.confirm(
-      `⚠️ ATENÇÃO: Deseja realmente ELIMINAR a cotação ${cotacao.numero_cotacao || cotacao.id}?\n\nEsta ação não pode ser desfeita!`
-    );
+    const idApagar = cotacao.idNumerico || cotacao.id;
+    const label = cotacao.numero_cotacao || cotacao.id;
 
-    if (!confirmarEliminacao) {
+    if (
+      !window.confirm(
+        `Tem a certeza que deseja apagar a cotação ${label}?\n\nEsta ação é irreversível e eliminará todos os dados associados (veículos, histórico, anexos, etc.).`
+      )
+    ) {
       return;
     }
 
     try {
-      const result = await cotacaoService.excluir(idParaEliminar);
-      
+      const result = await cotacaoService.excluir(idApagar);
+
       if (result.success) {
-        alert(`✅ Cotação ${cotacao.numero_cotacao || cotacao.id} eliminada com sucesso!`);
-        carregarCotacoes(); // Recarregar lista
+        setCotacoes((prev) =>
+          prev.filter((c) => (c.idNumerico || c.id) !== idApagar)
+        );
+        alert(`✅ Cotação ${label} apagada com sucesso.`);
       } else {
-        alert(`❌ Erro ao eliminar cotação: ${result.message || 'Erro desconhecido'}`);
+        alert(`❌ ${result.message || "Erro ao apagar cotação."}`);
       }
     } catch (error) {
-      console.error("Erro ao eliminar cotação:", error);
-      alert(`❌ Erro ao eliminar cotação: ${error.response?.data?.message || error.message || 'Erro desconhecido'}`);
+      console.error("Erro ao apagar cotação:", error);
+      alert(`❌ ${error.response?.data?.message || error.message || "Erro ao apagar cotação."}`);
     }
   };
 
@@ -664,13 +673,15 @@ function GestaoCotacoes() {
                               <User className="h-4 w-4" />
                             </button>
                           )}
-                          <button 
-                            onClick={() => handleEliminar(cotacao)}
-                            className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors duration-200"
-                            title="Eliminar Cotação"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {podeApagarCotacao(usuario, cotacao) && (
+                            <button 
+                              onClick={() => handleApagarCotacao(cotacao)}
+                              className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors duration-200"
+                              title="Apagar Cotação"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

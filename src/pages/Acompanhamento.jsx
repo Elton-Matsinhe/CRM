@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Search, Filter, Eye, Phone, MapPin, Clock, CheckCircle,
   Calendar, User, MessageSquare, FileText, TrendingUp,
@@ -1297,7 +1298,7 @@ Sistema de Gestão de Cotações
     
     return (
       <div className="relative mb-8">
-        <div className="absolute top-6 left-0 right-0 flex justify-between px-12">
+        <div className="absolute top-6 left-0 right-0 hidden sm:flex justify-between px-6 md:px-12">
           {[0, 1, 2].map((lineIndex) => {
             const startWeek = semanas[lineIndex];
             const endWeek = semanas[lineIndex + 1];
@@ -1428,54 +1429,66 @@ Sistema de Gestão de Cotações
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-white">
-      {/* Efeitos de background */}
-      <div className="absolute inset-0 overflow-hidden">
+    <div className="page-container w-full relative">
+      {/* Efeitos de background (não interferem com o layout) */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden -z-10" aria-hidden="true">
         <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-emerald-50 to-transparent"></div>
         <div className="absolute bottom-0 left-0 w-full h-64 bg-gradient-to-t from-emerald-50 to-transparent"></div>
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-100/30 rounded-full blur-3xl animate-pulse-slow"></div>
         <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-green-100/30 rounded-full blur-3xl animate-pulse-slower"></div>
       </div>
 
-      {/* Modal de Acompanhamento */}
-      {showAcompanhamentoModal && cotacaoSelecionada && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[95vh] overflow-y-auto shadow-2xl">
+      {/* Modal de Acompanhamento — portal acima do sidebar (z-60) e header (z-80) */}
+      {showAcompanhamentoModal && cotacaoSelecionada && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/70 backdrop-blur-md"
+            aria-label="Fechar acompanhamento"
+            onClick={() => setShowAcompanhamentoModal(false)}
+          />
+          <div
+            className="relative bg-white rounded-2xl w-full max-w-6xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)] flex flex-col shadow-2xl overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="acompanhamento-modal-title"
+          >
             {/* Header do Modal */}
-            <div className="sticky top-0 bg-gradient-to-r from-slate-800 to-slate-900 text-white p-6 rounded-t-2xl">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">
+            <div className="flex-shrink-0 bg-gradient-to-r from-slate-800 to-slate-900 text-white p-4 sm:p-6 rounded-t-2xl">
+              <div className="flex justify-between items-start gap-4">
+                <div className="min-w-0 flex-1">
+                  <h2 id="acompanhamento-modal-title" className="text-xl sm:text-2xl font-bold text-white">
                     {titulosPorSemana[semanaAtual]}
                   </h2>
-                  <div className="flex items-center space-x-4 mt-2">
-                    <span className="text-teal-100">
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-4 mt-2">
+                    <span className="text-teal-100 text-sm sm:text-base truncate">
                       Cliente: <strong className="text-white">{cotacaoSelecionada.cliente}</strong>
                     </span>
-                    <span className="text-teal-100">
+                    <span className="text-teal-100 text-sm sm:text-base">
                       Código: <strong className="text-white">{cotacaoSelecionada.id}</strong>
                     </span>
-                    <span className="bg-white/20 px-3 py-1 rounded-full text-sm text-white">
+                    <span className="bg-white/20 px-3 py-1 rounded-full text-xs sm:text-sm text-white w-fit">
                       Semana {semanaAtual + 1} de 4
                     </span>
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowAcompanhamentoModal(false)}
-                  className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                  className="flex-shrink-0 p-2 hover:bg-white/20 rounded-full transition-colors"
                 >
                   <X className="h-6 w-6 text-white" />
                 </button>
               </div>
-              
+
               {/* Progress Bar */}
-              <div className="mt-6">
+              <div className="mt-4 sm:mt-6">
                 {renderProgressBar()}
               </div>
             </div>
 
-            {/* Corpo do Modal */}
-            <div className="p-8">
+            {/* Corpo do Modal — scroll independente */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
               {/* Seleção de Tipo de Contato - Apenas para agentes */}
               {isAgente && (
                 <div className="bg-teal-50 rounded-2xl p-6 border border-teal-200 mb-6">
@@ -2112,11 +2125,12 @@ Sistema de Gestão de Cotações
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Conteúdo Principal */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="relative z-0 w-full max-w-7xl mx-auto px-0 sm:px-2 lg:px-4 py-4 sm:py-6 lg:py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl lg:text-3xl font-black mb-2 text-gray-900 tracking-tight">

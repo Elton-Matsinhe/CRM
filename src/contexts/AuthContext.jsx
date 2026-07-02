@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect, useCallback, useContext } from "react";
 import { usuarioService } from "../services/api";
+import { registerSessionExpiredHandler } from "../utils/authSession";
 
 export const AuthContext = createContext();
 
@@ -64,6 +65,13 @@ export const AuthProvider = ({ children }) => {
       }
     }).finally(() => {
       setCarregando(false);
+    });
+  }, []);
+
+  useEffect(() => {
+    return registerSessionExpiredHandler(() => {
+      setUsuario(null);
+      setError(null);
     });
   }, []);
 

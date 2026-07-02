@@ -39,10 +39,27 @@ import {
   deveMostrarTrimestral,
   deveMostrarMensal,
   configCoberturas,
+  TIPOS_COBERTURA_OPCOES,
+  formatarMatriculaValor,
+  validarMatriculaValor,
+  getFormatoMatriculaConfig,
 } from "../utils/cotacaoCoberturas";
 import { cotacaoPodePartilhar, getStatusAprovacaoLabel } from "../utils/statusAprovacao";
+import { useAuth } from "../contexts/AuthContext";
+import {
+  saveCotacaoDraft,
+  loadCotacaoDraft,
+  clearCotacaoDraft,
+} from "../utils/cotacaoDraftStorage";
+import {
+  saveDraftAttachment,
+  loadDraftAttachments,
+  removeDraftAttachment,
+} from "../utils/cotacaoDraftAttachments";
 
 function CriarCliente() {
+  const { usuario } = useAuth();
+  const draftUserId = usuario?.id;
   const [tipoCliente, setTipoCliente] = useState("Particular");
   const [isSwitching, setIsSwitching] = useState(false);
   const [showVehicleForm, setShowVehicleForm] = useState(false);
@@ -55,12 +72,12 @@ function CriarCliente() {
   const [showMatriculaOptions, setShowMatriculaOptions] = useState(false);
   const [paisMatricula, setPaisMatricula] = useState("");
   const [formatoMatricula, setFormatoMatricula] = useState("");
+  const [rascunhoRestaurado, setRascunhoRestaurado] = useState(false);
+  const draftCarregadoRef = useRef(false);
   
   // Estados para upload de documentos
   const [docBI, setDocBI] = useState(null);
   const [docLivrete, setDocLivrete] = useState(null);
-  const [previewBI, setPreviewBI] = useState(null);
-  const [previewLivrete, setPreviewLivrete] = useState(null);
 
   // Estados para o formulário da viatura
   const [tipoCobertura, setTipoCobertura] = useState("");
@@ -97,6 +114,102 @@ function CriarCliente() {
     nomeEmpresa: "",
     numeroReferenciaFiscal: "",
   });
+
+  // Restaurar rascunho ao abrir o formulário
+  useEffect(() => {
+    if (draftCarregadoRef.current || !draftUserId) return;
+    draftCarregadoRef.current = true;
+
+    const draft = loadCotacaoDraft(draftUserId);
+    if (!draft || draft.cotacaoGerada) return;
+
+    if (draft.tipoCliente) setTipoCliente(draft.tipoCliente);
+    if (draft.formData) setFormData(draft.formData);
+    if (draft.veiculos) setVeiculos(draft.veiculos);
+    if (draft.veiculoAtual) setVeiculoAtual(draft.veiculoAtual);
+    if (draft.tipoCobertura) setTipoCobertura(draft.tipoCobertura);
+    if (draft.classificacao) setClassificacao(draft.classificacao);
+    if (typeof draft.debitoDiretoAtivo === 'boolean') setDebitoDiretoAtivo(draft.debitoDiretoAtivo);
+    if (typeof draft.taxaManualAtiva === 'boolean') setTaxaManualAtiva(draft.taxaManualAtiva);
+    if (typeof draft.showVehicleForm === 'boolean') setShowVehicleForm(draft.showVehicleForm);
+    if (draft.paisMatricula) {
+      setPaisMatricula(draft.paisMatricula);
+      setFormatoMatricula(getFormatoMatriculaConfig(draft.paisMatricula, draft.classificacao));
+    } else if (draft.formatoMatricula) {
+      setFormatoMatricula(draft.formatoMatricula);
+    }
+    setRascunhoRestaurado(true);
+
+    loadDraftAttachments(draftUserId).then(({ bi, livrete }) => {
+      if (bi) setDocBI(bi);
+      if (livrete) setDocLivrete(livrete);
+    }).catch((err) => {
+      console.warn('Não foi possível restaurar anexos do rascunho:', err);
+    });
+  }, [draftUserId]);
+
+  // Atualizar formato da matrícula quando país ou classificação mudam
+  useEffect(() => {
+    if (paisMatricula) {
+      setFormatoMatricula(getFormatoMatriculaConfig(paisMatricula, classificacao));
+    }
+  }, [paisMatricula, classificacao]);
+
+  // Reformatar matrícula ao mudar classificação (Moçambique curta vs padrão)
+  useEffect(() => {
+    if (!paisMatricula || paisMatricula === "Outros" || !veiculoAtual.matricula) return;
+
+    const formatada = formatarMatriculaValor(
+      veiculoAtual.matricula,
+      paisMatricula,
+      classificacao
+    );
+
+    if (formatada !== veiculoAtual.matricula) {
+      setVeiculoAtual((prev) => ({
+        ...prev,
+        matricula: formatada,
+        matriculaCompleta: `${paisMatricula} — ${formatada}`,
+      }));
+    }
+  }, [classificacao, paisMatricula]);
+
+  // Guardar rascunho automaticamente (debounce)
+  useEffect(() => {
+    if (!draftUserId || cotacaoGerada) return;
+
+    const timer = setTimeout(() => {
+      saveCotacaoDraft(draftUserId, {
+        tipoCliente,
+        formData,
+        veiculos,
+        veiculoAtual,
+        tipoCobertura,
+        classificacao,
+        debitoDiretoAtivo,
+        taxaManualAtiva,
+        showVehicleForm,
+        paisMatricula,
+        formatoMatricula,
+      });
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [
+    draftUserId,
+    cotacaoGerada,
+    tipoCliente,
+    formData,
+    veiculos,
+    veiculoAtual,
+    tipoCobertura,
+    classificacao,
+    debitoDiretoAtivo,
+    taxaManualAtiva,
+    showVehicleForm,
+    paisMatricula,
+    formatoMatricula,
+  ]);
 
   // Coberturas, taxas e prémios mínimos: utils/cotacaoCoberturas.js (importado)
 
@@ -328,7 +441,7 @@ function CriarCliente() {
   // Função para selecionar o país da matrícula
   const selecionarPaisMatricula = (pais) => {
     setPaisMatricula(pais);
-    setFormatoMatricula(formatosMatricula[pais]);
+    setFormatoMatricula(getFormatoMatriculaConfig(pais, classificacao));
     setShowMatriculaOptions(false);
     
     // Resetar a matrícula quando mudar de país
@@ -339,19 +452,9 @@ function CriarCliente() {
     }));
   };
 
-  // Função para formatar a matrícula conforme o país selecionado
-  const formatarMatricula = (valor) => {
-    if (!paisMatricula || paisMatricula === "Outros") {
-      return valor.toUpperCase();
-    }
-    
-    const formato = formatosMatricula[paisMatricula];
-    if (!formato || !formato.mascara) {
-      return valor.toUpperCase();
-    }
-    
-    return formato.mascara(valor);
-  };
+  // Função para formatar a matrícula conforme o país e classificação
+  const formatarMatricula = (valor) =>
+    formatarMatriculaValor(valor, paisMatricula, classificacao);
 
   // Handler para mudança na matrícula
   const handleMatriculaChange = (valor) => {
@@ -365,16 +468,8 @@ function CriarCliente() {
   };
 
   // Validar matrícula
-  const validarMatricula = () => {
-    if (!veiculoAtual.matricula || !paisMatricula) return true;
-    
-    if (paisMatricula === "Outros") return true;
-    
-    const formato = formatosMatricula[paisMatricula];
-    if (!formato || !formato.regex) return true;
-    
-    return formato.regex.test(veiculoAtual.matricula);
-  };
+  const validarMatricula = () =>
+    validarMatriculaValor(veiculoAtual.matricula, paisMatricula, classificacao);
 
   // Obter classificações disponíveis para a cobertura selecionada
   const getClassificacoesDisponiveis = () => {
@@ -473,28 +568,28 @@ function CriarCliente() {
     
     if (type === 'bi') {
       setDocBI(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewBI(reader.result);
-      };
-      reader.readAsDataURL(file);
     } else if (type === 'livrete') {
       setDocLivrete(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewLivrete(reader.result);
-      };
-      reader.readAsDataURL(file);
+    }
+
+    if (draftUserId) {
+      saveDraftAttachment(draftUserId, type, file).catch((err) => {
+        console.warn('Não foi possível guardar anexo no rascunho:', err);
+      });
     }
   };
 
   const removerDocumento = (type) => {
     if (type === 'bi') {
       setDocBI(null);
-      setPreviewBI(null);
     } else if (type === 'livrete') {
       setDocLivrete(null);
-      setPreviewLivrete(null);
+    }
+
+    if (draftUserId) {
+      removeDraftAttachment(draftUserId, type).catch((err) => {
+        console.warn('Não foi possível remover anexo do rascunho:', err);
+      });
     }
   };
 
@@ -649,6 +744,8 @@ function CriarCliente() {
         };
 
         setCotacaoGerada(novaCotacao);
+        clearCotacaoDraft(draftUserId);
+        setRascunhoRestaurado(false);
 
         if (cotacaoPodePartilhar(novaCotacao.status_aprovacao)) {
           setMostrarOpcoesPartilha(true);
@@ -876,6 +973,12 @@ function CriarCliente() {
             <div className="w-8 h-px bg-emerald-600" />
           </div>
         </div>
+
+        {rascunhoRestaurado && !cotacaoGerada && (
+          <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-800 text-center">
+            Rascunho restaurado automaticamente, incluindo documentos anexados.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Container Principal - Dados do Cliente */}
@@ -1444,18 +1547,11 @@ function CriarCliente() {
                         onChange={(e) => setTipoCobertura(e.target.value)}
                       >
                         <option value="">- Selecionar Cobertura -</option>
-                        <option value="Seguro Automóvel Responsabilidade Civil Apenas">
-                          Seguro Automóvel Responsabilidade Civil Apenas
-                        </option>
-                        <option value="Seguro Automóvel Responsabilidade Civil & Ocupantes">
-                          Seguro Automóvel Responsabilidade Civil & Ocupantes
-                        </option>
-                        <option value="Seguro de Transporte Público">
-                          Seguro de Transporte Público
-                        </option>
-                        <option value="Seguro Automóvel Todos os Riscos">
-                          Seguro Automóvel Todos os Riscos
-                        </option>
+                        {TIPOS_COBERTURA_OPCOES.map((tipo) => (
+                          <option key={tipo} value={tipo}>
+                            {configCoberturas[tipo]?.nome || tipo}
+                          </option>
+                        ))}
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-600 h-4 w-4 z-10" />
                     </div>

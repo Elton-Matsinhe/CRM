@@ -43,6 +43,8 @@ import {
   calcularPremioVeiculo,
   calcularPremioComTaxaCustom,
   formatarMatriculaValor,
+  validarMatriculaValor,
+  getFormatoMatriculaConfig,
   exigeCapitalSeguro,
   normalizarClassificacao,
   normalizarTipoCobertura,
@@ -291,6 +293,21 @@ function EditarCotacao() {
     try {
       setSalvando(true);
 
+      for (const v of formData.veiculos) {
+        if (
+          v.paisMatricula &&
+          v.paisMatricula !== "Outros" &&
+          v.matricula &&
+          !validarMatriculaValor(v.matricula, v.paisMatricula, v.classificacao)
+        ) {
+          const cfg = getFormatoMatriculaConfig(v.paisMatricula, v.classificacao);
+          alert(
+            `Matrícula inválida para ${v.marca || "veículo"}${v.classificacao ? ` (${v.classificacao})` : ""}. Formato esperado: ${cfg?.exemplo || cfg?.formato}`
+          );
+          return;
+        }
+      }
+
       const payload = {
         total_premio: formData.totalPremio,
         status: formData.status,
@@ -428,8 +445,18 @@ function EditarCotacao() {
           updated.matriculaCompleta = "";
         }
 
+        if (campo === "classificacao" && updated.paisMatricula && updated.matricula) {
+          const fmt = formatarMatriculaValor(
+            updated.matricula,
+            updated.paisMatricula,
+            valor
+          );
+          updated.matricula = fmt;
+          updated.matriculaCompleta = `${updated.paisMatricula} — ${fmt}`;
+        }
+
         if (campo === "matricula") {
-          const fmt = formatarMatriculaValor(valor, updated.paisMatricula);
+          const fmt = formatarMatriculaValor(valor, updated.paisMatricula, updated.classificacao);
           updated.matricula = fmt;
           updated.matriculaCompleta = updated.paisMatricula
             ? `${updated.paisMatricula} — ${fmt}`
@@ -1049,10 +1076,19 @@ function EditarCotacao() {
                                 atualizarVeiculo(
                                   veiculo.id,
                                   "matricula",
-                                  formatarMatriculaValor(e.target.value, veiculo.paisMatricula),
+                                  formatarMatriculaValor(
+                                    e.target.value,
+                                    veiculo.paisMatricula,
+                                    veiculo.classificacao
+                                  ),
                                 )
                               }
-                              placeholder={formatosMatricula[veiculo.paisMatricula]?.placeholder || ""}
+                              placeholder={
+                                getFormatoMatriculaConfig(veiculo.paisMatricula, veiculo.classificacao)
+                                  ?.placeholder ||
+                                formatosMatricula[veiculo.paisMatricula]?.placeholder ||
+                                ""
+                              }
                             />
                           )}
                         </div>

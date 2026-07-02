@@ -1,4 +1,5 @@
 ﻿import axios from 'axios';
+import { handleSessionExpired, isAuthErrorResponse } from '../utils/authSession';
 
 // URL do backend — desenvolvimento: localhost | produção: portal-imp
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/';
@@ -25,7 +26,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor para tratar erros de resposta
+// Interceptor para tratar erros de resposta (sessão expirada / token inválido)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -37,6 +38,13 @@ api.interceptors.response.use(
         method: error.config?.method,
         data: error.response.data
       });
+
+      const { status, data } = error.response;
+      if (isAuthErrorResponse(status, data)) {
+        handleSessionExpired(
+          data?.message || 'A sua sessão expirou. Por favor, efetue login novamente.'
+        );
+      }
     } else if (error.request) {
       console.error('❌ [API] Erro na requisição (sem resposta):', {
         url: error.config?.url,
@@ -47,13 +55,6 @@ api.interceptors.response.use(
       console.error('❌ [API] Erro ao configurar requisição:', error.message);
     }
 
-    if (error.response?.status === 401) {
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("usuario");
-      window.location.href = '/login';
-    }
     return Promise.reject(error);
   }
 );
@@ -319,8 +320,8 @@ export const cotacaoService = {
   },
   excluir: async (id) => {
     try {
-      await api.delete(`/cotacoes/${id}`);
-      return { success: true };
+      const response = await api.delete(`/cotacoes/${id}`);
+      return { success: true, message: response.data?.message || 'Cotação eliminada com sucesso' };
     } catch (error) {
       console.error("Erro ao excluir cotação:", error);
       return {
